@@ -1,17 +1,52 @@
 #!/bin/sh
-# Globalny core.hooksPath wyłącza hooki projektu, więc każdy typ hooka trafia tutaj i wywołuje hook
-# projektu: z core.hooksPath zapisanego w repo albo z .git/hooks (wspólny katalog worktree).
+# Globalny core.hooksPath wyłącza hooki projektu, więc każdy typ hooka trafia tutaj i wywołuje:
+# 1. hook z core.hooksPath zapisanego w repo albo z .git/hooks (wspólny katalog worktree),
+# 2. hook z <repo>/.githooks/, chyba że ustawiono SH_BEZ_HOOKOW_REPO.
+# Pierwszy błąd kończy wywołania i zwraca jego kod.
+#
+# .githooks jest śledzony w repo, więc to kod z commita, także nieprzejrzanego: `git worktree add`
+# uruchamia jego post-checkout. Operacje na cudzym kodzie, np. review, ustawiają SH_BEZ_HOOKOW_REPO=1.
+#
 # Pliki w tym katalogu to symlinki do _deleguj. Nie ma tu push-to-checkout ani proc-receive, bo sama
 # obecność tych hooków zmienia zachowanie gita, ani fsmonitor-watchman, bo wskazuje go konfiguracja.
 tutaj=$(cd "$(dirname "$0")" && pwd -P)
 nazwa=${SH_HOOK_NAZWA:-$(basename "$0")}
 unset SH_HOOK_NAZWA
 
+wykonywalny() {
+  [ -f "$1" ] && [ -x "$1" ]
+}
+
+pierwszy=""
 katalog=$(git config --local --get core.hooksPath || true)
 [ -n "$katalog" ] || katalog="$(git rev-parse --git-common-dir)/hooks"
-[ -d "$katalog" ] || exit 0
-[ "$(cd "$katalog" && pwd -P)" != "$tutaj" ] || exit 0
-
-if [ -x "$katalog/$nazwa" ]; then
-  exec "$katalog/$nazwa" "$@"
+if [ -d "$katalog" ] && [ "$(cd "$katalog" && pwd -P)" != "$tutaj" ] && wykonywalny "$katalog/$nazwa"; then
+  pierwszy="$katalog/$nazwa"
 fi
+
+drugi=""
+if [ -z "${SH_BEZ_HOOKOW_REPO:-}" ]; then
+  gorny=$(git rev-parse --show-toplevel 2>/dev/null || true)
+  if [ -n "$gorny" ] && wykonywalny "$gorny/.githooks/$nazwa" &&
+    { [ -z "$pierwszy" ] || [ ! "$pierwszy" -ef "$gorny/.githooks/$nazwa" ]; }; then
+    drugi="$gorny/.githooks/$nazwa"
+  fi
+fi
+
+[ -n "$pierwszy" ] || [ -n "$drugi" ] || exit 0
+[ -n "$pierwszy" ] || exec "$drugi" "$@"
+[ -n "$drugi" ] || exec "$pierwszy" "$@"
+
+# Oba hooki: wejście trzeba podać dwa razy, a czytają je tylko te typy.
+wejscie=/dev/null
+case "$nazwa" in
+  pre-push | pre-receive | post-receive | post-rewrite | reference-transaction)
+    wejscie=$(mktemp) || exit 1
+    trap 'rm -f "$wejscie"' EXIT
+    cat >"$wejscie"
+    ;;
+esac
+
+"$pierwszy" "$@" <"$wejscie" || exit $?
+"$drugi" "$@" <"$wejscie"
+exit $?

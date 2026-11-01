@@ -18,3 +18,5 @@
 - Gałąź produkcyjna `production`, granica bezpieczeństwa, ponowienie wydania z `--tylko-aplikacja`.
 - Globalny hook `pre-push` blokuje push na `production`, wrappery zachowują hooki projektów.
 - Workflow `test.yml` uruchamia testy bats na ubuntu-24.04, testy z `plutil` są pomijane poza macOS.
+- Wrapper hooków wywołuje też `.githooks/`, `SH_BEZ_HOOKOW_REPO` pomija je przy nieprzejrzanym kodzie.
+- Wymagania `shctl doctor` i `shctl review run`, ostrzeżenie `install.sh` obejmuje `~/sh/projekty`.

@@ -10,7 +10,7 @@
 # do recznego zaladowania i notify.sh high. Flaga ~/sh/stan/autostart.off wstrzymuje
 # ladowanie agenta sh-start; plista jest nadal kopiowana, bez dotykania launchd.
 # Git: globalny core.hooksPath na scripts/server/git-hooks. Inna wartosc to blad, nie nadpisujemy.
-# Repo z lokalnym core.hooksPath w SH_DIR dostaje ostrzezenie, bo wygrywa on z globalnym.
+# Repo z lokalnym core.hooksPath w SH_DIR i SH_DIR/projekty dostaje ostrzezenie, bo wygrywa on z globalnym.
 # Katalogi docelowe: SH_DIR, SH_BIN, SH_AGENTS. Powiadomienie: SH_NOTIFY_CMD.
 set -euo pipefail
 
@@ -108,7 +108,7 @@ git_hooki() {
     fail=1
   fi
 
-  for repo in "$SH_DIR"/*/; do
+  for repo in "$SH_DIR"/*/ "$SH_DIR"/projekty/*/; do
     [ -e "$repo.git" ] || continue
     lokalny="$(git -C "$repo" config --local --get core.hooksPath || true)"
     [ -z "$lokalny" ] ||

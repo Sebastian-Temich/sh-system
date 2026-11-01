@@ -68,6 +68,15 @@ globalny_hooks_path() {
   [[ "$stderr" == *"projekt ma wlasny core.hooksPath (.husky/_)"* ]]
 }
 
+@test "repo w projekty/ z lokalnym core.hooksPath: ostrzezenie" {
+  mkdir "$T/sh/projekty"
+  git init -q "$T/sh/projekty/klient"
+  git -C "$T/sh/projekty/klient" config --local core.hooksPath .husky/_
+  install
+  [ "$status" -eq 0 ]
+  [[ "$stderr" == *"projekty/klient ma wlasny core.hooksPath"* ]]
+}
+
 @test "zaladowany, plista bez zmian: tylko print" {
   touch "$T/loaded"
   install

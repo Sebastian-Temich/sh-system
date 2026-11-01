@@ -164,6 +164,95 @@ MOCK
   [ "$status" -eq 0 ]
 }
 
+# Hook zapisuje znacznik i wejście, dzięki czemu widać kolejność i to, że obydwa dostały dane.
+hook_znacznik() {
+  mkdir -p "$(dirname "$1")"
+  cat >"$1" <<MOCK
+#!/bin/sh
+echo "$2" >>"$T/kolejnosc"
+cat >>"$T/wejscie-$2"
+exit ${3:-0}
+MOCK
+  chmod +x "$1"
+}
+
+@test ".githooks: wykonywalny hook dziala" {
+  hook_znacznik .githooks/pre-commit repo 1
+  run git commit --allow-empty -m nowy
+  [ "$status" -ne 0 ]
+  [ "$(cat "$T/kolejnosc")" = repo ]
+}
+
+@test ".githooks: niewykonywalny plik i katalog pomijane" {
+  hook_znacznik .githooks/pre-commit repo 1
+  chmod -x .githooks/pre-commit
+  mkdir .githooks/commit-msg
+  run git commit --allow-empty -m nowy
+  [ "$status" -eq 0 ]
+  [ ! -f "$T/kolejnosc" ]
+}
+
+@test ".githooks i .git/hooks: oba w kolejnosci, z tym samym wejsciem" {
+  hook_znacznik .git/hooks/pre-push git
+  hook_znacznik .githooks/pre-push repo
+  run git push origin main
+  [ "$status" -eq 0 ]
+  [ "$(tr '\n' ' ' <"$T/kolejnosc")" = "git repo " ]
+  grep -q '^refs/heads/main ' "$T/wejscie-git"
+  cmp "$T/wejscie-git" "$T/wejscie-repo"
+}
+
+@test "blad .git/hooks zatrzymuje .githooks i zwraca kod" {
+  hook_znacznik .git/hooks/pre-commit git 3
+  hook_znacznik .githooks/pre-commit repo
+  run git commit --allow-empty -m nowy
+  [ "$status" -ne 0 ]
+  [ "$(cat "$T/kolejnosc")" = git ]
+}
+
+@test "blad .githooks blokuje push po udanym .git/hooks" {
+  hook_znacznik .git/hooks/pre-push git
+  hook_znacznik .githooks/pre-push repo 1
+  run git push origin main
+  [ "$status" -ne 0 ]
+  brak_ref refs/heads/main
+}
+
+@test ".githooks nie omija blokady production" {
+  hook_znacznik .githooks/pre-push repo
+  run git push origin main:production
+  [ "$status" -ne 0 ]
+  [[ "$output" == *"$KOMUNIKAT"* ]]
+  [ ! -f "$T/kolejnosc" ]
+}
+
+@test "core.hooksPath na .githooks nie uruchamia hooka dwa razy" {
+  hook_znacznik .githooks/pre-commit repo
+  git config --local core.hooksPath .githooks
+  run git -c core.hooksPath="$HOOKI" commit --allow-empty -m nowy
+  [ "$status" -eq 0 ]
+  [ "$(cat "$T/kolejnosc")" = repo ]
+}
+
+@test "SH_BEZ_HOOKOW_REPO pomija .githooks, a .git/hooks zostaje" {
+  hook_znacznik .git/hooks/pre-commit git
+  hook_znacznik .githooks/pre-commit repo 1
+  SH_BEZ_HOOKOW_REPO=1 run git commit --allow-empty -m nowy
+  [ "$status" -eq 0 ]
+  [ "$(cat "$T/kolejnosc")" = git ]
+}
+
+@test "worktree add: post-checkout z commita dziala, SH_BEZ_HOOKOW_REPO go wylacza" {
+  hook_znacznik .githooks/post-checkout repo
+  git add .githooks
+  git commit -q -m hook
+  git worktree add -q "$T/wt1" -b task/1
+  [ "$(cat "$T/kolejnosc")" = repo ]
+  rm "$T/kolejnosc"
+  SH_BEZ_HOOKOW_REPO=1 git worktree add -q "$T/wt2" -b task/2
+  [ ! -f "$T/kolejnosc" ]
+}
+
 @test "hooki sa wykonywalne, a zmieniajacych zachowanie gita nie ma" {
   for h in "$HOOKI"/*; do
     [ -x "$h" ]

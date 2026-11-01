@@ -101,6 +101,13 @@ przez `scripts/server/install.sh` (`docs/serwer.md`). shctl odpowiada za:
 zakładanie projektu, dokumenty z szablonów, statusy etapów, issue, worktree, panele herdr, review,
 iteracje, eskalacje, decyzje, porty, status, awaryjny stop.
 
+Wymagania dla komend shctl:
+
+- `shctl doctor` ostrzega o każdym repo w `~/sh/projekty` z lokalnym `core.hooksPath`, bo taki wpis
+  wyłącza w nim globalny hook `pre-push`.
+- `shctl review run` i każda inna operacja na nieprzejrzanym kodzie ustawia `SH_BEZ_HOOKOW_REPO=1`,
+  także przy `git worktree add`, które uruchamia `post-checkout` z dodawanego commita.
+
 Skille wywołują shctl z argumentami. shctl jest idempotentny, ma `--dry-run`, `--json` i testy
 (bats), a dokumentację w `docs/shctl.md`. Gdy brakuje komendy, agent wykonuje operację ręcznie i
 zapisuje propozycję dla systemu (obieg: „Pliki wspólne i konflikty”).
@@ -463,6 +470,8 @@ go ponownie (`shctl reset-dryrun`) i porównujemy czas, iteracje i eskalacje w `
 - Push na `production` blokują tylko globalny hook `pre-push` i reguły procesu. Hook można obejść
   (`--no-verify`, inny `core.hooksPath`), a lokalny `core.hooksPath`, np. z husky, wyłącza go w danym
   repo. Twardą granicą będzie osobne konto bota w etapie B.
+- Hooki z `.githooks/` to kod z commita, uruchamiany na serwerze poza profilem uprawnień agenta. Dopóki
+  nie ma `shctl review run` z `SH_BEZ_HOOKOW_REPO=1`, review kodu ręcznie wymaga ustawienia tej zmiennej.
 
 ## Model docelowy (etap B), skrót
 
