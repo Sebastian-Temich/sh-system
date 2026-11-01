@@ -556,6 +556,20 @@ pluginów i pamięć projektów. Nie ma w nim sesji, historii, cache, `auth.json
 ani `.claude.json`. Po spakowaniu sprawdza je gitleaks; przy trafieniu archiwum jest kasowane.
 Archiwum zawiera temat ntfy, więc traktuj je jak dane poufne.
 
+## Globalny hook git
+
+`install.sh` ustawia `git config --global core.hooksPath` na `scripts/server/git-hooks/`. Tylko na
+serwerze: `pre-push` odrzuca push na gałąź `production`.
+
+Globalny `core.hooksPath` wyłącza `.git/hooks`, dlatego katalog zawiera wrapper każdego typu hooka.
+Wrapper wywołuje hook projektu z `core.hooksPath` zapisanego w repo albo z `.git/hooks`. Nie ma
+wrapperów `push-to-checkout` i `proc-receive`, bo ich obecność zmienia zachowanie gita.
+
+Lokalny `core.hooksPath` wygrywa z globalnym, więc w takim repo, np. z husky, hook globalny się nie
+uruchamia i nie blokuje pusha. `install.sh` ostrzega o takich repo w `~/sh`. Narzędzie `pre-commit`
+odmawia `pre-commit install` przy ustawionym `core.hooksPath`. Forgejo działa w kontenerze z własną
+konfiguracją gita, więc tego ustawienia nie widzi.
+
 ## Dziennik narzędzi
 
 | Data | Narzędzie | Źródło | Kto | Po co |

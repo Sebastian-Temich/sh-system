@@ -16,3 +16,5 @@
 - Bloki `tylko-tryb:L` w DoD, czysty worktree jako główna ochrona `.env*`, nowe punkty etapu B.
 - Sekcja „Droga na produkcję”, punkt „migracje zgodne wstecz” w DoD zadania, środowisko STAGING.
 - Gałąź produkcyjna `production`, granica bezpieczeństwa, ponowienie wydania z `--tylko-aplikacja`.
+- Globalny hook `pre-push` blokuje push na `production`, wrappery zachowują hooki projektów.
+- Workflow `test.yml` uruchamia testy bats na ubuntu-24.04, testy z `plutil` są pomijane poza macOS.

@@ -9,6 +9,8 @@
 # Agent z RunAtLoad wystartuje wtedy ponownie. Nieudany bootstrap to kod bledu, komenda
 # do recznego zaladowania i notify.sh high. Flaga ~/sh/stan/autostart.off wstrzymuje
 # ladowanie agenta sh-start; plista jest nadal kopiowana, bez dotykania launchd.
+# Git: globalny core.hooksPath na scripts/server/git-hooks. Inna wartosc to blad, nie nadpisujemy.
+# Repo z lokalnym core.hooksPath w SH_DIR dostaje ostrzezenie, bo wygrywa on z globalnym.
 # Katalogi docelowe: SH_DIR, SH_BIN, SH_AGENTS. Powiadomienie: SH_NOTIFY_CMD.
 set -euo pipefail
 
@@ -92,6 +94,28 @@ plist() {
   fail=1
 }
 
+git_hooki() {
+  local src="$REPO/scripts/server/git-hooks" obecny repo lokalny
+  obecny="$(git config --global --get core.hooksPath || true)"
+
+  if [ -z "$obecny" ]; then
+    git config --global core.hooksPath "$src"
+    echo "git:     core.hooksPath -> $src"
+  elif [ "$obecny" = "$src" ]; then
+    echo "ok:      core.hooksPath"
+  else
+    echo "BLAD:    core.hooksPath wskazuje na $obecny, oczekiwano $src" >&2
+    fail=1
+  fi
+
+  for repo in "$SH_DIR"/*/; do
+    [ -e "$repo.git" ] || continue
+    lokalny="$(git -C "$repo" config --local --get core.hooksPath || true)"
+    [ -z "$lokalny" ] ||
+      echo "UWAGA:   ${repo%/} ma wlasny core.hooksPath ($lokalny), hook globalny tam nie dziala" >&2
+  done
+}
+
 for src in "$REPO"/scripts/server/*.sh; do
   [ "$(basename "$src")" = install.sh ] || link "$src" "$BIN/$(basename "$src")"
 done
@@ -107,6 +131,8 @@ link "$REPO/scripts/server/Brewfile" "$SH_DIR/Brewfile"
 for src in "$REPO"/scripts/server/*.plist; do
   plist "$src"
 done
+
+git_hooki
 
 # Pliki spoza repo: tylko ostrzezenie, nic nie kasujemy.
 for dst in "$BIN"/*; do

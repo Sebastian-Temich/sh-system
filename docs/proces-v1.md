@@ -460,6 +460,9 @@ go ponownie (`shctl reset-dryrun`) i porównujemy czas, iteracje i eskalacje w `
   używają tokenu właściciela, więc bramka po stronie GitHuba ich nie powstrzyma. Dlatego granicą
   jest brak poświadczeń produkcyjnych na serwerze i w GitHub Secrets, a wdrożenie prod wykonuje
   wyłącznie właściciel ze swojego urządzenia.
+- Push na `production` blokują tylko globalny hook `pre-push` i reguły procesu. Hook można obejść
+  (`--no-verify`, inny `core.hooksPath`), a lokalny `core.hooksPath`, np. z husky, wyłącza go w danym
+  repo. Twardą granicą będzie osobne konto bota w etapie B.
 
 ## Model docelowy (etap B), skrót
 

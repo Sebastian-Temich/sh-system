@@ -30,8 +30,42 @@ MOCK
 }
 
 install() {
-  PATH="$T/mock:$PATH" SH_DIR="$T/sh" SH_AGENTS="$T/agents" SH_NOTIFY_CMD="$T/mock/notify" \
+  GIT_CONFIG_NOSYSTEM=1 GIT_CONFIG_GLOBAL="$T/gitconfig" \
+    PATH="$T/mock:$PATH" SH_DIR="$T/sh" SH_AGENTS="$T/agents" SH_NOTIFY_CMD="$T/mock/notify" \
     run --separate-stderr bash "$REPO/scripts/server/install.sh"
+}
+
+wymaga_plutil() {
+  command -v plutil >/dev/null || skip "wymaga macOS: plutil"
+}
+
+globalny_hooks_path() {
+  GIT_CONFIG_NOSYSTEM=1 GIT_CONFIG_GLOBAL="$T/gitconfig" git config --global --get core.hooksPath
+}
+
+@test "ustawia globalny core.hooksPath, drugi raz bez zmian" {
+  install
+  [ "$status" -eq 0 ]
+  [ "$(globalny_hooks_path)" = "$REPO/scripts/server/git-hooks" ]
+  install
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"ok:      core.hooksPath"* ]]
+}
+
+@test "obcy core.hooksPath: blad bez nadpisania" {
+  GIT_CONFIG_GLOBAL="$T/gitconfig" git config --global core.hooksPath /inny
+  install
+  [ "$status" -eq 1 ]
+  [[ "$stderr" == *"core.hooksPath wskazuje na /inny"* ]]
+  [ "$(globalny_hooks_path)" = /inny ]
+}
+
+@test "repo z lokalnym core.hooksPath: ostrzezenie" {
+  git init -q "$T/sh/projekt"
+  git -C "$T/sh/projekt" config --local core.hooksPath .husky/_
+  install
+  [ "$status" -eq 0 ]
+  [[ "$stderr" == *"projekt ma wlasny core.hooksPath (.husky/_)"* ]]
 }
 
 @test "zaladowany, plista bez zmian: tylko print" {
@@ -66,6 +100,7 @@ install() {
 }
 
 @test "po bledzie bootstrap kolejne uruchomienie laduje agenta" {
+  wymaga_plutil
   rm "$PLIST"
   touch "$T/fail"
   install
@@ -77,6 +112,7 @@ install() {
 }
 
 @test "zaladowany, plista zmieniona: bootout i bootstrap" {
+  wymaga_plutil
   touch "$T/loaded"
   echo '<!-- x -->' >>"$PLIST"
   install
@@ -96,6 +132,7 @@ install() {
 }
 
 @test "flaga autostart.off, plista zmieniona: kopia bez launchctl" {
+  wymaga_plutil
   mkdir -p "$T/sh/stan"
   touch "$T/sh/stan/autostart.off"
   echo '<!-- x -->' >>"$PLIST"

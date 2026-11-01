@@ -1,0 +1,17 @@
+#!/bin/sh
+# Globalny core.hooksPath wyłącza hooki projektu, więc każdy typ hooka trafia tutaj i wywołuje hook
+# projektu: z core.hooksPath zapisanego w repo albo z .git/hooks (wspólny katalog worktree).
+# Pliki w tym katalogu to symlinki do _deleguj. Nie ma tu push-to-checkout ani proc-receive, bo sama
+# obecność tych hooków zmienia zachowanie gita, ani fsmonitor-watchman, bo wskazuje go konfiguracja.
+tutaj=$(cd "$(dirname "$0")" && pwd -P)
+nazwa=${SH_HOOK_NAZWA:-$(basename "$0")}
+unset SH_HOOK_NAZWA
+
+katalog=$(git config --local --get core.hooksPath || true)
+[ -n "$katalog" ] || katalog="$(git rev-parse --git-common-dir)/hooks"
+[ -d "$katalog" ] || exit 0
+[ "$(cd "$katalog" && pwd -P)" != "$tutaj" ] || exit 0
+
+if [ -x "$katalog/$nazwa" ]; then
+  exec "$katalog/$nazwa" "$@"
+fi

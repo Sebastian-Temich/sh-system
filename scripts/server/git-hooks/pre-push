@@ -1,0 +1,17 @@
+#!/bin/sh
+# Odrzuca push na gałąź production: Vercel wdraża ją produkcyjnie z pominięciem review
+# (proces-v1.md, „Znane ograniczenia”). Potem wywołuje hook pre-push projektu.
+tutaj=$(cd "$(dirname "$0")" && pwd -P)
+wejscie=$(cat)
+
+# Format wejścia: <lokalny ref> <lokalny sha> <zdalny ref> <zdalny sha>.
+while read -r _ _ zdalny _; do
+  if [ "$zdalny" = "refs/heads/production" ]; then
+    echo "Push na production wykonuje wyłącznie właściciel z własnego urządzenia" >&2
+    exit 1
+  fi
+done <<EOF
+$wejscie
+EOF
+
+printf '%s\n' "$wejscie" | SH_HOOK_NAZWA=pre-push "$tutaj/_deleguj" "$@"
