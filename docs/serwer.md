@@ -42,6 +42,14 @@ Zmiany w `sh-system` i `sh-template-projekt` idą przez gałąź i PR, bez bezpo
 Wyjątek: zmiana dotycząca bezpieczeństwa, dostępów albo produkcji czeka na zgodę właściciela także
 po zielonym CI.
 
+Test na prawdziwym GitHubie uruchamiamy wyłącznie po wyraźnej zgodzie właściciela w danej rozmowie,
+tak jak zmiany dotyczące bezpieczeństwa. Dotyczy to `SHCTL_E2E=1` i każdego ręcznego wywołania, które
+może założyć repo lub zmienić je na GitHubie. Odczyt stanu repo zgody nie wymaga.
+
+Repo testowe ma unikalną nazwę `sh-test-RRRRMMDD-HHMM` i przed utworzeniem trafia do
+`~/sh/stan/do-usuniecia.md` (nazwa, data, po co). Repo usuwa właściciel, a potem kasuje wiersz z
+listy. `shctl doctor` pokazuje, ile repo czeka na usunięcie.
+
 ## Polityka instalacji
 
 1. **Zależności projektowe** agenci instalują sami (pnpm, uv itp.).

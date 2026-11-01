@@ -87,3 +87,25 @@ ob_stan() { jq -r '.wynik.kontrole | map(select(.nazwa == "Obsidian demo"))[0] |
   [ "$(ob_stan)" = "uwaga:różni się od origin" ]
   [ "$(git -C "$SH_OBSIDIAN_DIR/demo" rev-parse origin/main)" = "$przed" ]
 }
+
+do_usuniecia() { jq -r '.wynik.kontrole | map(select(.nazwa == "repo do usunięcia"))[0] | .stan + ":" + .szczegoly' <<<"$output"; }
+
+@test "brak listy repo do usuniecia: zero" {
+  run --separate-stderr "$SHCTL" doctor --json
+  [ "$(do_usuniecia)" = "ok:0" ]
+}
+
+@test "lista repo do usuniecia: liczba i nazwy, bez wplywu na kod wyjscia" {
+  mkdir -p "$SH_DIR/stan"
+  printf '# Repo do usunięcia\n\n| Nazwa | Data | Po co |\n|---|---|---|\n| sh-test-shctl | 2026-11-02 | test |\n| `sh-test-20261102-0900` | 2026-11-02 | test |\n' >"$SH_DIR/stan/do-usuniecia.md"
+  run --separate-stderr "$SHCTL" doctor --json
+  [ "$status" -eq 0 ]
+  [ "$(do_usuniecia)" = "uwaga:2: sh-test-shctl sh-test-20261102-0900" ]
+}
+
+@test "lista z samym naglowkiem: zero" {
+  mkdir -p "$SH_DIR/stan"
+  printf '| Nazwa | Data | Po co |\n|---|---|---|\n' >"$SH_DIR/stan/do-usuniecia.md"
+  run --separate-stderr "$SHCTL" doctor --json
+  [ "$(do_usuniecia)" = "ok:0" ]
+}
