@@ -3,7 +3,8 @@
 #
 #   sh-start.sh               przygotowuje workspace i podlacza terminal (gdy jest TTY)
 #   sh-start.sh --no-attach   tylko przygotowuje workspace
-#   sh-start.sh --autostart   jak --no-attach, ale najpierw czeka na Docker Desktop i siec
+#   sh-start.sh --autostart   jak --no-attach, ale najpierw czeka na Docker Desktop i siec;
+#                             przy fladze ~/sh/stan/autostart.off konczy prace z kodem 0
 #
 # Idempotentny: niczego nie duplikuje. Po restarcie serwera herdr odtwarza uklad, ale nie
 # procesy, dlatego orkiestrator jest uruchamiany ponownie tylko wtedy, gdy nie dziala.
@@ -21,6 +22,12 @@ NETWORK_TIMEOUT=120
 MODE="${1:-attach}"
 log() { printf '%s sh-start: %s\n' "$(date '+%F %T')" "$*"; }
 die() { log "BLAD: $*" >&2; exit 1; }
+
+# Tylko start przez launchd; recznie sh-start.sh dziala zawsze.
+if [[ "$MODE" == --autostart && -e "$SH_DIR/stan/autostart.off" ]]; then
+  log 'autostart wyłączony przez właściciela'
+  exit 0
+fi
 
 command -v herdr >/dev/null || die 'brak herdr w PATH'
 command -v jq >/dev/null || die 'brak jq w PATH'

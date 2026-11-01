@@ -155,8 +155,11 @@ Sam `bootout` nie wystarczy, bo kolejny `install.sh` załadowałby agenta z powr
 `install.sh` wypisuje „autostart wyłączony przez właściciela” i nie ładuje `sh-start`. Zmienioną
 plistę nadal kopiuje, ale nie dotyka `launchd`.
 
-Flagę czyta tylko `install.sh`. `launchd` wczytuje plisty z `~/Library/LaunchAgents` przy każdym
-logowaniu, więc po restarcie agent i tak wystartuje; nie testowano tego na tej maszynie.
+Wyłączenie przetrwa restart. `launchd` przy logowaniu wczyta plistę i uruchomi
+`sh-start.sh --autostart`, ale skrypt przy fladze od razu kończy pracę z kodem 0 i zapisuje ten sam
+komunikat w `~/sh/logs/sh-start.log`, bez Dockera, herdr i orkiestratora. Ręczne `sh-start.sh` bez
+`--autostart` działa zawsze, także przy fladze. Testy używają atrap; samego restartu maszyny nie
+testowano.
 
 Włączenie z powrotem:
 
