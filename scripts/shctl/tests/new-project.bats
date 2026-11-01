@@ -11,6 +11,7 @@ K() { echo "$SH_DIR/projekty/demo/$1"; }
   [ "$status" -eq 0 ]
   grep -q 'repo create test-owner/demo --template test-owner/sh-template-projekt --private --description Aplikacja testowa' "$T/gh.calls"
   grep -q 'label create' "$T/gh.calls"
+  grep -qx 'repo edit test-owner/demo --delete-branch-on-merge' "$T/gh.calls"
   [ "$(fm "$(K docs/konfiguracja.md)" tryb_procesu)" = M ]
   [ "$(fm "$(K docs/konfiguracja.md)" etap_wdrozenia)" = A ]
   [ "$(fm "$(K docs/konfiguracja.md)" data)" = "$(date +%F)" ]
@@ -107,6 +108,14 @@ K() { echo "$SH_DIR/projekty/demo/$1"; }
   [ "$status" -eq 0 ]
   [[ "$stderr" == *"pomijam klon"* ]] || false
   [ "$(jq -r .wynik.obsidian <<<"$output")" = null ]
+}
+
+@test "powtorka wlacza usuwanie galezi takze w istniejacym repo" {
+  nowy
+  : >"$T/gh.calls"
+  run nowy
+  [ "$status" -eq 0 ]
+  grep -qx 'repo edit test-owner/demo --delete-branch-on-merge' "$T/gh.calls"
 }
 
 @test "--public" {
