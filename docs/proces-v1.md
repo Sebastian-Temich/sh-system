@@ -295,8 +295,8 @@ A wszystkie zadania mają `wykonawca:claude`.
 
 ## Modele
 
-W rolach kodowych najmocniejszy dostępny Opus. Model Codex do review wybiera właściciel (domyślnie
-najmocniejszy z wysokim poziomem rozumowania). Ustawienia per rola w `docs/konfiguracja.md`.
+W rolach kodowych najmocniejszy dostępny Opus. Model Codex do review wybiera właściciel; aktualny
+wybór jest w docs/konfiguracja.md. Ustawienia per rola w `docs/konfiguracja.md`.
 
 ## Limity subskrypcji
 
