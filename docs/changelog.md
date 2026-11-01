@@ -7,4 +7,5 @@
 - Rozstrzygnięcie 18 otwartych pytań procesu v1 (`decyzje-systemu.md`).
 - `~/sh/bin` jako symlinki do repo, `scripts/server/install.sh`.
 - Review w czystym worktree bez plików env, warunki startu pilota, retro propozycji w etapie A.
+- `install.sh` ładuje niezaładowanych agentów; test `scripts/server/tests/install.bats`.
 - Repo jako źródło `Brewfile` i plist, ostrzeżenie w `backup-config.sh` o zmianach w `sh-system`.

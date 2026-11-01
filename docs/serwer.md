@@ -26,7 +26,9 @@ więc zmiany trzeba najpierw przenieść do repo. Plik spoza repo zgłasza ostrz
 narzędzie trzeba więc zacommitować w `sh-system`.
 
 Plisty LaunchAgentów mają źródło w `scripts/server/*.plist`. `install.sh` kopiuje je tylko przy
-różnicy, a potem przeładowuje agenta (`launchctl bootout` i `bootstrap`). Agent z `RunAtLoad` startuje wtedy od razu: dla
+różnicy, a potem przeładowuje agenta (`launchctl bootout` i `bootstrap`). Agenta niezaładowanego
+(`launchctl print`) ładuje przy każdym uruchomieniu, także bez zmiany plisty. Nieudany `bootstrap`
+kończy się kodem błędu, komendą do ręcznego załadowania i powiadomieniem `notify.sh high`. Agent z `RunAtLoad` startuje wtedy od razu: dla
 `sh-start` jest to bezpieczne, bo skrypt uruchamia tylko to, co nie działa. Ręczna zmiana w
 `~/Library/LaunchAgents` zostanie nadpisana przy następnym `install.sh`.
 
@@ -140,7 +142,7 @@ tylko wtedy, gdy nie działa, więc można go wywoływać wielokrotnie. Sesje ag
 panelach trzeba wznowić ręcznie: integracja `herdr integration install claude` nie jest
 zainstalowana, bo zmienia konfigurację Claude Code.
 
-Wyłączenie autostartu:
+Wyłączenie autostartu (kolejny `install.sh` załaduje agenta z powrotem):
 
 ```sh
 launchctl bootout gui/$(id -u)/pl.iskt.softwarehouse.sh-start
