@@ -24,3 +24,4 @@
 - `shctl` część 1 (`scripts/shctl/`, `docs/shctl.md`): new-project, stage, doc, decision, escalate, ports, status, stop-all, doctor, testy bats.
 - `shctl obsidian link|unlink`, lekki klon `docs/` w vaulcie, kontrola klonów w `doctor`, `~/.config/sh/config`, kolejność w `stop-all --dry-run`.
 - Model reviewera Codex: `proces-v1.md` odsyła do `docs/konfiguracja.md`, wartość ustawia szablon.
+- Zasada pracy nad systemem: gałąź i PR, merge po zielonym CI, zgoda właściciela przy bezpieczeństwie, dostępach i produkcji.

@@ -4,6 +4,7 @@ iMac13,2 (2012), Intel i5-3470S, 4 rdzenie bez HT, 24 GB RAM, macOS 14.8.9 przez
 Legacy Patcher. Narzędzia, przeglądarki i testy działają natywnie. Docker służy do usług.
 
 - Skrypty, Brewfile, plisty: źródłem jest repo `sh-system` (sekcja „Skrypty serwera”)
+- Zmiany w systemie: gałąź i PR (sekcja „Praca nad systemem”)
 - Toolchain: `~/sh/bin/setup-toolchain.sh` (idempotentny, bez sudo)
 - Homebrew: `~/sh/Brewfile` (symlink do `scripts/server/Brewfile`)
 - Porty: `~/sh/porty.md`
@@ -32,6 +33,14 @@ różnicy, a potem przeładowuje agenta (`launchctl bootout` i `bootstrap`). Age
 kończy się kodem błędu, komendą do ręcznego załadowania i powiadomieniem `notify.sh high`. Agent z `RunAtLoad` startuje wtedy od razu: dla
 `sh-start` jest to bezpieczne, bo skrypt uruchamia tylko to, co nie działa. Ręczna zmiana w
 `~/Library/LaunchAgents` zostanie nadpisana przy następnym `install.sh`.
+
+## Praca nad systemem
+
+Zmiany w `sh-system` i `sh-template-projekt` idą przez gałąź i PR, bez bezpośrednich commitów na
+`main`. Po zielonym CI agent merguje PR sam, bez pytania właściciela.
+
+Wyjątek: zmiana dotycząca bezpieczeństwa, dostępów albo produkcji czeka na zgodę właściciela także
+po zielonym CI.
 
 ## Polityka instalacji
 
