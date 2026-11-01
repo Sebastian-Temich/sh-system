@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>pl.iskt.softwarehouse.sh-start</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/zsh</string>
+    <string>-lic</string>
+    <string>"$HOME/sh/bin/sh-start.sh" --autostart</string>
+  </array>
+  <key>RunAtLoad</key>
+  <true/>
+  <key>KeepAlive</key>
+  <false/>
+  <!-- Serwer herdr ma przezyc zakonczenie sh-start.sh. -->
+  <key>AbandonProcessGroup</key>
+  <true/>
+  <key>WorkingDirectory</key>
+  <string>/Users/sebastiant./sh</string>
+  <key>StandardOutPath</key>
+  <string>/Users/sebastiant./sh/logs/sh-start.log</string>
+  <key>StandardErrorPath</key>
+  <string>/Users/sebastiant./sh/logs/sh-start.log</string>
+</dict>
+</plist>
