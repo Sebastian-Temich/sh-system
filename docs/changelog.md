@@ -11,3 +11,6 @@
   launchd w `sh-start.sh --autostart`.
 - `install.sh` ładuje niezaładowanych agentów; test `scripts/server/tests/install.bats`.
 - Repo jako źródło `Brewfile` i plist, ostrzeżenie w `backup-config.sh` o zmianach w `sh-system`.
+- Produkcja bez poświadczeń na serwerze i w GitHub Secrets; wdraża wyłącznie właściciel.
+- Warunki startu pilota: wylogowane Supabase CLI i Vercel CLI, deny jako zabezpieczenie przed pomyłką.
+- Bloki `tylko-tryb:L` w DoD, czysty worktree jako główna ochrona `.env*`, nowe punkty etapu B.

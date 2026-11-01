@@ -223,6 +223,17 @@ zaznacza review sam sobie. `scripts/check-dod.sh` działa w CI.
 
 W DoD etapu nie ma statusu `blocked`: etap czekający na coś zewnętrznego ma `in-progress` i notatkę.
 
+Każdy `DoD.md` zawiera checklistę trybu M. Punkty tylko dla trybu L stoją w bloku:
+
+```markdown
+<!-- tylko-tryb:L -->
+- [ ] `tech-proposal.md` powstał
+<!-- /tylko-tryb -->
+```
+
+`check-dod.sh` liczy pola z takiego bloku wyłącznie przy `tryb_procesu: L`. W pozostałych trybach je
+pomija, więc etap może być `done` mimo pustych pól w bloku.
+
 Etapy trybu M zapisujemy w tych folderach:
 
 | Etap trybu M | Foldery z `DoD.md` |
@@ -325,12 +336,17 @@ sam.
 |---|---|
 | LOCAL | Supabase CLI |
 | PREVIEW | Preview deploy |
-| PROD | Agenci nie mają zapisu. Produkcja zmienia się wyłącznie przez GitHub Actions z akceptacją właściciela (environment „production”) |
+| PROD | Agenci nie mają dostępu. Wdrożenie wykonuje wyłącznie właściciel ze swojego urządzenia (`scripts/deploy-prod.sh`) |
+
+**Zasada produkcji:** na serwerze i w GitHub Secrets nie ma żadnych poświadczeń produkcyjnych.
+Wdrożenie prod wykonuje wyłącznie właściciel ze swojego urządzenia, ze swoimi tokenami w zmiennych
+środowiskowych. Workflow `deploy-prod.yml` jest zablokowany bramką. W pilocie nie ma deployów prod.
 
 Sekrety nie trafiają do repo, docs ani issue. Lokalnie trzymamy je w `.env.local`, który
 `shctl task dispatch` kopiuje do worktree workera. `.env.local` zawiera tylko klucze testowe.
 Reviewer nie dostaje sekretów: `shctl review run` tworzy mu czysty worktree `../wt/review-NR` bez
-plików env, a testy uruchamia CI. gitleaks działa w CI. Resend w dev ma tylko klucz testowy.
+plików env, a testy uruchamia CI. To główna ochrona; deny na `.env*` w profilu reviewera Claude
+jest dodatkową warstwą. gitleaks działa w CI. Resend w dev ma tylko klucz testowy.
 
 ## Bezpieczeństwo publicznych repo
 
@@ -366,6 +382,10 @@ Właściciel potwierdza tę listę przed pierwszym uruchomieniem projektu wzorco
 - [ ] Autostart herdr i Remote Control działają po restarcie.
 - [ ] Na dysku jest min. 15 GB wolnego miejsca.
 - [ ] Chrome, ChatGPT i Claude Desktop są zamknięte na czas pracy agentów.
+- [ ] Supabase CLI na serwerze wylogowane (`supabase logout`; lokalny stack działa bez logowania).
+- [ ] Vercel CLI niezalogowane na serwerze.
+- [ ] Reguły deny to zabezpieczenie przed pomyłką, nie granica bezpieczeństwa; granicą jest brak
+  poświadczeń prod na serwerze.
 
 ## Projekt wzorcowy
 
@@ -380,6 +400,10 @@ go ponownie (`shctl reset-dryrun`) i porównujemy czas, iteracje i eskalacje w `
   to w etapie A, bo Codex robi tam wyłącznie review. Czysty worktree `../wt/review-NR` usuwa pliki
   env z jego katalogu pracy, ale nie blokuje odczytu `.env.local` z innych worktree na dysku. Dlatego
   `.env.local` zawiera tylko klucze testowe.
+- GitHub nie oferuje wymaganej akceptacji dla environment w repo prywatnych bez Enterprise, a agenci
+  używają tokenu właściciela, więc bramka po stronie GitHuba ich nie powstrzyma. Dlatego granicą
+  jest brak poświadczeń produkcyjnych na serwerze i w GitHub Secrets, a wdrożenie prod wykonuje
+  wyłącznie właściciel ze swojego urządzenia.
 
 ## Model docelowy (etap B), skrót
 
@@ -397,3 +421,5 @@ go ponownie (`shctl reset-dryrun`) i porównujemy czas, iteracje i eskalacje w `
 - Automatyczne wznowienie po limitach.
 - GitHub Projects i dashboard firmowy.
 - `shctl upgrade`.
+- Osobny użytkownik macOS dla agentów, konto bota GitHub (zapis bez praw admina), lustro repo w
+  Forgejo jako backup.
