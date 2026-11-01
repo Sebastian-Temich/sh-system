@@ -1,0 +1,46 @@
+#!/usr/bin/env bats
+load helper
+
+setup() { wspolny_setup; projekt_demo; }
+
+@test "liczy zadania z GitHuba" {
+  cat >"$T/issues.json" <<'JSON'
+[{"state":"OPEN","stateReason":"","labels":[{"name":"status:review"}]},
+ {"state":"OPEN","stateReason":"","labels":[]},
+ {"state":"CLOSED","stateReason":"COMPLETED","labels":[]},
+ {"state":"CLOSED","stateReason":"NOT_PLANNED","labels":[]}]
+JSON
+  run "$SHCTL" status show --json
+  [ "$status" -eq 0 ]
+  [ "$(jq -c '.wynik.zadania | [.todo,.review,.done,.anulowane]' <<<"$output")" = '[1,1,1,1]' ]
+  [ "$(jq -r .wynik.zrodlo_zadan <<<"$output")" = github ]
+}
+
+@test "bez GitHuba bierze liczniki ze status.md" {
+  run "$SHCTL" status show --json
+  [ "$status" -eq 0 ]
+  [ "$(jq -r '.wynik.zrodlo_zadan, .wynik.zadania.done' <<<"$output" | tr '\n' ' ')" = "status.md 3 " ]
+}
+
+@test "pokazuje etap, eskalacje i wstrzymania" {
+  "$SHCTL" stage start 05-plan
+  "$SHCTL" escalate --dotyczy 05-plan --powod "spór" --potrzebne x
+  printf '# Limity\n\n| Wykonawca | Do kiedy |\n|---|---|\n| claude | 18:00 |\n\n- codex do 20:00\n' >"$SH_DIR/limity.md"
+  run "$SHCTL" status show
+  [ "$status" -eq 0 ]
+  [[ "$output" == *'`05-plan`: escalated'* ]]
+  [[ "$output" == *"E-001 (05-plan): spór"* ]]
+  [[ "$output" == *"| claude | 18:00 |"* ]]
+  [[ "$output" == *"- codex do 20:00"* ]]
+  [[ "$output" != *"Wykonawca"* ]]
+}
+
+@test "brak limity.md to brak wstrzyman" {
+  run "$SHCTL" status show
+  [[ "$output" == *"Wstrzymania: brak"* ]]
+}
+
+@test "samo status dziala jak show" {
+  run "$SHCTL" status
+  [ "$status" -eq 0 ]
+}

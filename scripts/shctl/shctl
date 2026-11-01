@@ -1,0 +1,52 @@
+#!/usr/bin/env bash
+# shctl - mechanika procesu SH (docs/shctl.md). Punkt wejścia: wybiera podkomendę z cmd/.
+# Działa na bash 3.2 (macOS). Kody wyjścia: 0 ok, 1 błąd wykonania, 2 błędne użycie,
+# 3 brak projektu, pliku lub narzędzia, 4 odmowa według reguł procesu.
+set -euo pipefail
+
+zrodlo="${BASH_SOURCE[0]}"
+while [ -L "$zrodlo" ]; do
+  kat="$(cd -P "$(dirname "$zrodlo")" && pwd)"
+  zrodlo="$(readlink "$zrodlo")"
+  case "$zrodlo" in /*) ;; *) zrodlo="$kat/$zrodlo" ;; esac
+done
+SHCTL_DIR="$(cd -P "$(dirname "$zrodlo")" && pwd)"
+
+# shellcheck source=lib/common.sh
+. "$SHCTL_DIR/lib/common.sh"
+# shellcheck source=lib/projekt.sh
+. "$SHCTL_DIR/lib/projekt.sh"
+
+pomoc() {
+  cat <<'TXT'
+Użycie: shctl KOMENDA [argumenty] [--dry-run] [--json] [--projekt NAZWA]
+
+  new-project NAZWA [--tryb S|M] [--public] [--opis "..."]
+  stage start|review|done|skip|escalate ETAP [--notatka "..."]
+  doc new ETAP TYP [--tytul "..."] [--rola ROLA] [--nr NR]
+  decision add --co "..." --dlaczego "..." --cofniecie "..." [--rola ROLA]
+  escalate --dotyczy "#NR|ETAP" --powod "..." --potrzebne "..." [--opcje "A;B"] [--priorytet high]
+  escalate close E-NNN --odpowiedz "..."
+  ports reserve|release|list [--zakres 55|56]
+  status show
+  stop-all
+  doctor [--test-notify]
+
+Dokumentacja: sh-system/docs/shctl.md
+TXT
+}
+
+[ $# -gt 0 ] || { pomoc >&2; exit "$E_UZYCIE"; }
+KOMENDA="$1"
+shift
+
+case "$KOMENDA" in
+  -h | --help | help) pomoc; exit 0 ;;
+  new-project | stage | doc | decision | escalate | ports | status | stop-all | doctor) ;;
+  *) echo "BŁĄD: nieznana komenda: $KOMENDA (shctl --help)" >&2; exit "$E_UZYCIE" ;;
+esac
+
+start_shctl "$KOMENDA" "$@"
+# shellcheck disable=SC1090
+. "$SHCTL_DIR/cmd/$KOMENDA.sh"
+komenda_main "$@"
