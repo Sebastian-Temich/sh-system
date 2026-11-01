@@ -325,7 +325,11 @@ shctl doctor [--test-notify]
 Sprawdza narzędzia, logowania gh, codex i claude, Docker, serwer herdr, `notify.sh` i temat ntfy,
 globalny `core.hooksPath`, lokalny `core.hooksPath` w repo z `~/sh/projekty`, wolne miejsce,
 `porty.md`, klony w `SH_OBSIDIAN_DIR` (czy są czyste i zgodne z origin, przez `git ls-remote`, bez
-pobierania; różnica to `uwaga`) oraz liczbę repo w `~/sh/stan/do-usuniecia.md` (`uwaga`, gdy są). Stany: `ok`, `uwaga`, `blad`; tylko `blad` daje kod 1. Domyślnie nic nie wysyła, a
+pobierania; różnica to `uwaga`) oraz repo z `~/sh/stan/do-usuniecia.md` (`uwaga`, gdy są).
+
+Repo z listy `doctor` sprawdza przez `gh repo view` i zdejmuje wiersze tych, których już nie ma. To
+jego jedyny zapis; przy `--dry-run` tylko je wskazuje. Błąd sieci lub logowania niczego nie zdejmuje
+(`niesprawdzone`). Stany: `ok`, `uwaga`, `blad`; tylko `blad` daje kod 1. Domyślnie nic nie wysyła, a
 `--test-notify` wysyła prawdziwe powiadomienie.
 
 ```json
@@ -350,4 +354,4 @@ SHCTL_E2E=1 bats scripts/shctl/tests/new-project-e2e.bats
 
 Test zakłada prywatne repo `sh-test-RRRRMMDD-HHMM` i przed utworzeniem dopisuje je do
 `~/sh/stan/do-usuniecia.md`. Repo usuwa właściciel (`gh repo delete` wymaga zakresu `delete_repo`), a
-potem kasuje wiersz z listy.
+wiersz z listy zdejmuje kolejny `shctl doctor`.

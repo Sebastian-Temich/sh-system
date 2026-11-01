@@ -95,12 +95,57 @@ do_usuniecia() { jq -r '.wynik.kontrole | map(select(.nazwa == "repo do usunięc
   [ "$(do_usuniecia)" = "ok:0" ]
 }
 
-@test "lista repo do usuniecia: liczba i nazwy, bez wplywu na kod wyjscia" {
+lista() {
   mkdir -p "$SH_DIR/stan"
-  printf '# Repo do usunięcia\n\n| Nazwa | Data | Po co |\n|---|---|---|\n| sh-test-shctl | 2026-11-02 | test |\n| `sh-test-20261102-0900` | 2026-11-02 | test |\n' >"$SH_DIR/stan/do-usuniecia.md"
+  printf '# Repo do usunięcia\n\nOpis.\n\n| Nazwa | Data | Po co |\n|---|---|---|\n| sh-test-a | 2026-11-02 | test |\n| `sh-test-b` | 2026-11-02 | test |\n' >"$SH_DIR/stan/do-usuniecia.md"
+}
+
+@test "lista: istniejace repo zostaja, bez wplywu na kod wyjscia" {
+  lista
+  printf 'x' >"$T/repo-istnieje"
   run --separate-stderr "$SHCTL" doctor --json
   [ "$status" -eq 0 ]
-  [ "$(do_usuniecia)" = "uwaga:2: sh-test-shctl sh-test-20261102-0900" ]
+  [ "$(do_usuniecia)" = "uwaga:2: sh-test-a sh-test-b" ]
+  grep -q 'repo view test-owner/sh-test-a --json name' "$T/gh.calls"
+}
+
+@test "lista: repo, ktorych nie ma, znikaja z listy" {
+  lista
+  cat >"$T/mock/gh" <<'MOCK'
+#!/bin/bash
+case "$3" in
+  */sh-test-a) echo "GraphQL: Could not resolve to a Repository" >&2; exit 1 ;;
+esac
+MOCK
+  run --separate-stderr "$SHCTL" doctor --json
+  [ "$(do_usuniecia)" = "uwaga:1: sh-test-b; zdjęte z listy: sh-test-a" ]
+  ! grep -q 'sh-test-a' "$SH_DIR/stan/do-usuniecia.md" || false
+  grep -q '`sh-test-b`' "$SH_DIR/stan/do-usuniecia.md"
+  grep -qx 'Opis.' "$SH_DIR/stan/do-usuniecia.md"
+  grep -qx '| Nazwa | Data | Po co |' "$SH_DIR/stan/do-usuniecia.md"
+}
+
+@test "lista: wszystkie usuniete to zero i stan ok" {
+  lista
+  run --separate-stderr "$SHCTL" doctor --json
+  [ "$(do_usuniecia)" = "ok:0; zdjęte z listy: sh-test-a sh-test-b" ]
+}
+
+@test "lista: blad sieci lub logowania niczego nie zdejmuje" {
+  lista
+  printf '#!/bin/sh\necho "HTTP 401: Bad credentials" >&2\nexit 1\n' >"$T/mock/gh"
+  cp "$SH_DIR/stan/do-usuniecia.md" "$T/l"
+  run --separate-stderr "$SHCTL" doctor --json
+  [ "$(do_usuniecia)" = "uwaga:2; niesprawdzone: sh-test-a sh-test-b" ]
+  cmp "$SH_DIR/stan/do-usuniecia.md" "$T/l"
+}
+
+@test "lista: --dry-run nie zmienia pliku" {
+  lista
+  cp "$SH_DIR/stan/do-usuniecia.md" "$T/l"
+  run --separate-stderr "$SHCTL" doctor --dry-run --json
+  [ "$(do_usuniecia)" = "ok:0; do zdjęcia z listy: sh-test-a sh-test-b" ]
+  cmp "$SH_DIR/stan/do-usuniecia.md" "$T/l"
 }
 
 @test "lista z samym naglowkiem: zero" {
