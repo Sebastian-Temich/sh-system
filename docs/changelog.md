@@ -20,3 +20,4 @@
 - Workflow `test.yml` uruchamia testy bats na ubuntu-24.04, testy z `plutil` są pomijane poza macOS.
 - Wrapper hooków wywołuje też `.githooks/`, `SH_BEZ_HOOKOW_REPO` pomija je przy nieprzejrzanym kodzie.
 - Wymagania `shctl doctor` i `shctl review run`, ostrzeżenie `install.sh` obejmuje `~/sh/projekty`.
+- Projekty SH bez hooków git: wrapper nie woła `.githooks/`, `SH_BEZ_HOOKOW_REPO` usunięte, kontrole w CI.

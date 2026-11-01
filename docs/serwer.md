@@ -562,13 +562,11 @@ Archiwum zawiera temat ntfy, więc traktuj je jak dane poufne.
 serwerze: `pre-push` odrzuca push na gałąź `production`.
 
 Globalny `core.hooksPath` wyłącza `.git/hooks`, dlatego katalog zawiera wrapper każdego typu hooka.
-Wrapper wywołuje hook z `core.hooksPath` zapisanego w repo albo z `.git/hooks`, a potem wykonywalny
-hook z `<repo>/.githooks/`. Pierwszy błąd kończy wywołania. Nie ma wrapperów `push-to-checkout` i
-`proc-receive`, bo ich obecność zmienia zachowanie gita.
+Wrapper wywołuje hook projektu z `core.hooksPath` zapisanego w repo albo z `.git/hooks`. Nie ma
+wrapperów `push-to-checkout` i `proc-receive`, bo ich obecność zmienia zachowanie gita.
 
-`.githooks/` jest śledzony w repo, więc to kod z commita, także nieprzejrzanego. `git worktree add`
-uruchamia jego `post-checkout`. Operacje na cudzym kodzie ustawiają `SH_BEZ_HOOKOW_REPO=1`, które
-pomija `.githooks/`.
+Hooków śledzonych w repo, np. `.githooks/`, wrapper celowo nie wywołuje (`proces-v1.md`, „Znane
+ograniczenia”).
 
 Lokalny `core.hooksPath` wygrywa z globalnym, więc w takim repo, np. z husky, hook globalny się nie
 uruchamia i nie blokuje pusha. `install.sh` ostrzega o takich repo w `~/sh` i

@@ -105,8 +105,9 @@ Wymagania dla komend shctl:
 
 - `shctl doctor` ostrzega o każdym repo w `~/sh/projekty` z lokalnym `core.hooksPath`, bo taki wpis
   wyłącza w nim globalny hook `pre-push`.
-- `shctl review run` i każda inna operacja na nieprzejrzanym kodzie ustawia `SH_BEZ_HOOKOW_REPO=1`,
-  także przy `git worktree add`, które uruchamia `post-checkout` z dodawanego commita.
+
+Projekty SH nie używają hooków git, a lint, formatowanie i testy sprawdza CI. shctl nie instaluje
+hooków i nie wywołuje hooków śledzonych w repo („Znane ograniczenia”).
 
 Skille wywołują shctl z argumentami. shctl jest idempotentny, ma `--dry-run`, `--json` i testy
 (bats), a dokumentację w `docs/shctl.md`. Gdy brakuje komendy, agent wykonuje operację ręcznie i
@@ -470,8 +471,11 @@ go ponownie (`shctl reset-dryrun`) i porównujemy czas, iteracje i eskalacje w `
 - Push na `production` blokują tylko globalny hook `pre-push` i reguły procesu. Hook można obejść
   (`--no-verify`, inny `core.hooksPath`), a lokalny `core.hooksPath`, np. z husky, wyłącza go w danym
   repo. Twardą granicą będzie osobne konto bota w etapie B.
-- Hooki z `.githooks/` to kod z commita, uruchamiany na serwerze poza profilem uprawnień agenta. Dopóki
-  nie ma `shctl review run` z `SH_BEZ_HOOKOW_REPO=1`, review kodu ręcznie wymaga ustawienia tej zmiennej.
+- Projekty nie mają hooków git: ani `.githooks/`, ani husky, ani pre-commit. Hook z repo to kod sprzed
+  review uruchamiany na serwerze poza profilem uprawnień agenta. Przykład: `git worktree add` wykonuje
+  `post-checkout` z dodawanego commita, więc zadziałałby przed review. Kontrole robi CI, a
+  `check-dod.sh` odrzuca `.githooks/` i husky. Globalny wrapper woła tylko `.git/hooks` i lokalny
+  `core.hooksPath`, czyli pliki spoza commitów.
 
 ## Model docelowy (etap B), skrót
 
