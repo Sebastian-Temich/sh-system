@@ -27,3 +27,4 @@
 - Zasada pracy nad systemem: gałąź i PR, merge po zielonym CI, zgoda właściciela przy bezpieczeństwie, dostępach i produkcji.
 - `shctl new-project` włącza usuwanie gałęzi po merge'u.
 - Test na GitHubie tylko za zgodą właściciela, repo `sh-test-RRRRMMDD-HHMM`, lista `~/sh/stan/do-usuniecia.md` w `shctl doctor`.
+- `shctl doctor` sprawdza repo z `do-usuniecia.md` i zdejmuje te, których już nie ma.

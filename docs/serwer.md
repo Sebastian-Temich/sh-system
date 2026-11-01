@@ -47,8 +47,8 @@ tak jak zmiany dotyczące bezpieczeństwa. Dotyczy to `SHCTL_E2E=1` i każdego r
 może założyć repo lub zmienić je na GitHubie. Odczyt stanu repo zgody nie wymaga.
 
 Repo testowe ma unikalną nazwę `sh-test-RRRRMMDD-HHMM` i przed utworzeniem trafia do
-`~/sh/stan/do-usuniecia.md` (nazwa, data, po co). Repo usuwa właściciel, a potem kasuje wiersz z
-listy. `shctl doctor` pokazuje, ile repo czeka na usunięcie.
+`~/sh/stan/do-usuniecia.md` (nazwa, data, po co). Repo usuwa właściciel. `shctl doctor` pokazuje, ile
+repo czeka na usunięcie, i zdejmuje z listy te, których już nie ma.
 
 ## Polityka instalacji
 

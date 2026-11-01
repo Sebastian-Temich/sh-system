@@ -1,4 +1,5 @@
-# shctl doctor [--test-notify]: stan narzędzi i logowań. Tylko odczyt; blad daje kod 1.
+# shctl doctor [--test-notify]: stan narzędzi i logowań; blad daje kod 1. Sprawdza odczytem. Zapisuje
+# tylko jedno: usuwa z ~/sh/stan/do-usuniecia.md repo, których już nie ma (nie przy --dry-run).
 # --test-notify wysyła prawdziwe powiadomienie.
 # shellcheck shell=bash
 
@@ -99,21 +100,39 @@ sprawdz_obsidian() {
   [ "$ile" -gt 0 ] || wpis "Obsidian" ok "brak klonów w $SH_OBSIDIAN_DIR"
 }
 
-# Lista jest utrzymywana ręcznie: repo usuwa właściciel, potem kasuje wiersz.
+# Tylko „nie ma takiego repo” zdejmuje wpis: błąd sieci albo logowania nie może skasować listy.
 sprawdz_do_usuniecia() {
-  local plik="$STAN/do-usuniecia.md" nazwy n
-  nazwy=""
-  if [ -f "$plik" ]; then
-    nazwy="$(awk -F'|' '/^\|/ && !/^\|[- |]*$/ {
-      p = $2; gsub(/^[ \t`]+|[ \t`]+$/, "", p)
-      if (p != "Nazwa" && p != "") print p }' "$plik")"
+  local plik="$STAN/do-usuniecia.md" nazwy n wyj nowy zostaja="" usuniete="" niepewne="" ile=0 opis
+  [ -f "$plik" ] || { wpis "repo do usunięcia" ok "0"; return 0; }
+  nazwy="$(awk -F'|' '/^\|/ && !/^\|[- |]*$/ {
+    p = $2; gsub(/^[ \t`]+|[ \t`]+$/, "", p)
+    if (p != "Nazwa" && p != "") print p }' "$plik")"
+  for n in $nazwy; do
+    if ! command -v gh >/dev/null; then
+      niepewne="$niepewne $n"
+    elif wyj="$(z_limitem 20 gh repo view "$SH_GH_OWNER/$n" --json name 2>&1)"; then
+      zostaja="$zostaja $n"
+    else
+      case "$wyj" in
+        *"Could not resolve"*)
+          usuniete="$usuniete $n"
+          if [ "$DRY" -eq 0 ]; then
+            nowy="$(tmp_plik)"
+            awk -F'|' -v n="$n" '{ p = $2; gsub(/^[ \t`]+|[ \t`]+$/, "", p) } !/^\|/ || p != n' "$plik" >"$nowy"
+            podmien_plik "$nowy" "$plik"
+          fi
+          ;;
+        *) niepewne="$niepewne $n" ;;
+      esac
+    fi
+  done
+  for n in $zostaja $niepewne; do ile=$((ile + 1)); done
+  opis="$ile${zostaja:+:$zostaja}"
+  [ -z "$niepewne" ] || opis="$opis; niesprawdzone:$niepewne"
+  if [ -n "$usuniete" ]; then
+    if [ "$DRY" -eq 0 ]; then opis="$opis; zdjęte z listy:$usuniete"; else opis="$opis; do zdjęcia z listy:$usuniete"; fi
   fi
-  if [ -z "$nazwy" ]; then
-    wpis "repo do usunięcia" ok "0"
-    return 0
-  fi
-  n="$(printf '%s\n' "$nazwy" | wc -l | tr -d ' ')"
-  wpis "repo do usunięcia" uwaga "$n: $(printf '%s\n' "$nazwy" | paste -sd ' ' -)"
+  if [ "$ile" -gt 0 ]; then wpis "repo do usunięcia" uwaga "$opis"; else wpis "repo do usunięcia" ok "$opis"; fi
 }
 
 komenda_main() {
