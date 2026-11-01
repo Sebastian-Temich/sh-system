@@ -15,3 +15,4 @@
 - Warunki startu pilota: wylogowane Supabase CLI i Vercel CLI, deny jako zabezpieczenie przed pomyłką.
 - Bloki `tylko-tryb:L` w DoD, czysty worktree jako główna ochrona `.env*`, nowe punkty etapu B.
 - Sekcja „Droga na produkcję”, punkt „migracje zgodne wstecz” w DoD zadania, środowisko STAGING.
+- Gałąź produkcyjna `production`, granica bezpieczeństwa, ponowienie wydania z `--tylko-aplikacja`.

@@ -360,10 +360,10 @@ W etapie A nie ma deployów produkcyjnych. Sekcja opisuje drogę, z której korz
 
 - Konta prod na kontach klienta: Vercel, Supabase prod w UE, domena.
 - Osobny projekt Supabase staging.
-- Vercel CLI i Supabase CLI zalogowane tylko u właściciela.
-- Poświadczenia prod w menedżerze haseł lub w `.env.prod.local` poza repo.
-- W Vercel wyłączony automatyczny deploy produkcyjny z `main`, preview zostaje: gałąź produkcyjna
-  ustawiona na gałąź bez pushy, dzięki czemu `main` wdraża się jako preview ze zmiennymi staging.
+- Vercel CLI i Supabase CLI zalogowane tylko u właściciela, poświadczenia prod w menedżerze haseł
+  lub w `.env.prod.local` poza repo.
+- W Vercel gałąź produkcyjna to `production`, a nie `main`, więc `main` daje wdrożenia podglądowe pod
+  stałym aliasem staging. Gałęzi `production` nikt nie zakłada ani nie pushuje.
   `git.deploymentEnabled` tu nie pasuje, bo wyłączyłby także wdrożenie `main`, czyli staging.
 - Zmienne prod w panelu Vercel.
 - W GitHub Secrets tylko `STAGING_DB_URL` (connection string jednej bazy, a nie token konta).
@@ -374,25 +374,35 @@ Kroki opisuje README szablonu.
 ### Wydanie
 
 1. Merge na `main`.
-2. CI migruje staging (`staging.yml`).
+2. CI migruje staging (`staging.yml`), a Vercel wdraża podgląd pod aliasem staging.
 3. QA i dokumentacja.
 4. Checkpoint 2 na stagingu (w trybie M: odbiór).
 5. Orkiestrator przygotowuje `CHANGELOG.md`, tag `vX.Y.Z`, notatki, listę migracji i plan rollbacku
    w `docs/wydanie/techniczna/`.
 6. Właściciel uruchamia `scripts/deploy-prod.sh vX.Y.Z`:
-   sprawdzenie tagu i CI, lista migracji, potwierdzenie, backup bazy prod, migracje prod, promocja
-   na Vercel prod tej samej wersji co na stagingu, smoke test, rollback przy błędzie.
+   sprawdzenie tagu i CI, wdrożenie podglądowe tego commita, lista migracji, potwierdzenie, backup
+   bazy prod, migracje prod, `vercel promote`, smoke test, `vercel rollback` przy błędzie.
 7. Orkiestrator aktualizuje `status.md` i `metryki.md`.
 
 „Ta sama wersja” oznacza ten sam commit. Vercel przy promocji preview buduje go od nowa ze zmiennymi
 prod, więc powstaje nowe wdrożenie. Skrypt ma `--dry-run` i `--target staging` do prób, także
 rollbacku.
 
+Gdy Vercel zawiedzie po migracjach, baza jest zaktualizowana, a stara aplikacja działa dzięki
+migracjom zgodnym wstecz. Właściciel ponawia wtedy wydanie z `--tylko-aplikacja`.
+
 ### Zasady
 
 - Migracje są zgodne wstecz (expand/contract): poprzednia wersja aplikacji działa na nowym schemacie.
+  Zasada wchodzi w DoD zadania.
 - Rollback aplikacji to poprzednia wersja w Vercel. Rollback bazy to migracja naprawcza albo backup.
+- W etapie A nie ma deployów prod.
 - Tryb S idzie tą samą drogą w skrócie: bez Checkpointu 2, z odbiorem zlecenia.
+
+### Granica bezpieczeństwa
+
+Poświadczenia bazy prod istnieją wyłącznie u właściciela. Ewentualny deploy aplikacji przez Vercel
+dotyczy tylko kodu z `main` po review i CI.
 
 ## Bezpieczeństwo publicznych repo
 
