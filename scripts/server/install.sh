@@ -7,7 +7,8 @@
 # Plisty: scripts/server/*.plist kopiuje do ~/Library/LaunchAgents tylko przy roznicy
 # i przeladowuje agenta. Niezaladowanego agenta laduje zawsze, takze bez zmiany plisty.
 # Agent z RunAtLoad wystartuje wtedy ponownie. Nieudany bootstrap to kod bledu, komenda
-# do recznego zaladowania i notify.sh high.
+# do recznego zaladowania i notify.sh high. Flaga ~/sh/stan/autostart.off wstrzymuje
+# ladowanie agenta sh-start; plista jest nadal kopiowana, bez dotykania launchd.
 # Katalogi docelowe: SH_DIR, SH_BIN, SH_AGENTS. Powiadomienie: SH_NOTIFY_CMD.
 set -euo pipefail
 
@@ -16,6 +17,8 @@ SH_DIR="${SH_DIR:-$HOME/sh}"
 BIN="${SH_BIN:-$SH_DIR/bin}"
 AGENTS="${SH_AGENTS:-$HOME/Library/LaunchAgents}"
 NOTIFY="${SH_NOTIFY_CMD:-$REPO/scripts/server/notify.sh}"
+AUTOSTART_LABEL=pl.iskt.softwarehouse.sh-start
+AUTOSTART_OFF="$SH_DIR/stan/autostart.off"
 fail=0
 
 mkdir -p "$BIN" "$AGENTS"
@@ -45,23 +48,34 @@ link() {
 }
 
 plist() {
-  local src="$1" name dst domain label
+  local src="$1" name dst domain label off=0 changed=""
   name="$(basename "$src")"
   dst="$AGENTS/$name"
   domain="gui/$(id -u)"
   label="${name%.plist}"
+  if [ "$label" = "$AUTOSTART_LABEL" ] && [ -e "$AUTOSTART_OFF" ]; then
+    off=1
+  fi
 
   if ! cmp -s "$src" "$dst"; then
+    changed=1
     if ! plutil -lint -s "$src"; then
       echo "BLAD:    $src nie jest poprawna plista" >&2
       fail=1
       return
     fi
     # Agent moze nie byc zaladowany, np. przy pierwszej instalacji.
-    launchctl bootout "$domain/$label" 2>/dev/null || true
+    [ "$off" = 1 ] || launchctl bootout "$domain/$label" 2>/dev/null || true
     cp "$src" "$dst.tmp.$$"
     mv -f "$dst.tmp.$$" "$dst"
-  elif launchctl print "$domain/$label" >/dev/null 2>&1; then
+  fi
+
+  if [ "$off" = 1 ]; then
+    echo "pomijam: $label: autostart wyłączony przez właściciela"
+    return
+  fi
+
+  if [ -z "$changed" ] && launchctl print "$domain/$label" >/dev/null 2>&1; then
     echo "ok:      $dst"
     return
   fi

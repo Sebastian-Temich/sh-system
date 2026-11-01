@@ -84,3 +84,33 @@ install() {
   [ "$(tr '\n' ' ' <"$T/calls")" = "bootout bootstrap " ]
   cmp "$REPO/scripts/server/$LABEL.plist" "$PLIST"
 }
+
+@test "flaga autostart.off: brak launchctl i komunikat" {
+  mkdir -p "$T/sh/stan"
+  touch "$T/sh/stan/autostart.off"
+  install
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"autostart wyłączony przez właściciela"* ]]
+  [ ! -s "$T/calls" ]
+  [ ! -f "$T/loaded" ]
+}
+
+@test "flaga autostart.off, plista zmieniona: kopia bez launchctl" {
+  mkdir -p "$T/sh/stan"
+  touch "$T/sh/stan/autostart.off"
+  echo '<!-- x -->' >>"$PLIST"
+  install
+  [ "$status" -eq 0 ]
+  [ ! -s "$T/calls" ]
+  cmp "$REPO/scripts/server/$LABEL.plist" "$PLIST"
+}
+
+@test "usuniecie flagi: kolejny install laduje agenta" {
+  mkdir -p "$T/sh/stan"
+  touch "$T/sh/stan/autostart.off"
+  install
+  rm "$T/sh/stan/autostart.off"
+  install
+  [ "$status" -eq 0 ]
+  [ -f "$T/loaded" ]
+}

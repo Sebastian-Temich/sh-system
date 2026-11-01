@@ -27,7 +27,8 @@ narzędzie trzeba więc zacommitować w `sh-system`.
 
 Plisty LaunchAgentów mają źródło w `scripts/server/*.plist`. `install.sh` kopiuje je tylko przy
 różnicy, a potem przeładowuje agenta (`launchctl bootout` i `bootstrap`). Agenta niezaładowanego
-(`launchctl print`) ładuje przy każdym uruchomieniu, także bez zmiany plisty. Nieudany `bootstrap`
+(`launchctl print`) ładuje przy każdym uruchomieniu, także bez zmiany plisty, chyba że
+`~/sh/stan/autostart.off` wyłącza `sh-start`. Nieudany `bootstrap`
 kończy się kodem błędu, komendą do ręcznego załadowania i powiadomieniem `notify.sh high`. Agent z `RunAtLoad` startuje wtedy od razu: dla
 `sh-start` jest to bezpieczne, bo skrypt uruchamia tylko to, co nie działa. Ręczna zmiana w
 `~/Library/LaunchAgents` zostanie nadpisana przy następnym `install.sh`.
@@ -142,16 +143,26 @@ tylko wtedy, gdy nie działa, więc można go wywoływać wielokrotnie. Sesje ag
 panelach trzeba wznowić ręcznie: integracja `herdr integration install claude` nie jest
 zainstalowana, bo zmienia konfigurację Claude Code.
 
-Wyłączenie autostartu (kolejny `install.sh` załaduje agenta z powrotem):
+Wyłączenie autostartu:
 
 ```sh
+mkdir -p ~/sh/stan
+touch ~/sh/stan/autostart.off
 launchctl bootout gui/$(id -u)/pl.iskt.softwarehouse.sh-start
 ```
+
+Sam `bootout` nie wystarczy, bo kolejny `install.sh` załadowałby agenta z powrotem. Przy fladze
+`install.sh` wypisuje „autostart wyłączony przez właściciela” i nie ładuje `sh-start`. Zmienioną
+plistę nadal kopiuje, ale nie dotyka `launchd`.
+
+Flagę czyta tylko `install.sh`. `launchd` wczytuje plisty z `~/Library/LaunchAgents` przy każdym
+logowaniu, więc po restarcie agent i tak wystartuje; nie testowano tego na tej maszynie.
 
 Włączenie z powrotem:
 
 ```sh
-launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/pl.iskt.softwarehouse.sh-start.plist
+rm ~/sh/stan/autostart.off
+~/sh/sh-system/scripts/server/install.sh
 ```
 
 ### Ściąga CLI herdr
