@@ -7,6 +7,8 @@
 # ~/.codex/config.toml, ~/.config/sh, ~/sh/bin, ~/sh/porty.md.
 # Pomija: auth.json, .credentials.json, ~/.claude.json i jego kopie (backups/), historie,
 # sesje, cache. Gdy gitleaks znajdzie sekret, archiwum jest kasowane (kod wyjscia 1).
+# ~/sh/bin to symlinki, wiec tresc skryptow zyje w repo sh-system: niezacommitowane lub
+# niewypchniete zmiany daja ostrzezenie i wpis w ~/sh/logs/backup-config.log.
 set -euo pipefail
 
 DEST=${1:-$HOME/sh/backups}
@@ -15,9 +17,32 @@ ARCHIVE="$DEST/config-$STAMP.tar.gz"
 
 log() { printf 'backup-config: %s\n' "$*"; }
 die() { printf 'backup-config: BLAD: %s\n' "$*" >&2; exit 1; }
+warn() {
+  printf 'backup-config: UWAGA: %s\n' "$*" >&2
+  printf '%s UWAGA: %s\n' "$(date '+%F %T')" "$*" >>"$LOG"
+}
+
+# Skrypty nie trafiaja do archiwum, wiec ich jedyna kopia to zdalne repo.
+check_repo() {
+  local dirty ahead
+  if ! dirty=$(git -C "$REPO" status --porcelain 2>/dev/null); then
+    warn "brak repo $REPO, archiwum nie obejmuje tresci skryptow"
+    return
+  fi
+  [ -z "$dirty" ] || warn "$REPO ma niezacommitowane zmiany, nie ma ich w zadnej kopii"
+  if ahead=$(git -C "$REPO" rev-list --count '@{upstream}..HEAD' 2>/dev/null); then
+    [ "$ahead" = 0 ] || warn "$REPO ma niewypchniete commity ($ahead)"
+  else
+    warn "$REPO: galaz bez upstreamu, nie da sie sprawdzic wypchniecia"
+  fi
+}
 
 # Archiwum zawiera m.in. temat ntfy, wiec tylko dla wlasciciela.
 umask 077
+REPO=${SH_REPO:-$HOME/sh/sh-system}
+LOG=${SH_LOG:-$HOME/sh/logs/backup-config.log}
+mkdir -p "$(dirname "$LOG")"
+check_repo
 command -v gitleaks >/dev/null || die 'brak gitleaks w PATH (nie da sie sprawdzic archiwum)'
 mkdir -p "$DEST"
 WORK=$(mktemp -d)

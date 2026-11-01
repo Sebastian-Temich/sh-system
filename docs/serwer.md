@@ -3,9 +3,9 @@
 iMac13,2 (2012), Intel i5-3470S, 4 rdzenie bez HT, 24 GB RAM, macOS 14.8.9 przez OpenCore
 Legacy Patcher. Narzędzia, przeglądarki i testy działają natywnie. Docker służy do usług.
 
-- Skrypty: `~/sh/bin` to symlinki do repo `sh-system` (sekcja „Skrypty serwera”)
+- Skrypty, Brewfile, plisty: źródłem jest repo `sh-system` (sekcja „Skrypty serwera”)
 - Toolchain: `~/sh/bin/setup-toolchain.sh` (idempotentny, bez sudo)
-- Homebrew: `~/sh/Brewfile`
+- Homebrew: `~/sh/Brewfile` (symlink do `scripts/server/Brewfile`)
 - Porty: `~/sh/porty.md`
 - Chrome for Testing: `~/sh/browsers`
 
@@ -22,13 +22,19 @@ Skrypt jest idempotentny i uruchamiamy go po dodaniu nowego skryptu. Zwykły pli
 zastępuje tylko, gdy jest identyczny z repo; przy różnicy kończy się błędem i niczego nie nadpisuje,
 więc zmiany trzeba najpierw przenieść do repo. Plik spoza repo zgłasza ostrzeżeniem.
 
-`install.sh` nie obejmuje `Brewfile` i plisty LaunchAgenta: `scripts/server/` ma ich kopie, a
-działające pliki to `~/sh/Brewfile` i `~/Library/LaunchAgents/`.
+`~/sh/Brewfile` to także symlink, do `scripts/server/Brewfile`, na tych samych zasadach. Dopisane
+narzędzie trzeba więc zacommitować w `sh-system`.
+
+Plisty LaunchAgentów mają źródło w `scripts/server/*.plist`. `install.sh` kopiuje je tylko przy
+różnicy, a potem przeładowuje agenta (`launchctl bootout` i `bootstrap`). Agent z `RunAtLoad` startuje wtedy od razu: dla
+`sh-start` jest to bezpieczne, bo skrypt uruchamia tylko to, co nie działa. Ręczna zmiana w
+`~/Library/LaunchAgents` zostanie nadpisana przy następnym `install.sh`.
 
 ## Polityka instalacji
 
 1. **Zależności projektowe** agenci instalują sami (pnpm, uv itp.).
-2. **Narzędzia z brew** agenci instalują sami, ale każde dopisują do `~/sh/Brewfile`
+2. **Narzędzia z brew** agenci instalują sami, ale każde dopisują do `~/sh/Brewfile` (commit w
+   `sh-system`)
    i do sekcji „Dziennik narzędzi” poniżej.
 3. **sudo, ustawienia systemu i Docker Desktop** zmienia wyłącznie właściciel.
    Agent wypisuje potrzebną komendę i czeka.
@@ -342,9 +348,9 @@ czy Paperclip nie ma aktywnych zadań.
 | Usługa | Zalecenie | Zysk | Uzasadnienie |
 |---|---|---|---|
 | Runner release + dind | **Wstrzymać** | 240 MB | Pilot nie robi wydań; zysk jest mały, ale bez kosztu |
-| Chrome | **Zamknąć**, gdy zbędny | 6 GB | Największy zysk RAM |
-| ChatGPT/Codex Desktop | **Zamknąć** | 1,3 GB | Worker używa Codex CLI |
-| Claude Desktop | Zamknąć, gdy zbędny | 1,9 GB | Worker używa Claude Code |
+| Chrome | **Zamknąć** na czas pracy agentów | 6 GB | Największy zysk RAM |
+| ChatGPT/Codex Desktop | **Zamknąć** na czas pracy agentów | 1,3 GB | Worker używa Codex CLI |
+| Claude Desktop | **Zamknąć** na czas pracy agentów | 1,9 GB | Worker używa Claude Code |
 | Runner CI + dind | Zostawić; wstrzymać przy dużym obciążeniu | do 4 GiB | Bez niego PR nie dostaną kontroli |
 | Forgejo | Zostawić | nd. | Bez niego nie ma repo i review |
 | Paperclip | Zostawić, jeśli pilot na nim działa | 1 GB | Inaczej wstrzymać (komenda niżej) |
@@ -527,7 +533,9 @@ backup-config.sh /Volumes/X   # do wskazanego katalogu
 
 Archiwum `config-<data>.tar.gz` (tylko dla właściciela) zawiera `~/.claude`, `~/.codex/config.toml`,
 `~/.config/sh`, `~/sh/bin` i `~/sh/porty.md`. `~/sh/bin` trafia tam jako symlinki, więc treści
-skryptów nie ma w archiwum: odtwarza je klon `sh-system` i `install.sh`. Z `~/.claude` trafiają tylko ustawienia, skille, lista
+skryptów nie ma w archiwum: odtwarza je klon `sh-system` i `install.sh`. Gdy `~/sh/sh-system` ma
+niezacommitowane lub niewypchnięte zmiany, skrypt ostrzega i dopisuje wpis do
+`~/sh/logs/backup-config.log`, ale archiwum powstaje. Z `~/.claude` trafiają tylko ustawienia, skille, lista
 pluginów i pamięć projektów. Nie ma w nim sesji, historii, cache, `auth.json`, `.credentials.json`
 ani `.claude.json`. Po spakowaniu sprawdza je gitleaks; przy trafieniu archiwum jest kasowane.
 Archiwum zawiera temat ntfy, więc traktuj je jak dane poufne.

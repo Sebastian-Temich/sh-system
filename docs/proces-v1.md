@@ -21,6 +21,7 @@
 - [Dostępy i środowiska](#dostępy-i-środowiska)
 - [Bezpieczeństwo publicznych repo](#bezpieczeństwo-publicznych-repo)
 - [Etykiety GitHub](#etykiety-github)
+- [Warunki startu pilota](#warunki-startu-pilota)
 - [Projekt wzorcowy](#projekt-wzorcowy)
 - [Znane ograniczenia](#znane-ograniczenia)
 - [Model docelowy (etap B), skrót](#model-docelowy-etap-b-skrót)
@@ -66,13 +67,13 @@ Wszystko inne w tym dokumencie to model docelowy, wdrażany w etapie B.
 - **Lekka izolacja:** zablokowane zdjęcia, pęk kluczy i profile wszystkich przeglądarek
   zainstalowanych na serwerze, bez kluczy produkcyjnych w zasięgu agentów. Zasada obowiązuje też
   Codexa (ograniczenie techniczne: „Znane ograniczenia”). Brak kluczy produkcyjnych potwierdza
-  właściciel z agentem w zadaniu A1.6 (krok 4); to warunek startu A5.1.
+  właściciel w „Warunkach startu pilota”.
 - **Toolchain:** natywnie w macOS (Homebrew, fnm + Node LTS + pnpm, uv). Projekty JS używają
   wyłącznie pnpm (wspólny magazyn pakietów, więc worktree nie duplikują `node_modules`). Docker
   tylko dla usług (Supabase). Testy E2E: Playwright z własnymi przeglądarkami (chromium + webkit,
   headless).
 - **Polityka instalacji:** zależności projektowe agenci instalują sami; narzędzia z brew też sami,
-  z dopisaniem do `~/sh/Brewfile`; sudo, ustawienia systemu i Docker Desktop zmienia wyłącznie
+  z dopisaniem do `~/sh/Brewfile` (symlink do repo `sh-system`); sudo, ustawienia systemu i Docker Desktop zmienia wyłącznie
   właściciel.
 - **Hosting produkcji:** domyślnie Vercel + Supabase Cloud (region UE) na kontach klienta. Hosting
   proponuje intake, a właściciel akceptuje.
@@ -205,7 +206,8 @@ Pliki wspólne (`status.md`, `decyzje.md`, `metryki.md`, `06-zadania/index.md`, 
 Worker pisze tylko własne pliki: kod, testy, docs obszaru swojego zadania i raport
 `docs/07-realizacja/T-NR.md` z sekcjami „Decyzje”, „Drobne uwagi” i „Propozycje dla systemu”.
 Orkiestrator przenosi dwie pierwsze do plików wspólnych, a propozycje zbiera do
-`sh-system/docs/propozycje.md` przez PR do `sh-system`. Decyzję o nich podejmuje retro.
+`sh-system/docs/propozycje.md` przez PR do `sh-system`. Decyzję o nich podejmuje retro: w etapie A
+właściciel przegląda je w retro pilota (prompt ręczny), a od etapu B robi to skill `sh-retro`.
 
 ## Definition of Done
 
@@ -238,7 +240,9 @@ Tryb S nie ma DoD etapów: jego DoD to issue i checklista PR.
 ## Review, QA, pętla poprawek
 
 - **Review PR** robi zawsze inny model niż autor (w etapie A: autor Claude, reviewer Codex).
-  Sprawdza kod, testy, kryteria z issue, bezpieczeństwo i sekrety.
+  Sprawdza kod, testy, kryteria z issue, bezpieczeństwo i sekrety. `shctl review run` tworzy dla
+  niego osobny, czysty worktree `../wt/review-NR` bez plików env. Reviewer pracuje tylko na kodzie i
+  diffie, a testy uruchamia CI.
 - **Review etapu:** dokumenty etapu powstają na gałęzi `stage/ETAP` i przechodzą przez PR. Review
   robi Codex (`sh-review`, tryb etapu), akceptację w checkpointach daje właściciel, potem następuje
   merge.
@@ -324,9 +328,9 @@ sam.
 | PROD | Agenci nie mają zapisu. Produkcja zmienia się wyłącznie przez GitHub Actions z akceptacją właściciela (environment „production”) |
 
 Sekrety nie trafiają do repo, docs ani issue. Lokalnie trzymamy je w `.env.local`, który
-`shctl task dispatch` kopiuje do każdego worktree. `.env.local` zawiera tylko klucze testowe.
-Reviewer nie widzi sekretów: profil reviewer ma deny na `.env*`. gitleaks działa w CI. Resend w dev
-ma tylko klucz testowy.
+`shctl task dispatch` kopiuje do worktree workera. `.env.local` zawiera tylko klucze testowe.
+Reviewer nie dostaje sekretów: `shctl review run` tworzy mu czysty worktree `../wt/review-NR` bez
+plików env, a testy uruchamia CI. gitleaks działa w CI. Resend w dev ma tylko klucz testowy.
 
 ## Bezpieczeństwo publicznych repo
 
@@ -352,6 +356,17 @@ zablokowana zależność, brak miejsca na dysku). PR czekający na review przy l
 
 Kamienie milowe jako GitHub Milestones.
 
+## Warunki startu pilota
+
+Właściciel potwierdza tę listę przed pierwszym uruchomieniem projektu wzorcowego:
+
+- [ ] Izolacja: reguły deny działają (test: `ls ~/Pictures` jest blokowany).
+- [ ] Brak kluczy produkcyjnych w zasięgu agentów, potwierdzony przez właściciela.
+- [ ] Powiadomienia ntfy docierają na telefon.
+- [ ] Autostart herdr i Remote Control działają po restarcie.
+- [ ] Na dysku jest min. 15 GB wolnego miejsca.
+- [ ] Chrome, ChatGPT i Claude Desktop są zamknięte na czas pracy agentów.
+
 ## Projekt wzorcowy
 
 Repo `sh-dryrun` to test regresji systemu. Po każdej istotnej zmianie skilli lub shctl uruchamiamy
@@ -362,8 +377,9 @@ go ponownie (`shctl reset-dryrun`) i porównujemy czas, iteracje i eskalacje w `
 - Pliki skopiowane z szablonu (`AGENTS.md`, CI, DoD) w istniejących projektach nie aktualizują się
   same po zmianach w sh-system. W etapie B pojawi się `shctl upgrade`.
 - Codex nie ma blokady odczytu chronionych katalogów, a sandbox ogranicza tylko zapis. Akceptujemy
-  to w etapie A, bo Codex robi tam wyłącznie review. Dotyczy to też deny na `.env*`: w Codexie nie
-  jest ono egzekwowane technicznie, więc `.env.local` może zawierać tylko klucze testowe.
+  to w etapie A, bo Codex robi tam wyłącznie review. Czysty worktree `../wt/review-NR` usuwa pliki
+  env z jego katalogu pracy, ale nie blokuje odczytu `.env.local` z innych worktree na dysku. Dlatego
+  `.env.local` zawiera tylko klucze testowe.
 
 ## Model docelowy (etap B), skrót
 

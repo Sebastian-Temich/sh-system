@@ -12,6 +12,5 @@ Centralne repozytorium software house'u prowadzonego przez agentów AI.
 | `scripts/shctl/` | Narzędzie `shctl` |
 | `zrodla/skille-istniejace/` | Istniejące skille jako materiał źródłowy |
 
-Repo jest źródłem skryptów: `~/sh/bin` zawiera symlinki do `scripts/server/` i `scripts/shctl/`,
-zakładane przez `scripts/server/install.sh`. `Brewfile` i plist LaunchAgenta to kopie plików z `~/sh`
-i `~/Library/LaunchAgents`, bez automatycznej synchronizacji.
+Repo jest źródłem plików serwera. `scripts/server/install.sh` zakłada symlinki `~/sh/bin` i
+`~/sh/Brewfile`, a plisty kopiuje do `~/Library/LaunchAgents` przy różnicy i przeładowuje agenta.
