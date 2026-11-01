@@ -24,7 +24,6 @@
 - [Projekt wzorcowy](#projekt-wzorcowy)
 - [Znane ograniczenia](#znane-ograniczenia)
 - [Model docelowy (etap B), skrót](#model-docelowy-etap-b-skrót)
-- [Otwarte pytania](#otwarte-pytania)
 
 ## Cel i zakres
 
@@ -50,6 +49,7 @@ Plik `docs/konfiguracja.md` projektu ma pole `etap_wdrozenia`: A albo B. W etapi
 - wszystkie zadania mają `runner:local` i `wykonawca:claude`, Codex robi wyłącznie review;
 - nie ma workerów w chmurze, Lovable ani GitHub Projects;
 - strażnik limitów tylko wykrywa limit i powiadamia, a wznowienie wywołuje właściciel („wznów”);
+- `auto_merge_S` działa, ale domyślnie ma wartość `false`; włączamy go po kilku udanych zleceniach S;
 - dostępne skille: `sh-intake`, `sh-architekt`, `sh-zadania`, `sh-worker`, `sh-review`, `sh-qa`,
   `sh-orkiestrator`, `sh-status`.
 
@@ -57,14 +57,16 @@ Wszystko inne w tym dokumencie to model docelowy, wdrażany w etapie B.
 
 ## Infrastruktura
 
-- **Źródło prawdy:** GitHub TWOJA-ORG, jedno repo na projekt (kod, Issues, PR, `docs/`). Projekty
-  klientów domyślnie prywatne.
+- **Źródło prawdy:** GitHub Sebastian-Temich, jedno repo na projekt (kod, Issues, PR, `docs/`). Na
+  tym koncie są też `sh-system` i szablon. Projekty klientów domyślnie prywatne.
 - **Obsidian:** widok na `docs/` projektów (synchronizacja przez git). Dokumentacja zawsze żyje w
   repo.
 - **Serwer:** Mac (macOS Sonoma) z herdr, Claude Code, Codex CLI, Docker Desktop i Supabase CLI.
   Orkiestrator działa w panelu herdr, a właściciel rozmawia z nim przez Remote Control.
-- **Lekka izolacja:** zablokowane zdjęcia, pęk kluczy i profile przeglądarek, bez kluczy
-  produkcyjnych w zasięgu agentów.
+- **Lekka izolacja:** zablokowane zdjęcia, pęk kluczy i profile wszystkich przeglądarek
+  zainstalowanych na serwerze, bez kluczy produkcyjnych w zasięgu agentów. Zasada obowiązuje też
+  Codexa (ograniczenie techniczne: „Znane ograniczenia”). Brak kluczy produkcyjnych potwierdza
+  właściciel z agentem w zadaniu A1.6 (krok 4); to warunek startu A5.1.
 - **Toolchain:** natywnie w macOS (Homebrew, fnm + Node LTS + pnpm, uv). Projekty JS używają
   wyłącznie pnpm (wspólny magazyn pakietów, więc worktree nie duplikują `node_modules`). Docker
   tylko dla usług (Supabase). Testy E2E: Playwright z własnymi przeglądarkami (chromium + webkit,
@@ -74,11 +76,15 @@ Wszystko inne w tym dokumencie to model docelowy, wdrażany w etapie B.
   właściciel.
 - **Hosting produkcji:** domyślnie Vercel + Supabase Cloud (region UE) na kontach klienta. Hosting
   proponuje intake, a właściciel akceptuje.
-- **Supabase local:** jedna instancja na projekt, blok portów z `~/sh/porty.md`. Zadania z
-  migracjami lub resetem bazy mają etykietę `db:migracja` i idą pojedynczo w projekcie.
+- **Supabase local:** jedna instancja na projekt, blok portów z `~/sh/porty.md`. Po wyczerpaniu
+  puli najpierw zwalniamy bloki projektów archiwalnych (`shctl ports release`), a dopiero potem
+  sięgamy po kolejny zakres 56X21–56X29. Zadania z migracjami lub resetem bazy mają etykietę
+  `db:migracja` i idą pojedynczo w projekcie.
 - **Limity równoległości:** w `docs/konfiguracja.md` (pilot: `max_local=1`, po pomiarach obciążenia
-  maks. 2). Limit lokalny jest wspólny dla wszystkich projektów na Macu. Naraz działa maks. 1
-  lokalny stack Supabase, a orkiestrator zatrzymuje stack nieaktywnego projektu (`supabase stop`).
+  maks. 2). Limit lokalny jest wspólny dla wszystkich projektów na Macu. Naraz działa maks. 1 stack
+  Supabase projektów SH, a orkiestrator zatrzymuje stack nieaktywnego projektu (`supabase stop`).
+  `supabase-local` to stary system i nie wlicza się do limitu; właściciel może go zatrzymać na czas
+  pilota.
 - **Serwer pilota:** iMac 2012 (Intel, 4 rdzenie, macOS 14 przez OpenCore). Playwright jest
   przypięty do wersji z `konfiguracja.md` (1.61.1, ostatnia z działającym WebKit na macOS 14 Intel)
   i działa z `workers: 1`. Narzędzia bez gotowych paczek brew instalujemy jako oficjalne binarki do
@@ -87,13 +93,15 @@ Wszystko inne w tym dokumencie to model docelowy, wdrażany w etapie B.
 
 ## Automatyzacja: CLI shctl
 
-Agent decyduje i pisze treść, a mechanikę wykonuje `~/sh/bin/shctl` (`sh-system/scripts/shctl/`):
+Agent decyduje i pisze treść, a mechanikę wykonuje `~/sh/bin/shctl`. Źródłem skryptów jest repo
+`sh-system`: `~/sh/bin` zawiera tylko symlinki do `scripts/server/` i `scripts/shctl/`, zakładane
+przez `scripts/server/install.sh` (`docs/serwer.md`). shctl odpowiada za:
 zakładanie projektu, dokumenty z szablonów, statusy etapów, issue, worktree, panele herdr, review,
 iteracje, eskalacje, decyzje, porty, status, awaryjny stop.
 
 Skille wywołują shctl z argumentami. shctl jest idempotentny, ma `--dry-run`, `--json` i testy
 (bats), a dokumentację w `docs/shctl.md`. Gdy brakuje komendy, agent wykonuje operację ręcznie i
-zapisuje propozycję w `decyzje-systemu.md`.
+zapisuje propozycję dla systemu (obieg: „Pliki wspólne i konflikty”).
 
 ## Skala procesu (tryby S, M, L)
 
@@ -103,7 +111,7 @@ trwającym projekcie.
 
 | Tryb | Zastosowanie | Skala | Checkpointy |
 |---|---|---|---|
-| S, szybki | Poprawka, drobna zmiana, mała funkcja w działającym projekcie; bez zmian modelu danych i bez obszarów ryzyka | 1–3 zadania | Odbiór (przy `auto_merge_S: true` orkiestrator merguje sam i powiadamia) |
+| S, szybki | Poprawka, drobna zmiana, mała funkcja w działającym projekcie; bez zmian modelu danych i bez obszarów ryzyka | 1–3 zadania | Odbiór (przy `auto_merge_S: true` orkiestrator merguje sam i powiadamia; domyślnie `false`) |
 | M, średni | Nowa funkcja lub moduł, mały samodzielny projekt | 4–15 zadań | Akceptacja specyfikacji, akceptacja architektury i planu, odbiór |
 | L, pełny (etap B) | Nowy produkt, MVP, duża przebudowa | | Checkpoint 1 (etap 4), Checkpoint 2 (etap 10) |
 
@@ -111,7 +119,7 @@ trwającym projekcie.
 
 1. Zlecenie (issue z celem i kryteriami akceptacji).
 2. Realizacja (worker, CI, review krzyżowe, maks. 3 iteracje).
-3. Odbiór (merge, raport, changelog).
+3. Odbiór (merge, raport, `CHANGELOG.md`).
 
 ### Etapy trybu M
 
@@ -145,7 +153,8 @@ trwającym projekcie.
 
 - Ryzyko podnosi tryb (auth, płatności, dane osobowe i migracje prod to minimum M z ADR).
 - Nowy projekt zaczyna od M lub L.
-- Etapy, których tryb nie przewiduje, mają w DoD status `pominiety`.
+- Etapy, których tryb M lub L nie przewiduje, mają w DoD status `pominiety`. Tryb S nie ma DoD
+  etapów.
 - Podniesienie trybu w trakcie: orkiestrator proponuje, właściciel decyduje, nigdy po cichu.
 
 ## Typ projektu
@@ -184,28 +193,45 @@ docs/
 └── backlog-drobne.md
 ```
 
-Każdy folder etapu ma `DoD.md`.
+Każdy folder etapu ma `DoD.md`. W katalogu głównym repo leżą `CHANGELOG.md`, `AGENTS.md` i
+`CLAUDE.md`.
 
 ## Pliki wspólne i konflikty
 
-Pliki wspólne (`status.md`, `decyzje.md`, `metryki.md`, `06-zadania/index.md`, `backlog-drobne.md`)
-aktualizuje WYŁĄCZNIE orkiestrator, na main, po merge'u zadania (przez shctl).
+Pliki wspólne (`status.md`, `decyzje.md`, `metryki.md`, `06-zadania/index.md`, `backlog-drobne.md`,
+`CHANGELOG.md`) aktualizuje WYŁĄCZNIE orkiestrator, na main, po merge'u zadania (przez shctl,
+`CHANGELOG.md` w `shctl task close`).
 
 Worker pisze tylko własne pliki: kod, testy, docs obszaru swojego zadania i raport
-`docs/07-realizacja/T-NR.md` z sekcją „Decyzje” i „Drobne uwagi”. Orkiestrator przenosi te sekcje
-do plików wspólnych.
+`docs/07-realizacja/T-NR.md` z sekcjami „Decyzje”, „Drobne uwagi” i „Propozycje dla systemu”.
+Orkiestrator przenosi dwie pierwsze do plików wspólnych, a propozycje zbiera do
+`sh-system/docs/propozycje.md` przez PR do `sh-system`. Decyzję o nich podejmuje retro.
 
 ## Definition of Done
 
 `DoD.md` etapu zawiera:
 
-- frontmatter: `etap`, `status` (`todo|in-progress|review|done|escalated|pominiety`), `iteracja`
-  (`0-3`);
+- frontmatter: `etap` (nazwa folderu, np. `04-architektura`), `status`
+  (`todo|in-progress|review|done|escalated|pominiety`), `iteracja` (`0-3`);
 - sekcje: Dokumentacja, Funkcjonalność, Checklisty jakości, Checkpoint (review PASS, akceptacja
   właściciela, jeśli wymagana).
 
 Etap jest done tylko wtedy, gdy wszystkie pola są zaznaczone, a review dało PASS. Agent nie
 zaznacza review sam sobie. `scripts/check-dod.sh` działa w CI.
+
+W DoD etapu nie ma statusu `blocked`: etap czekający na coś zewnętrznego ma `in-progress` i notatkę.
+
+Etapy trybu M zapisujemy w tych folderach:
+
+| Etap trybu M | Foldery z `DoD.md` |
+|---|---|
+| Specyfikacja | `00-intake` |
+| Architektura i plan | `04-architektura`, `05-plan`, `06-zadania` |
+| Realizacja | `07-realizacja` |
+| QA | `08-qa` |
+| Odbiór i dokumentacja | `wydanie` |
+
+Tryb S nie ma DoD etapów: jego DoD to issue i checklista PR.
 
 **DoD zadania:** kryteria z issue spełnione, testy zielone, raport `T-NR.md`, brak sekretów.
 
@@ -213,10 +239,14 @@ zaznacza review sam sobie. `scripts/check-dod.sh` działa w CI.
 
 - **Review PR** robi zawsze inny model niż autor (w etapie A: autor Claude, reviewer Codex).
   Sprawdza kod, testy, kryteria z issue, bezpieczeństwo i sekrety.
+- **Review etapu:** dokumenty etapu powstają na gałęzi `stage/ETAP` i przechodzą przez PR. Review
+  robi Codex (`sh-review`, tryb etapu), akceptację w checkpointach daje właściciel, potem następuje
+  merge.
 - **QA zbiorcze** po kamieniu milowym (testy E2E, integracja, zgodność z wymaganiami). Błędy stają
   się nowymi issue.
-- **Pętla:** maks. 3 iteracje. Licznik podbija orkiestrator. W iteracji poprawia się tylko
-  zgłoszenia z review. Po 3. FAIL: eskalacja. Eskalacja nie zatrzymuje zadań niezależnych.
+- **Pętla:** maks. 3 iteracje. Licznik podbija orkiestrator, wyłącznie po FAIL review; przerwanie
+  przez limit go nie podbija. W iteracji poprawia się tylko zgłoszenia z review. Po 3. FAIL:
+  eskalacja. Eskalacja nie zatrzymuje zadań niezależnych.
 
 Waga zgłoszeń:
 
@@ -254,7 +284,10 @@ model. Strażnik `~/sh/bin/sh-watchdog.sh` (launchd, bez AI) wykrywa komunikat o
 
 Wznowienie zawsze z weryfikacją: dla każdego przerwanego zadania orkiestrator sprawdza stan gałęzi i
 worktree, wynik testów i aktualność zadania, po czym decyduje: kontynuuj, rebase i kontynuuj albo
-iteracja od nowa. Decyzja trafia do raportu.
+iteracja od nowa. Decyzja trafia do raportu, a „iteracja od nowa” nie podbija licznika iteracji.
+
+**Limit Codexa:** gotowe PR czekają w `status:review`, a Claude bierze kolejne zadania. Dispatch
+staje, gdy na review czeka `max_review_queue` PR (domyślnie 3, w `konfiguracja.md`).
 
 ## Autonomia, decyzje, eskalacje
 
@@ -267,14 +300,20 @@ iteracja od nowa. Decyzja trafia do raportu.
 
 ## Higiena kontekstu
 
-- Każdy skill czyta tylko pliki z sekcji „Wejście”. `AGENTS.md` jest krótki (do ok. 150 linii).
+- Każdy skill czyta tylko pliki z sekcji „Wejście”. `AGENTS.md` jest krótki (do ok. 150 linii) i
+  jest jedynym plikiem instrukcji. `CLAUDE.md` tylko go importuje i dodaje krótkie wskazówki dla
+  Claude.
 - Orkiestrator po każdym kamieniu milowym zapisuje w `status.md` punkt przekazania i proponuje
   właścicielowi restart sesji (`/clear` + „wznów”). Stan jest w plikach, więc nic nie ginie.
 
 ## Awaryjny stop
 
 Polecenie właściciela „STOP” (albo `shctl stop-all`) zatrzymuje wszystkich workerów i orkiestratora,
-zachowuje worktree i zapisuje stan. Wznowienie: „wznów”.
+zachowuje worktree i zapisuje stan w `~/sh/stan/NAZWA.json`.
+
+Wznowienie: właściciel uruchamia nową sesję orkiestratora (`sh-start.sh` albo `claude` w panelu) i
+pisze „wznów”. Orkiestrator odtwarza stan ze `status.md` i `~/sh/stan/NAZWA.json`. shctl nie wznawia
+sam.
 
 ## Dostępy i środowiska
 
@@ -285,8 +324,9 @@ zachowuje worktree i zapisuje stan. Wznowienie: „wznów”.
 | PROD | Agenci nie mają zapisu. Produkcja zmienia się wyłącznie przez GitHub Actions z akceptacją właściciela (environment „production”) |
 
 Sekrety nie trafiają do repo, docs ani issue. Lokalnie trzymamy je w `.env.local`, który
-`shctl task dispatch` kopiuje do każdego worktree. gitleaks działa w CI. Resend w dev ma tylko klucz
-testowy.
+`shctl task dispatch` kopiuje do każdego worktree. `.env.local` zawiera tylko klucze testowe.
+Reviewer nie widzi sekretów: profil reviewer ma deny na `.env*`. gitleaks działa w CI. Resend w dev
+ma tylko klucz testowy.
 
 ## Bezpieczeństwo publicznych repo
 
@@ -306,6 +346,10 @@ polecenia.
 | Typ | `typ:feature`, `typ:bug`, `typ:qa`, `typ:docs`, `typ:cr` |
 | Waga | `sev:krytyczne`, `sev:istotne`, `sev:drobne` |
 
+`status:blocked` oznacza, że zadanie czeka na coś zewnętrznego, co nie jest eskalacją (limit,
+zablokowana zależność, brak miejsca na dysku). PR czekający na review przy limicie Codexa zostaje w
+`status:review`. Zadanie `done` to zamknięte issue bez etykiety statusu.
+
 Kamienie milowe jako GitHub Milestones.
 
 ## Projekt wzorcowy
@@ -317,6 +361,9 @@ go ponownie (`shctl reset-dryrun`) i porównujemy czas, iteracje i eskalacje w `
 
 - Pliki skopiowane z szablonu (`AGENTS.md`, CI, DoD) w istniejących projektach nie aktualizują się
   same po zmianach w sh-system. W etapie B pojawi się `shctl upgrade`.
+- Codex nie ma blokady odczytu chronionych katalogów, a sandbox ogranicza tylko zapis. Akceptujemy
+  to w etapie A, bo Codex robi tam wyłącznie review. Dotyczy to też deny na `.env*`: w Codexie nie
+  jest ono egzekwowane technicznie, więc `.env.local` może zawierać tylko klucze testowe.
 
 ## Model docelowy (etap B), skrót
 
@@ -334,51 +381,3 @@ go ponownie (`shctl reset-dryrun`) i porównujemy czas, iteracje i eskalacje w `
 - Automatyczne wznowienie po limitach.
 - GitHub Projects i dashboard firmowy.
 - `shctl upgrade`.
-
-## Otwarte pytania
-
-Pytania nie zmieniają powyższych ustaleń. Do czasu odpowiedzi obowiązuje tekst specyfikacji.
-
-### Infrastruktura
-
-1. **Organizacja GitHub.** „TWOJA-ORG” to placeholder. Repo `sh-system` jest na koncie
-   `Sebastian-Temich`. Czy projekty też mają powstawać tam, czy w organizacji?
-2. **Liczba stacków Supabase.** Specyfikacja mówi o maks. 1 lokalnym stacku, a `docs/serwer.md` o
-   jednym dodatkowym stacku obok `supabase-local`. Czy `supabase-local` wlicza się do limitu?
-3. **Liczba projektów.** `~/sh/porty.md` daje bloki portów dla projektów 1–9. Co po wyczerpaniu puli:
-   zwalnianie bloków archiwalnych czy nowy schemat?
-4. **Kopie skryptów.** `~/sh/bin/shctl` pochodzi z `sh-system/scripts/shctl/`, ale skrypty z
-   `scripts/server/` to dziś niezależne kopie `~/sh/bin`. Które miejsce jest źródłem i jak trafia
-   stamtąd na serwer?
-
-### Bezpieczeństwo
-
-5. **Izolacja a Codex.** Reguły deny działają w Claude Code. Codex ma sandbox zapisu, ale bez blokady
-   odczytu chronionych katalogów. Czy „zablokowane zdjęcia, pęk kluczy i profile przeglądarek” ma
-   obowiązywać także Codexa?
-6. **Profile przeglądarek.** Blokada obejmuje Chrome i Safari. Czy dotyczy też innych przeglądarek?
-7. **Klucze produkcyjne.** Przegląd z 2026-11-01 nie ustalił, czy pliki `.env` w zasięgu agentów
-   zawierają takie klucze (`docs/serwer.md`). Kto i kiedy to potwierdza przed startem pilota?
-8. **Sekrety w worktree.** Czy agent review ma widzieć `.env.local` skopiowany do worktree?
-
-### Proces
-
-9. **Domyślne `auto_merge_S`.** Jaka jest wartość domyślna i czy opcja działa w etapie A?
-10. **Limit reviewera.** Limity opisują wstrzymanie wykonawcy. Czy po wyczerpaniu limitu Codexa gotowe
-    PR czekają, a Claude pracuje dalej nad kolejnymi zadaniami?
-11. **Iteracja od nowa.** Czy „iteracja od nowa” po limicie podbija licznik zbliżający do eskalacji?
-12. **Review etapu.** Review PR opisano dla kodu. Kto daje PASS w `DoD.md` etapów dokumentowych, np.
-    specyfikacji w trybie M?
-13. **Numeracja etapów i folderów.** Tryb S i M mają własną numerację, a folderów `docs/` z `DoD.md`
-    jest więcej. W którym pliku `DoD.md` zapisywać np. etap „Odbiór”? Która numeracja trafia do pola
-    `etap`?
-14. **Changelog projektu.** Tryb S kończy się aktualizacją changelogu, a struktura `docs/` nie zawiera
-    tego pliku. Gdzie ma być i kto go aktualizuje, skoro pliki wspólne prowadzi orkiestrator?
-15. **Status `blocked`.** Etykieta `status:blocked` nie ma definicji ani odpowiednika w `DoD.md`, a
-    `done` nie ma etykiety. Kiedy jej używać?
-16. **Propozycje w `decyzje-systemu.md`.** Plik leży w `sh-system`, a agent pracuje w repo projektu.
-    Kto zapisuje tam propozycję i jak: bezpośrednio na main czy przez PR?
-17. **Plik instrukcji.** Dokument wymienia `AGENTS.md`. Czy Claude Code ma czytać ten sam plik, czy
-    projekt ma też `CLAUDE.md`?
-18. **Odbiorca „wznów”.** Po „STOP” orkiestrator jest zatrzymany. Co wtedy odbiera polecenie „wznów”:
-    nowa sesja orkiestratora czy `shctl`?

@@ -3,10 +3,27 @@
 iMac13,2 (2012), Intel i5-3470S, 4 rdzenie bez HT, 24 GB RAM, macOS 14.8.9 przez OpenCore
 Legacy Patcher. Narzędzia, przeglądarki i testy działają natywnie. Docker służy do usług.
 
+- Skrypty: `~/sh/bin` to symlinki do repo `sh-system` (sekcja „Skrypty serwera”)
 - Toolchain: `~/sh/bin/setup-toolchain.sh` (idempotentny, bez sudo)
 - Homebrew: `~/sh/Brewfile`
 - Porty: `~/sh/porty.md`
 - Chrome for Testing: `~/sh/browsers`
+
+## Skrypty serwera
+
+Źródłem skryptów jest repo `sh-system`. `~/sh/bin` zawiera symlinki do `scripts/server/*.sh` i
+plików wykonywalnych z `scripts/shctl/`. Zmiany wprowadzamy w repo, a na serwerze działają od razu.
+
+```sh
+~/sh/sh-system/scripts/server/install.sh
+```
+
+Skrypt jest idempotentny i uruchamiamy go po dodaniu nowego skryptu. Zwykły plik w `~/sh/bin`
+zastępuje tylko, gdy jest identyczny z repo; przy różnicy kończy się błędem i niczego nie nadpisuje,
+więc zmiany trzeba najpierw przenieść do repo. Plik spoza repo zgłasza ostrzeżeniem.
+
+`install.sh` nie obejmuje `Brewfile` i plisty LaunchAgenta: `scripts/server/` ma ich kopie, a
+działające pliki to `~/sh/Brewfile` i `~/Library/LaunchAgents/`.
 
 ## Polityka instalacji
 
@@ -34,7 +51,8 @@ Legacy Patcher. Narzędzia, przeglądarki i testy działają natywnie. Docker s�
 
 - Maksymalnie **2 workery lokalne**.
 - **Jeden** ciężki job naraz (build, E2E, CI) i `workers: 1` w Playwright.
-- Maksymalnie **jeden dodatkowy stack Supabase** przy limicie Docker 7,75 GiB.
+- Maksymalnie **jeden stack Supabase projektów SH** przy limicie Docker 7,75 GiB. `supabase-local`
+  to stary system i nie wlicza się do limitu; właściciel może go zatrzymać na czas pilota.
   Stack zużywa ok. 2 GiB; w nowych projektach wyłączaj `analytics` i `studio`, jeśli nie są
   potrzebne (ok. 0,9 GiB mniej).
 
@@ -331,7 +349,7 @@ czy Paperclip nie ma aktywnych zadań.
 | Forgejo | Zostawić | nd. | Bez niego nie ma repo i review |
 | Paperclip | Zostawić, jeśli pilot na nim działa | 1 GB | Inaczej wstrzymać (komenda niżej) |
 | Hermes | Bez zmian | 200 MB | Znikomy zysk |
-| Supabase `supabase-local` | Nie ruszać | nd. | Analytics to 0,6 GB; wyłączać w nowych stackach |
+| Supabase `supabase-local` | Decyduje właściciel | ok. 2 GB | Stary system, poza limitem stacków; analytics to 0,6 GB |
 
 Kontenery mają `restart: unless-stopped`, więc po `docker stop` wrócą dopiero po `docker start`,
 także po restarcie Dockera. Paperclip ma `KeepAlive`, dlatego `kill` nie wystarczy.
@@ -443,14 +461,20 @@ także Mac z OpenCore Legacy Patcher, więc przed włączeniem trzeba sprawdzić
 
 `~/.claude/settings.json` ma w `permissions.deny` reguły `Read` i `Edit` dla: `~/Pictures`
 (z biblioteką Zdjęć), `~/Movies`, `~/Music`, `~/.gnupg`, `~/.ssh/id_*` oraz katalogów
-`Keychains`, `Safari`, `Application Support/Google`, `Messages` i `Mail` w `~/Library`.
-`~/Documents`, `~/Desktop` i `~/Downloads` celowo zostają dostępne.
+`Keychains`, `Safari`, `Containers/com.apple.Safari*`, `Application Support/Google`, `Messages` i
+`Mail` w `~/Library`. `~/Documents`, `~/Desktop` i `~/Downloads` celowo zostają dostępne.
+
+Profile przeglądarek: w `/Applications` są tylko Chrome i Safari (stan z 2026-11-01), ale reguły
+obejmują też pozostałe katalogi w `Application Support`: `Firefox` i `Mozilla` (60 MB profili po
+odinstalowanej przeglądarce) oraz puste zaczątki `Arc`, `BraveSoftware`, `Chromium`,
+`Microsoft Edge`, `Vivaldi` i `com.operasoftware.Opera`. Nową przeglądarkę dopisujemy do `deny` przy
+instalacji.
 
 Składnia `~/` oznacza katalog domowy, `/**` zawartość katalogu. Pojedynczy `/` nie jest ścieżką
 bezwzględną, do tego służy `//`. Format: <https://code.claude.com/docs/en/permissions>.
 
 Test z 2026-11-01: `ls ~/Pictures`, `cat`, `find` i narzędzie Read są blokowane, zaś
-`~/Documents` działa.
+`~/Documents` działa. Narzędzie Read jest też blokowane w `Application Support/Firefox`.
 
 Ograniczenia:
 
@@ -473,7 +497,9 @@ Test przez `codex exec`, uruchomiony w `~/sh`: zapis w katalogu roboczym działa
 - `codex sandbox -- <komenda>` nie czyta `sandbox_mode`, więc nie nadaje się do tego testu.
 - Narzędzia wymagające katalogu tymczasowego mogą nie działać w Codexie. Wtedy usuń
   `exclude_tmpdir_env_var` i `exclude_slash_tmp`.
-- Sandbox ogranicza zapis, nie odczyt spoza katalogu roboczego.
+- Sandbox ogranicza zapis, nie odczyt spoza katalogu roboczego. Zasada izolacji obowiązuje też
+  Codexa, a brak blokady odczytu to znane ograniczenie, akceptowane w etapie A (Codex tylko robi
+  review).
 - Ten sam plik czyta aplikacja ChatGPT, nie była testowana po zmianie.
 
 ### Poświadczenia w zasięgu agentów
@@ -500,7 +526,8 @@ backup-config.sh /Volumes/X   # do wskazanego katalogu
 ```
 
 Archiwum `config-<data>.tar.gz` (tylko dla właściciela) zawiera `~/.claude`, `~/.codex/config.toml`,
-`~/.config/sh`, `~/sh/bin` i `~/sh/porty.md`. Z `~/.claude` trafiają tylko ustawienia, skille, lista
+`~/.config/sh`, `~/sh/bin` i `~/sh/porty.md`. `~/sh/bin` trafia tam jako symlinki, więc treści
+skryptów nie ma w archiwum: odtwarza je klon `sh-system` i `install.sh`. Z `~/.claude` trafiają tylko ustawienia, skille, lista
 pluginów i pamięć projektów. Nie ma w nim sesji, historii, cache, `auth.json`, `.credentials.json`
 ani `.claude.json`. Po spakowaniu sprawdza je gitleaks; przy trafieniu archiwum jest kasowane.
 Archiwum zawiera temat ntfy, więc traktuj je jak dane poufne.
