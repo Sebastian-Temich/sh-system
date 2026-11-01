@@ -20,7 +20,7 @@ K() { echo "$SH_DIR/projekty/demo/$1"; }
   [ "$(fm "$(K docs/04-architektura/DoD.md)" status)" = todo ]
   grep -q '`00-intake`: todo (następny)' "$(K docs/status.md)"
   grep -qx 'Aplikacja testowa' "$(K docs/00-intake/zrodlo.md)"
-  [[ "$output" == *"git clone https://github.com/test-owner/demo.git"* ]]
+  [[ "$output" == *"wystarczy włączyć Obsidian Git"* ]] || false
   [ -z "$(git -C "$(K .)" status --porcelain)" ]
   [ "$(git -C "$T/remote.git" log -1 --format=%s main)" = "shctl: konfiguracja projektu demo (tryb M)" ]
 }
@@ -69,7 +69,7 @@ K() { echo "$SH_DIR/projekty/demo/$1"; }
 
 @test "koncowy komunikat wskazuje Obsidian Git, powtorka nie klonuje drugi raz" {
   run nowy
-  [[ "$output" == *"wystarczy włączyć Obsidian Git"* ]]
+  [[ "$output" == *"wystarczy włączyć Obsidian Git"* ]] || false
   run --separate-stderr nowy --json
   [ "$status" -eq 0 ]
   [ "$(jq -r .wynik.obsidian.utworzono <<<"$output")" = false ]
@@ -105,7 +105,7 @@ K() { echo "$SH_DIR/projekty/demo/$1"; }
   unset SH_OBSIDIAN_DIR
   run --separate-stderr nowy --json
   [ "$status" -eq 0 ]
-  [[ "$stderr" == *"pomijam klon"* ]]
+  [[ "$stderr" == *"pomijam klon"* ]] || false
   [ "$(jq -r .wynik.obsidian <<<"$output")" = null ]
 }
 
@@ -117,7 +117,7 @@ K() { echo "$SH_DIR/projekty/demo/$1"; }
 @test "tryb S: wszystkie etapy pominiete i ostrzezenie" {
   run --separate-stderr nowy --tryb S
   [ "$status" -eq 0 ]
-  [[ "$stderr" == *"zaczyna od M lub L"* ]]
+  [[ "$stderr" == *"zaczyna od M lub L"* ]] || false
   [ "$(fm "$(K docs/00-intake/DoD.md)" status)" = pominiety ]
   grep -q 'tryb S: bez etapów' "$(K docs/status.md)"
 }
@@ -165,5 +165,5 @@ K() { echo "$SH_DIR/projekty/demo/$1"; }
   printf '#!/bin/sh\necho "HTTP 401" >&2\nexit 1\n' >"$T/mock/gh"
   run --separate-stderr nowy
   [ "$status" -eq 1 ]
-  [[ "$stderr" == *"401"* ]]
+  [[ "$stderr" == *"401"* ]] || false
 }

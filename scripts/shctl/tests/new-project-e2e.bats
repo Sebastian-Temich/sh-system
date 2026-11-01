@@ -16,7 +16,7 @@ setup() {
 }
 
 @test "new-project na GitHubie, z powtorka" {
-  ! gh repo view "$SLUG" --json name >/dev/null 2>&1
+  ! gh repo view "$SLUG" --json name >/dev/null 2>&1 || false
   run --separate-stderr "$REPO/scripts/shctl/shctl" new-project sh-test-shctl --opis "Test shctl" --json
   echo "$output $stderr"
   [ "$status" -eq 0 ]

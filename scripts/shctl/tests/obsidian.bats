@@ -6,7 +6,7 @@ setup() { wspolny_setup; szablon_remote; V="$SH_OBSIDIAN_DIR/demo"; }
 @test "link tworzy klon tylko z docs/ w katalogu ze spacja" {
   run "$SHCTL" obsidian link demo
   [ "$status" -eq 0 ]
-  [[ "$output" == *"wystarczy włączyć Obsidian Git"* ]]
+  [[ "$output" == *"wystarczy włączyć Obsidian Git"* ]] || false
   [ -f "$V/docs/konfiguracja.md" ]
   [ ! -e "$V/src" ]
   [ ! -e "$V/README.md" ]
@@ -57,7 +57,7 @@ setup() { wspolny_setup; szablon_remote; V="$SH_OBSIDIAN_DIR/demo"; }
   git -C "$V" commit -qm lokalny
   run --separate-stderr "$SHCTL" obsidian unlink demo
   [ "$status" -eq 4 ]
-  [[ "$stderr" == *"niewypchnięte"* ]]
+  [[ "$stderr" == *"niewypchnięte"* ]] || false
 }
 
 @test "unlink nie usuwa katalogu, ktory nie jest klonem" {

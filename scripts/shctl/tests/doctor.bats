@@ -22,7 +22,7 @@ setup() {
   printf '#!/bin/sh\necho "{\\"loggedIn\\": false}"\n' >"$T/mock/claude"
   run --separate-stderr "$SHCTL" doctor
   [ "$status" -eq 1 ]
-  [[ "$output" == *"claude auth login"* ]]
+  [[ "$output" == *"claude auth login"* ]] || false
 }
 
 @test "Docker nie odpowiada: kod 1" {
@@ -36,7 +36,7 @@ setup() {
   rm "$HOME/.config/sh/ntfy-topic"
   run --separate-stderr "$SHCTL" doctor
   [ "$status" -eq 1 ]
-  [[ "$output" == *"brak tematu"* ]]
+  [[ "$output" == *"brak tematu"* ]] || false
 }
 
 @test "lokalny core.hooksPath to ostrzezenie, nie blad" {
@@ -46,8 +46,8 @@ setup() {
   cd "$T"
   run "$SHCTL" doctor
   [ "$status" -eq 0 ]
-  [[ "$output" == *"hooki demo"* ]]
-  [[ "$output" == *"wyłącza globalny pre-push"* ]]
+  [[ "$output" == *"hooki demo"* ]] || false
+  [[ "$output" == *"wyłącza globalny pre-push"* ]] || false
 }
 
 @test "bez --test-notify nie wysyla, z nim wysyla" {

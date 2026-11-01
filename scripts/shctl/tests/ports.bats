@@ -8,7 +8,7 @@ setup() { wspolny_setup; }
   [ "$status" -eq 0 ]
   [ "$(jq -r '.wynik.zakres, .wynik.shadow, .wynik.inspector, .wynik.dev' <<<"$output" | tr '\n' ' ')" = "55121-55129 55128 55125 55126 " ]
   grep -q '^| 1 | alfa | `~/sh/projekty/alfa` | 55121 | 55122 | 55123 | 55124 | 55127 | 55128 | 55129 | 55125 |' "$SH_DIR/porty.md"
-  ! grep -q 'wolny' "$SH_DIR/porty.md"
+  ! grep -q 'wolny' "$SH_DIR/porty.md" || false
   cp "$SH_DIR/porty.md" "$T/p"
   run "$SHCTL" ports reserve --projekt alfa --json
   [ "$(jq -r .wynik.baza <<<"$output")" = 551 ]
@@ -38,7 +38,7 @@ setup() { wspolny_setup; }
   for n in a b c d e f g h i; do "$SHCTL" ports reserve --projekt "$n"; done
   run --separate-stderr "$SHCTL" ports reserve --projekt j
   [ "$status" -eq 4 ]
-  [[ "$stderr" == *"zwolnij blok"* ]]
+  [[ "$stderr" == *"zwolnij blok"* ]] || false
   [ ! -e "$SH_DIR/porty.md.lock" ]
   run "$SHCTL" ports reserve --projekt j --zakres 56 --json
   [ "$(jq -r .wynik.zakres <<<"$output")" = 56121-56129 ]

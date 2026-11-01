@@ -57,7 +57,7 @@ esk() { "$SHCTL" escalate --dotyczy "#7" --powod "brak klucza" --potrzebne "kluc
   [ "$(fm "$E1" status)" = zamknieta ]
   grep -qx 'wariant A' "$E1"
   grep -q '^(brak)$' docs/status.md
-  ! grep -q 'E-001' docs/status.md
+  ! grep -q 'E-001' docs/status.md || false
 }
 
 @test "close issue przywraca poprzedni status" {
@@ -72,7 +72,7 @@ esk() { "$SHCTL" escalate --dotyczy "#7" --powod "brak klucza" --potrzebne "kluc
   "$SHCTL" escalate --dotyczy "#7" --powod "drugi" --potrzebne x
   : >"$T/gh.calls"
   "$SHCTL" escalate close E-001 --odpowiedz OK
-  ! grep -q 'issue edit' "$T/gh.calls"
+  ! grep -q 'issue edit' "$T/gh.calls" || false
 }
 
 @test "close jest idempotentny, inna odpowiedz to odmowa" {

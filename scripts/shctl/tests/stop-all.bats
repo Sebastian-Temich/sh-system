@@ -71,7 +71,7 @@ zamkniete() { grep '^pane close' "$T/herdr.calls" | awk '{print $3}' | tr '\n' '
   [ "$(jq -r '.wynik.kolejnosc[0]' <<<"$output" | cut -c1-12)" = "zapisz stan:" ]
   [ "$(jq -r '.wynik.kolejnosc[-1]' <<<"$output")" = "zamknij na końcu: w1:p1 orkiestrator (własny panel)" ]
   run --separate-stderr "$SHCTL" stop-all --dry-run
-  [[ "$output" == *"Kolejność:"* ]]
+  [[ "$output" == *"Kolejność:"* ]] || false
   [ -z "$(zamkniete)" ]
 }
 

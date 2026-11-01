@@ -46,7 +46,7 @@ zaznacz() { sed -i.bak 's/^- \[ \]/- [x]/' "$(dod "$1")"; rm -f "$(dod "$1").bak
   "$SHCTL" stage review 05-plan
   run --separate-stderr "$SHCTL" stage done 05-plan
   [ "$status" -eq 4 ]
-  [[ "$stderr" == *"check-dod"* ]]
+  [[ "$stderr" == *"check-dod"* ]] || false
   [ "$(fm "$(dod 05-plan)" status)" = review ]
 }
 
@@ -84,7 +84,7 @@ zaznacz() { sed -i.bak 's/^- \[ \]/- [x]/' "$(dod "$1")"; rm -f "$(dod "$1").bak
 @test "skip etapu z trybu M: odmowa" {
   run --separate-stderr "$SHCTL" stage skip 04-architektura
   [ "$status" -eq 4 ]
-  [[ "$stderr" == *"należy do trybu M"* ]]
+  [[ "$stderr" == *"należy do trybu M"* ]] || false
 }
 
 @test "skip etapu spoza trybu M" {
@@ -117,7 +117,7 @@ zaznacz() { sed -i.bak 's/^- \[ \]/- [x]/' "$(dod "$1")"; rm -f "$(dod "$1").bak
   git checkout -q -b stage/05-plan
   run --separate-stderr "$SHCTL" stage start 05-plan
   [ "$status" -eq 0 ]
-  [[ "$stderr" == *"pliki wspólne"* ]]
+  [[ "$stderr" == *"pliki wspólne"* ]] || false
 }
 
 @test "frontmatter i tresc DoD bez innych zmian" {

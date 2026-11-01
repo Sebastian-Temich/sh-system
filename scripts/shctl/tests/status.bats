@@ -28,16 +28,16 @@ JSON
   printf '# Limity\n\n| Wykonawca | Do kiedy |\n|---|---|\n| claude | 18:00 |\n\n- codex do 20:00\n' >"$SH_DIR/limity.md"
   run "$SHCTL" status show
   [ "$status" -eq 0 ]
-  [[ "$output" == *'`05-plan`: escalated'* ]]
-  [[ "$output" == *"E-001 (05-plan): spór"* ]]
-  [[ "$output" == *"| claude | 18:00 |"* ]]
-  [[ "$output" == *"- codex do 20:00"* ]]
-  [[ "$output" != *"Wykonawca"* ]]
+  [[ "$output" == *'`05-plan`: escalated'* ]] || false
+  [[ "$output" == *"E-001 (05-plan): spór"* ]] || false
+  [[ "$output" == *"| claude | 18:00 |"* ]] || false
+  [[ "$output" == *"- codex do 20:00"* ]] || false
+  [[ "$output" != *"Wykonawca"* ]] || false
 }
 
 @test "brak limity.md to brak wstrzyman" {
   run "$SHCTL" status show
-  [[ "$output" == *"Wstrzymania: brak"* ]]
+  [[ "$output" == *"Wstrzymania: brak"* ]] || false
 }
 
 @test "samo status dziala jak show" {

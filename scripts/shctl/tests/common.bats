@@ -11,7 +11,7 @@ setup() { wspolny_setup; }
 @test "nieznana komenda: kod 2" {
   run --separate-stderr "$SHCTL" nie-ma-takiej
   [ "$status" -eq 2 ]
-  [[ "$stderr" == *"nieznana komenda"* ]]
+  [[ "$stderr" == *"nieznana komenda"* ]] || false
 }
 
 @test "dziala przez symlink i zapisuje log" {
@@ -27,7 +27,7 @@ setup() { wspolny_setup; }
   cd "$T"
   run "$SHCTL" status show --projekt demo
   [ "$status" -eq 0 ]
-  [[ "$output" == *"Projekt: demo"* ]]
+  [[ "$output" == *"Projekt: demo"* ]] || false
 }
 
 @test "poza projektem bez --projekt: kod 3" {
@@ -46,14 +46,14 @@ setup() { wspolny_setup; }
   run --separate-stderr "$SHCTL" status show --json
   [ "$status" -eq 3 ]
   [ "$(jq -r '.ok, .kod' <<<"$output" | tr '\n' ' ')" = "false 3 " ]
-  [[ "$(jq -r .blad <<<"$output")" == *"katalog projektu"* ]]
+  [[ "$(jq -r .blad <<<"$output")" == *"katalog projektu"* ]] || false
 }
 
 @test "--json przy bledzie w podpowloce tez ma tresc" {
   projekt_demo
   run --separate-stderr "$SHCTL" stage done 00-intake --json
   [ "$status" -eq 4 ]
-  [[ "$(jq -r .blad <<<"$output")" == *"niedozwolone"* ]]
+  [[ "$(jq -r .blad <<<"$output")" == *"niedozwolone"* ]] || false
 }
 
 @test "worktree: projekt to nazwa repo glownego" {
