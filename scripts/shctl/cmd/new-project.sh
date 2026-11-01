@@ -4,6 +4,8 @@
 
 # shellcheck source=../lib/porty.sh
 . "$SHCTL_DIR/lib/porty.sh"
+# shellcheck source=../lib/obsidian.sh
+. "$SHCTL_DIR/lib/obsidian.sh"
 
 KROKI='[]'
 krok() {
@@ -34,7 +36,7 @@ czekaj_na_szablon() {
 
 komenda_main() {
   local nazwa="" tryb_arg="" public=0 opis="" slug stan katalog tryb_proj poprz e s origin
-  local widocznosc=--private porty baza pliki rzeczy obs zrodlo tresc
+  local widocznosc=--private porty baza pliki rzeczy zrodlo tresc obs='null' zal=0
   while [ $# -gt 0 ]; do
     case "$1" in
       --tryb) tryb_arg="$(wartosc "$@")"; shift 2 ;;
@@ -67,8 +69,6 @@ komenda_main() {
   ROOT="$katalog"
   KONFIG="$ROOT/docs/konfiguracja.md"
   ST="$ROOT/docs/status.md"
-  obs="git clone https://github.com/$slug.git \"${SH_OBSIDIAN_DIR:-\$HOME/Obsidian/sh}/$nazwa\""
-
   stan="$(repo_stan "$slug")"
   case "$stan" in
     brak)
@@ -104,12 +104,19 @@ komenda_main() {
   krok "oznacz etapy spoza trybu jako pominiety, zaktualizuj status.md"
   [ -z "$opis" ] || krok "zapisz opis w docs/00-intake/zrodlo.md"
   krok "commit i push na main"
+  if [ -n "${SH_OBSIDIAN_DIR:-}" ]; then
+    krok "lekki klon docs/ w $(obsidian_kat "$nazwa")"
+  else
+    uwaga "brak SH_OBSIDIAN_DIR w $SH_CONFIG, pomijam klon w Obsidianie"
+  fi
 
   if [ "$DRY" -eq 1 ]; then
     baza="$(porty_rezerwuj "$nazwa" 55 | jq -r .zakres)"
     info "blok portów: $baza"
-    info "Obsidian na laptopie: $obs"
-    wynik_json "$(jq -nc --arg r "$slug" --arg k "$katalog" --argjson s "$KROKI" --arg b "$baza" --arg o "$obs" \
+    if [ -n "${SH_OBSIDIAN_DIR:-}" ]; then
+      obs="$(jq -nc --arg k "$(obsidian_kat "$nazwa")" '{katalog:$k, utworzono:false}')"
+    fi
+    wynik_json "$(jq -nc --arg r "$slug" --arg k "$katalog" --argjson s "$KROKI" --arg b "$baza" --argjson o "$obs" \
       '{repo:$r, katalog:$k, kroki:$s, porty:$b, obsidian:$o}')"
     return 0
   fi
@@ -168,7 +175,13 @@ komenda_main() {
   fi
 
   info "Gotowe: https://github.com/$slug"
-  info "Obsidian na laptopie: $obs"
-  wynik_json "$(jq -nc --arg r "$slug" --arg k "$katalog" --argjson s "$KROKI" --argjson p "$porty" --arg o "$obs" \
+  # Po pushu: klon ma dostać gotową konfigurację.
+  if [ -n "${SH_OBSIDIAN_DIR:-}" ]; then
+    zal="$(obsidian_polacz "$nazwa")"
+    obs="$(jq -nc --arg k "$(obsidian_kat "$nazwa")" --argjson z "$zal" '{katalog:$k, utworzono:($z == 1)}')"
+    info "Klon docs/: $(obsidian_kat "$nazwa")"
+    info "W Obsidianie wystarczy włączyć Obsidian Git dla tego folderu."
+  fi
+  wynik_json "$(jq -nc --arg r "$slug" --arg k "$katalog" --argjson s "$KROKI" --argjson p "$porty" --argjson o "$obs" \
     --arg t "$tryb_proj" '{repo:$r, katalog:$k, tryb:$t, kroki:$s, porty:$p, obsidian:$o}')"
 }

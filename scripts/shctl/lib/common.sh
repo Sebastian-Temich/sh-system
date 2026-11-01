@@ -13,6 +13,7 @@ SH_DIR="${SH_DIR:-$HOME/sh}"
 SH_GH_OWNER="${SH_GH_OWNER:-Sebastian-Temich}"
 SH_TEMPLATE="${SH_TEMPLATE:-sh-template-projekt}"
 SH_NOTIFY_CMD="${SH_NOTIFY_CMD:-$SH_DIR/bin/notify.sh}"
+SH_CONFIG="${SH_CONFIG:-$HOME/.config/sh/config}"
 PROJEKTY="$SH_DIR/projekty"
 PORTY="$SH_DIR/porty.md"
 LIMITY="$SH_DIR/limity.md"
@@ -24,10 +25,30 @@ JSON=0
 PROJEKT=""
 ZJEDZONE=0
 WYNIK_WYSLANY=0
-BLOKADY=""
+BLOKADA=""
 SHCTL_TMP=""
 SHCTL_KOMENDA=""
 SHCTL_ARGI=""
+
+# Czyta plik jako dane, bez source: konfiguracja nie wykonuje kodu. Zmienna środowiska wygrywa.
+wczytaj_config() {
+  local l v
+  [ -z "${SH_OBSIDIAN_DIR:-}" ] || return 0
+  [ -f "$SH_CONFIG" ] || return 0
+  while IFS= read -r l || [ -n "$l" ]; do
+    case "$l" in
+      SH_OBSIDIAN_DIR=*)
+        v="${l#SH_OBSIDIAN_DIR=}"
+        case "$v" in
+          \"*\") v="${v#\"}"; v="${v%\"}" ;;
+          \'*\') v="${v#\'}"; v="${v%\'}" ;;
+        esac
+        SH_OBSIDIAN_DIR="$v"
+        ;;
+    esac
+  done <"$SH_CONFIG"
+}
+wczytaj_config
 
 dzis() { date +%F; }
 
@@ -54,9 +75,9 @@ zapisz_log() {
 }
 
 koniec_shctl() {
-  local rc=$? b nazwa
+  local rc=$? nazwa
   trap - EXIT
-  for b in $BLOKADY; do rmdir "$b" 2>/dev/null || true; done
+  [ -z "$BLOKADA" ] || rmdir "$BLOKADA" 2>/dev/null || true
   if [ "$JSON" -eq 1 ] && [ "$WYNIK_WYSLANY" -eq 0 ] && [ "$rc" -ne 0 ]; then
     nazwa="$SHCTL_KOMENDA"
     jq -nc --arg k "$nazwa" --argjson rc "$rc" --rawfile b "$SHCTL_TMP/blad" \
@@ -137,16 +158,27 @@ zablokuj() {
     [ "$i" -lt 100 ] || die "$E_WYKONANIE" "blokada zajęta: $k (usuń katalog, jeśli to pozostałość)"
     sleep 0.1
   done
-  BLOKADY="$BLOKADY $k"
+  BLOKADA="$k"
 }
 
 odblokuj() {
   rmdir "$1" 2>/dev/null || true
-  BLOKADY="${BLOKADY/ $1/}"
+  BLOKADA=""
 }
 
 # Jedna linia do tabeli Markdown.
 komorka() { printf '%s' "$1" | LC_ALL=C tr '\r\n' '  ' | LC_ALL=C sed 's/|/\\|/g'; }
+
+# Docker, logowania i git potrafią wisieć przy braku sieci.
+z_limitem() {
+  local s="$1"
+  shift
+  if command -v perl >/dev/null; then
+    perl -e 'alarm shift; exec @ARGV or exit 127' "$s" "$@"
+  else
+    "$@"
+  fi
+}
 
 powiadom() {
   [ -x "$SH_NOTIFY_CMD" ] || { uwaga "brak $SH_NOTIFY_CMD"; return 1; }

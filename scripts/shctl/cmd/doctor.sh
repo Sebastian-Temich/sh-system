@@ -2,18 +2,10 @@
 # --test-notify wysyła prawdziwe powiadomienie.
 # shellcheck shell=bash
 
-wpis() { printf '%s\t%s\t%s\n' "$1" "$2" "$3" >>"$SHCTL_TMP/doctor"; }
+# shellcheck source=../lib/obsidian.sh
+. "$SHCTL_DIR/lib/obsidian.sh"
 
-# Docker i logowania potrafią wisieć przy braku sieci.
-z_limitem() {
-  local s="$1"
-  shift
-  if command -v perl >/dev/null; then
-    perl -e 'alarm shift; exec @ARGV or exit 127' "$s" "$@"
-  else
-    "$@"
-  fi
-}
+wpis() { printf '%s\t%s\t%s\n' "$1" "$2" "$3" >>"$SHCTL_TMP/doctor"; }
 
 sprawdz_narzedzia() {
   local n
@@ -88,6 +80,25 @@ sprawdz_srodowisko() {
   if [ -f "$PORTY" ]; then wpis "porty.md" ok "$PORTY"; else wpis "porty.md" blad "brak $PORTY"; fi
 }
 
+sprawdz_obsidian() {
+  local k stan ile=0
+  if [ -z "${SH_OBSIDIAN_DIR:-}" ]; then
+    wpis "Obsidian" uwaga "brak SH_OBSIDIAN_DIR w $SH_CONFIG"
+    return 0
+  fi
+  for k in "$SH_OBSIDIAN_DIR"/*/; do
+    [ -e "$k.git" ] || continue
+    ile=$((ile + 1))
+    stan="$(obsidian_stan "${k%/}")"
+    if [ "$stan" = ok ]; then
+      wpis "Obsidian $(basename "$k")" ok "czysty i aktualny"
+    else
+      wpis "Obsidian $(basename "$k")" uwaga "$stan"
+    fi
+  done
+  [ "$ile" -gt 0 ] || wpis "Obsidian" ok "brak klonów w $SH_OBSIDIAN_DIR"
+}
+
 komenda_main() {
   local test=0 bledy
   while [ $# -gt 0 ]; do
@@ -103,6 +114,7 @@ komenda_main() {
   sprawdz_uslugi
   sprawdz_notify "$test"
   sprawdz_srodowisko
+  sprawdz_obsidian
 
   bledy="$(awk -F'\t' '$2 == "blad" { n++ } END { print n + 0 }' "$SHCTL_TMP/doctor")"
   if [ "$JSON" -eq 1 ]; then

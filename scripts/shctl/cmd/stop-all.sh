@@ -66,7 +66,7 @@ zapisz_stan() {
 }
 
 komenda_main() {
-  local panele wybrane teraz na_koncu lista p ile orch=0 bledy=0 zmiana=0 id wynik
+  local panele wybrane teraz na_koncu lista p ile orch=0 bledy=0 zmiana=0 id wynik kolejnosc
   while [ $# -gt 0 ]; do opcja_wspolna "$@"; shift "$ZJEDZONE"; done
   wymagaj jq herdr
   [ -z "$PROJEKT" ] || sprawdz_nazwe "$PROJEKT"
@@ -77,9 +77,12 @@ komenda_main() {
     if $p == "" then . else map(select(.projekt == $p)) end' <<<"$panele")"
   orch="$(jq 'any(.[]; .label == "orkiestrator") | if . then 1 else 0 end' <<<"$wybrane")"
 
-  # Własny panel i orkiestrator na końcu: po ich zamknięciu shctl już nie działa.
+  # Orkiestrator na końcu, a panel, z którego działa shctl, po nim: po jego zamknięciu
+  # proces już nie żyje i pętla by nie doszła do kolejnych paneli.
   teraz="$(jq -c --arg s "${HERDR_PANE_ID:-}" 'map(select(.rodzaj == "worker" and .pane_id != $s))' <<<"$wybrane")"
-  na_koncu="$(jq -c --arg s "${HERDR_PANE_ID:-}" 'map(select(.rodzaj != "worker" or .pane_id == $s))' <<<"$wybrane")"
+  na_koncu="$(jq -c --arg s "${HERDR_PANE_ID:-}" '
+    map(select(.rodzaj != "worker" or .pane_id == $s))
+    | sort_by([.pane_id == $s, .label == "orkiestrator"])' <<<"$wybrane")"
 
   if [ -n "$PROJEKT" ]; then
     lista="$PROJEKT"
@@ -107,9 +110,22 @@ komenda_main() {
     fi
   fi
 
-  info "Do zatrzymania: $(jq -r 'map(.pane_id + " " + .label) | join(", ") | if . == "" then "nic" else . end' <<<"$wybrane")"
-  wynik="$(jq -nc --argjson k "$wybrane" --arg l "$lista" --arg s "$STAN" \
-    '{panele:$k, stan:($l | split("\n") | map(select(length > 0) | $s + "/" + . + ".json"))}')"
+  wynik="$(jq -nc --argjson k "$wybrane" --argjson t "$teraz" --argjson n "$na_koncu" --arg l "$lista" --arg s "$STAN" \
+    --arg w "${HERDR_PANE_ID:-}" '
+    def opis: .pane_id + " " + (if .label == "" then "(bez etykiety)" else .label end)
+      + (if .pane_id == $w then " (własny panel)" else "" end);
+    ($l | split("\n") | map(select(length > 0) | $s + "/" + . + ".json")) as $pliki
+    | {panele:$k, stan:$pliki, kolejnosc:(
+        ($pliki | map("zapisz stan: " + .))
+        + ($t | map("zamknij: " + opis))
+        + ["powiadom: notify.sh high"]
+        + ($n | map("zamknij na końcu: " + opis)))}')"
+  if [ "$DRY" -eq 1 ]; then
+    info "Kolejność:"
+    jq -r '.kolejnosc | to_entries[] | "  \(.key + 1). \(.value)"' <<<"$wynik" | while IFS= read -r kolejnosc; do info "$kolejnosc"; done
+  else
+    info "Zatrzymano: $(jq -r 'map(.pane_id + " " + .label) | join(", ") | if . == "" then "nic" else . end' <<<"$wybrane")"
+  fi
   wynik_json "$wynik"
 
   if [ "$DRY" -eq 0 ]; then

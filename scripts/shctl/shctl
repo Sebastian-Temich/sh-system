@@ -30,6 +30,7 @@ Użycie: shctl KOMENDA [argumenty] [--dry-run] [--json] [--projekt NAZWA]
   ports reserve|release|list [--zakres 55|56]
   status show
   stop-all
+  obsidian link|unlink NAZWA
   doctor [--test-notify]
 
 Dokumentacja: sh-system/docs/shctl.md
@@ -42,7 +43,7 @@ shift
 
 case "$KOMENDA" in
   -h | --help | help) pomoc; exit 0 ;;
-  new-project | stage | doc | decision | escalate | ports | status | stop-all | doctor) ;;
+  new-project | stage | doc | decision | escalate | ports | status | stop-all | obsidian | doctor) ;;
   *) echo "BŁĄD: nieznana komenda: $KOMENDA (shctl --help)" >&2; exit "$E_UZYCIE" ;;
 esac
 

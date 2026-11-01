@@ -6,8 +6,12 @@ ETAPY="00-intake 01-brief 02-design 03-wymagania 04-architektura 05-plan 06-zada
 wspolny_setup() {
   REPO="$(cd "$BATS_TEST_DIRNAME/../../.." && pwd -P)"
   SHCTL="$REPO/scripts/shctl/shctl"
-  T="$BATS_TEST_TMPDIR"
+  # Spacja w ścieżce przez cały zestaw: katalog Obsidiana i projekty nie mogą się na niej rozsypać.
+  T="$BATS_TEST_TMPDIR/ze spacja"
+  mkdir -p "$T"
   export SH_DIR="$T/sh" SH_NOTIFY_CMD="$T/mock/notify" SH_GH_OWNER=test-owner
+  export SH_OBSIDIAN_DIR="$T/Obsidian Vault/SH/Projekty"
+  unset SH_CONFIG HERDR_PANE_ID
   export GIT_CONFIG_NOSYSTEM=1 GIT_CONFIG_GLOBAL="$T/gitconfig" HOME="$T/home"
   mkdir -p "$SH_DIR/projekty" "$SH_DIR/logs" "$T/mock" "$T/home"
   git config --global user.name test
@@ -108,6 +112,9 @@ exit "$rc"
 SH
   printf '#!/bin/sh\nfor a in x; do gh label create test --force; done\n' >"$d/scripts/setup-labels.sh"
   chmod +x "$d/scripts/"*.sh
+  printf '# Projekt\n' >"$d/README.md"
+  mkdir -p "$d/src"
+  printf 'kod\n' >"$d/src/app.txt"
 }
 
 # Projekt w ~/sh/projekty/demo z originem na atrapie GitHuba i poprawnym układem.

@@ -49,7 +49,11 @@ Zmienne środowiska (dla testów i innego układu):
 | `SH_GH_OWNER` | `Sebastian-Temich` |
 | `SH_TEMPLATE` | `sh-template-projekt` |
 | `SH_NOTIFY_CMD` | `$SH_DIR/bin/notify.sh` |
-| `SH_OBSIDIAN_DIR` | `$HOME/Obsidian/sh` (tylko tekst komendy klonowania) |
+| `SH_CONFIG` | `~/.config/sh/config` |
+| `SH_OBSIDIAN_DIR` | Z `SH_CONFIG`; bez wartości `new-project` pomija klon w vaulcie |
+
+Plik `~/.config/sh/config` jest poza repo. shctl czyta z niego linię
+`SH_OBSIDIAN_DIR="/ścieżka/do/vaulta/SH/Projekty"` jako dane, bez `source`. Zmienna środowiska ma pierwszeństwo.
 
 ## new-project
 
@@ -61,7 +65,8 @@ Kolejno: repo `SH_GH_OWNER/NAZWA` z szablonu (domyślnie prywatne), klon do `~/s
 `setup-labels.sh`, frontmatter `konfiguracja.md` (`tryb_procesu`, `etap_wdrozenia: A`, `data`,
 `blok_portow`), blok portów, `supabase/config.toml`, jeśli istnieje, `pominiety` dla etapów spoza
 trybu, `status.md`, opis w `docs/00-intake/zrodlo.md`, `check-dod.sh`, commit i push na main. Na
-końcu wypisuje komendę klonowania repo do Obsidiana na laptopie.
+końcu zakłada lekki klon `docs/` w `SH_OBSIDIAN_DIR/NAZWA` (sekcja „obsidian”) i informuje, że w
+Obsidianie wystarczy włączyć Obsidian Git dla tego folderu.
 
 | Argument | Znaczenie |
 |---|---|
@@ -83,7 +88,7 @@ shctl new-project sklep --opis "Sklep z kawą" --json
   "porty":{"projekt":"sklep","baza":"551","zakres":"55121-55129","api":"55121","db":"55122",
     "studio":"55123","mail":"55124","inspector":"55125","dev":"55126","analytics":"55127",
     "shadow":"55128","pooler":"55129"},
-  "obsidian":"git clone https://github.com/Sebastian-Temich/sklep.git \"$HOME/Obsidian/sh/sklep\""}}
+  "obsidian":{"katalog":"/Users/.../Obsidian Vault/SH/Projekty/sklep","utworzono":true}}}
 ```
 
 Przy `--dry-run` pole `porty` to sam zakres, np. `"55121-55129"`.
@@ -266,8 +271,9 @@ shctl nie wznawia pracy sam (`proces-v1.md`, „Awaryjny stop”).
 
 Etykiety `worker:NAZWA:NR` i pokrewne to konwencja, której musi trzymać się `shctl task dispatch`.
 
-Kolejność: stan, workerzy, powiadomienie, wynik, a na końcu orkiestrator i panel, z którego działa
-shctl, bo po ich zamknięciu proces już nie żyje. Powtórka bez paneli zachowuje zapisany stan. Stan
+Kolejność: stan, workerzy, powiadomienie, wynik, potem orkiestrator, a na samym końcu panel, z
+którego działa shctl, bo po jego zamknięciu proces już nie żyje. `--dry-run` wypisuje tę kolejność
+(pole `kolejnosc`). Powtórka bez paneli zachowuje zapisany stan. Stan
 zawiera panele, etap, gałąź, HEAD, liczbę niezacommitowanych plików i listę worktree.
 
 ```json
@@ -277,6 +283,38 @@ zawiera panele, etap, gałąź, HEAD, liczbę niezacommitowanych plików i list�
   "stan":["/Users/.../sh/stan/sklep.json"]}}
 ```
 
+## obsidian
+
+```sh
+shctl obsidian link NAZWA
+shctl obsidian unlink NAZWA
+```
+
+Obsidian działa na tym samym Macu i służy **głównie do czytania** dokumentacji. Odpowiedzi na
+eskalacje idą przez czat z orkiestratorem i `shctl escalate close`, a nie przez edycję plików w
+vaulcie. Źródłem prawdy pozostaje repo w `~/sh/projekty`.
+
+`link` zakłada dla projektu założonego wcześniej to samo, co `new-project`: klon
+`git clone --filter=blob:none --sparse` i `git sparse-checkout set --no-cone /docs/`. Klon ma tylko
+`docs/`, bez kodu, `node_modules` i plików z katalogu głównego; tryb cone zostawiłby te ostatnie. W
+Obsidianie wystarczy włączyć Obsidian Git dla tego folderu. Powtórka nic nie zmienia, a katalog
+będący czymś innym niż klon tego repo daje kod 4.
+
+`unlink` usuwa klon przy archiwizacji. Odmawia (kod 4) przy niezacommitowanych zmianach, plikach
+nieśledzonych i niewypchniętych commitach oraz gdy katalog nie jest klonem tego repo. Brak klonu to
+sukces bez zmian.
+
+```sh
+shctl obsidian link sklep --json
+```
+
+```json
+{"ok":true,"komenda":"obsidian","dry_run":false,"wynik":{
+  "katalog":"/Users/.../Obsidian Vault/SH/Projekty/sklep","utworzono":true}}
+```
+
+`unlink` zwraca `{"katalog":"...","usunieto":true}`.
+
 ## doctor
 
 ```sh
@@ -284,8 +322,9 @@ shctl doctor [--test-notify]
 ```
 
 Sprawdza narzędzia, logowania gh, codex i claude, Docker, serwer herdr, `notify.sh` i temat ntfy,
-globalny `core.hooksPath`, lokalny `core.hooksPath` w repo z `~/sh/projekty`, wolne miejsce i
-`porty.md`. Stany: `ok`, `uwaga`, `blad`; tylko `blad` daje kod 1. Domyślnie nic nie wysyła, a
+globalny `core.hooksPath`, lokalny `core.hooksPath` w repo z `~/sh/projekty`, wolne miejsce,
+`porty.md` oraz klony w `SH_OBSIDIAN_DIR`: czy są czyste i zgodne z origin (`git ls-remote`, bez
+pobierania; różnica to `uwaga`). Stany: `ok`, `uwaga`, `blad`; tylko `blad` daje kod 1. Domyślnie nic nie wysyła, a
 `--test-notify` wysyła prawdziwe powiadomienie.
 
 ```json

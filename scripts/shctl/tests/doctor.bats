@@ -56,3 +56,34 @@ setup() {
   "$SHCTL" doctor --test-notify
   [ -s "$T/notified" ]
 }
+
+klon_vaulta() {
+  szablon_remote
+  "$SHCTL" obsidian link demo
+}
+ob_stan() { jq -r '.wynik.kontrole | map(select(.nazwa == "Obsidian demo"))[0] | .stan + ":" + .szczegoly' <<<"$output"; }
+
+@test "czysty i aktualny klon w vaulcie" {
+  klon_vaulta
+  run --separate-stderr "$SHCTL" doctor --json
+  [ "$(ob_stan)" = "ok:czysty i aktualny" ]
+}
+
+@test "niezacommitowana zmiana w klonie to uwaga" {
+  klon_vaulta
+  echo notatka >"$SH_OBSIDIAN_DIR/demo/docs/nowa.md"
+  run --separate-stderr "$SHCTL" doctor --json
+  [ "$status" -eq 0 ]
+  [ "$(ob_stan)" = "uwaga:niezacommitowane zmiany: 1" ]
+}
+
+@test "klon za origin to uwaga, doctor niczego nie pobiera" {
+  klon_vaulta
+  git clone -q "$T/remote.git" "$T/obok"
+  git -C "$T/obok" commit -q --allow-empty -m nowy
+  git -C "$T/obok" push -q origin HEAD:main
+  przed="$(git -C "$SH_OBSIDIAN_DIR/demo" rev-parse origin/main)"
+  run --separate-stderr "$SHCTL" doctor --json
+  [ "$(ob_stan)" = "uwaga:różni się od origin" ]
+  [ "$(git -C "$SH_OBSIDIAN_DIR/demo" rev-parse origin/main)" = "$przed" ]
+}

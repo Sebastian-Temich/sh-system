@@ -9,7 +9,7 @@ setup() {
   [ "${SHCTL_E2E:-}" = 1 ] || skip "wymaga SHCTL_E2E=1"
   REPO="$(cd "$BATS_TEST_DIRNAME/../../.." && pwd -P)"
   T="$BATS_TEST_TMPDIR"
-  export SH_DIR="$T/sh" SH_NOTIFY_CMD=/usr/bin/true
+  export SH_DIR="$T/sh" SH_NOTIFY_CMD=/usr/bin/true SH_OBSIDIAN_DIR="$T/Obsidian Vault/SH/Projekty"
   mkdir -p "$SH_DIR"
   cp "$HOME/sh/porty.md" "$SH_DIR/porty.md"
   SLUG="${SH_GH_OWNER:-Sebastian-Temich}/sh-test-shctl"
@@ -28,6 +28,8 @@ setup() {
   gh api "repos/$SLUG/contents/docs/konfiguracja.md" --jq .content | base64 -d | grep -q '^blok_portow: '
   gh api "repos/$SLUG/contents/docs/02-design/DoD.md" --jq .content | base64 -d | grep -qx 'status: pominiety'
   bash "$P/scripts/check-dod.sh" "$P"
+  [ -f "$SH_OBSIDIAN_DIR/sh-test-shctl/docs/konfiguracja.md" ]
+  [ ! -e "$SH_OBSIDIAN_DIR/sh-test-shctl/scripts" ]
 
   a="$(git -C "$P" rev-parse HEAD)"
   run --separate-stderr "$REPO/scripts/shctl/shctl" new-project sh-test-shctl --opis "Test shctl"

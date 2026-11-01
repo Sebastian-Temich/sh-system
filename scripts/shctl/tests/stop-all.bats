@@ -19,10 +19,16 @@ echo "\$*" >>"$T/herdr.calls"
 case "\$1 \$2" in
   "workspace list") [ ! -f "$T/herdr-down" ] && echo '{"result":{"workspaces":[{"workspace_id":"w1"}]}}' ;;
   "pane list") jq -c '{result:{panes:.}}' "$T/panele.json" ;;
-  "pane close") jq -c --arg p "\$3" 'map(select(.pane_id != \$p))' "$T/panele.json" >"$T/p2"; mv "$T/p2" "$T/panele.json"; [ "\$3" != "$(echo w1:p9)" ] ;;
+  "pane close") if [ -f "\$SH_DIR/stan/demo.json" ]; then echo "close \$3 stan" >>"$T/kolejnosc"; else echo "close \$3 BEZ-STANU" >>"$T/kolejnosc"; fi; jq -c --arg p "\$3" 'map(select(.pane_id != \$p))' "$T/panele.json" >"$T/p2"; mv "$T/p2" "$T/panele.json"; [ "\$3" != "$(echo w1:p9)" ] ;;
 esac
 MOCK
-  chmod +x "$T/mock/herdr"
+  cat >"$T/mock/notify" <<MOCK
+#!/bin/sh
+echo "\$*" >>"$T/notified"
+echo notify >>"$T/kolejnosc"
+[ ! -f "$T/notify-fail" ]
+MOCK
+  chmod +x "$T/mock/herdr" "$T/mock/notify"
   : >"$T/herdr.calls"
 }
 
@@ -43,6 +49,30 @@ zamkniete() { grep '^pane close' "$T/herdr.calls" | awk '{print $3}' | tr '\n' '
   "$SHCTL" stop-all
   [ -d "$T/wt-1" ]
   jq -e --arg w "$T/wt-1" '.git.worktree | map(endswith("wt-1")) | any' "$SH_DIR/stan/demo.json"
+}
+
+@test "z panelu orkiestratora: stan, workery, powiadomienie, orkiestrator na koncu" {
+  HERDR_PANE_ID=w1:p1 run "$SHCTL" stop-all
+  [ "$status" -eq 0 ]
+  [ "$(tr '\n' ',' <"$T/kolejnosc")" = "close w1:p3 stan,close w1:p4 stan,notify,close w1:p1 stan," ]
+}
+
+@test "z panelu orkiestratora: orkiestrator projektu zamyka sie przed wlasnym panelem" {
+  jq '. + [{"pane_id":"w1:p7","label":"orkiestrator:demo","agent":"claude","cwd":"/tmp"}]' "$T/panele.json" >"$T/p"
+  mv "$T/p" "$T/panele.json"
+  HERDR_PANE_ID=w1:p1 run "$SHCTL" stop-all
+  [ "$status" -eq 0 ]
+  [ "$(zamkniete)" = "w1:p3 w1:p4 w1:p7 w1:p1 " ]
+}
+
+@test "--dry-run pokazuje te sama kolejnosc, ktora wykonuje stop" {
+  HERDR_PANE_ID=w1:p1 run --separate-stderr "$SHCTL" stop-all --dry-run --json
+  [ "$status" -eq 0 ]
+  [ "$(jq -r '.wynik.kolejnosc[0]' <<<"$output" | cut -c1-12)" = "zapisz stan:" ]
+  [ "$(jq -r '.wynik.kolejnosc[-1]' <<<"$output")" = "zamknij na końcu: w1:p1 orkiestrator (własny panel)" ]
+  run --separate-stderr "$SHCTL" stop-all --dry-run
+  [[ "$output" == *"Kolejność:"* ]]
+  [ -z "$(zamkniete)" ]
 }
 
 @test "--projekt nie rusza wspolnego orkiestratora ani innych projektow" {

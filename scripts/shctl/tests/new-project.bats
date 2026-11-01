@@ -55,6 +55,60 @@ K() { echo "$SH_DIR/projekty/demo/$1"; }
   [ -f "$(K docs/notatka.md)" ]
 }
 
+@test "klon w vaulcie ma tylko docs/, sciezka ze spacja" {
+  run --separate-stderr nowy --json
+  [ "$status" -eq 0 ]
+  v="$SH_OBSIDIAN_DIR/demo"
+  [ "$(jq -r .wynik.obsidian.katalog <<<"$output")" = "$v" ]
+  [ -f "$v/docs/konfiguracja.md" ]
+  [ ! -e "$v/src" ]
+  [ ! -e "$v/scripts" ]
+  [ ! -e "$v/README.md" ]
+  [ "$(fm "$v/docs/konfiguracja.md" tryb_procesu)" = M ]
+}
+
+@test "koncowy komunikat wskazuje Obsidian Git, powtorka nie klonuje drugi raz" {
+  run nowy
+  [[ "$output" == *"wystarczy włączyć Obsidian Git"* ]]
+  run --separate-stderr nowy --json
+  [ "$status" -eq 0 ]
+  [ "$(jq -r .wynik.obsidian.utworzono <<<"$output")" = false ]
+}
+
+@test "--dry-run nie zaklada klonu" {
+  run --separate-stderr nowy --dry-run --json
+  [ ! -e "$SH_OBSIDIAN_DIR" ]
+  [ "$(jq -r .wynik.obsidian.utworzono <<<"$output")" = false ]
+}
+
+@test "sciezka z config, ze spacja; zmienna srodowiska wygrywa" {
+  unset SH_OBSIDIAN_DIR
+  mkdir -p "$HOME/.config/sh"
+  printf '# komentarz\nSH_OBSIDIAN_DIR="%s"\n' "$T/Inny Vault" >"$HOME/.config/sh/config"
+  run --separate-stderr nowy --dry-run --json
+  [ "$(jq -r .wynik.obsidian.katalog <<<"$output")" = "$T/Inny Vault/demo" ]
+  SH_OBSIDIAN_DIR="/ze srodowiska" run --separate-stderr nowy --dry-run --json
+  [ "$(jq -r .wynik.obsidian.katalog <<<"$output")" = "/ze srodowiska/demo" ]
+}
+
+@test "config jest czytany jako dane, nie wykonywany" {
+  unset SH_OBSIDIAN_DIR
+  mkdir -p "$HOME/.config/sh"
+  printf 'touch wykonano\nSH_OBSIDIAN_DIR="$(touch wykonano)"\n' >"$HOME/.config/sh/config"
+  cd "$T"
+  run --separate-stderr nowy --dry-run --json
+  [ "$status" -eq 0 ]
+  [ ! -e "$T/wykonano" ]
+}
+
+@test "bez konfiguracji projekt powstaje, klon pominiety z ostrzezeniem" {
+  unset SH_OBSIDIAN_DIR
+  run --separate-stderr nowy --json
+  [ "$status" -eq 0 ]
+  [[ "$stderr" == *"pomijam klon"* ]]
+  [ "$(jq -r .wynik.obsidian <<<"$output")" = null ]
+}
+
 @test "--public" {
   nowy --public
   grep -q 'repo create test-owner/demo .*--public' "$T/gh.calls"

@@ -32,6 +32,19 @@ setup() { wspolny_setup; projekt_demo; }
   [ "$(jq -r .wynik.adr <<<"$output")" = ADR-010 ]
 }
 
+@test "slug transliteruje polskie znaki, zamiast je usuwac" {
+  run --separate-stderr "$SHCTL" doc new 04-architektura adr --tytul "Zażółć gęślą jaźń" --json
+  [ "$status" -eq 0 ]
+  [ "$(jq -r .wynik.plik <<<"$output")" = docs/04-architektura/adr/ADR-001-zazolc-gesla-jazn.md ]
+  "$SHCTL" doc new 08-qa raport-qa --tytul "ĄĆĘŁŃÓŚŹŻ ąćęłńóśźż"
+  [ -f docs/08-qa/raport-qa-acelnoszz-acelnoszz.md ]
+}
+
+@test "slug nie zalezy od locale" {
+  LC_ALL=C LANG=C "$SHCTL" doc new 04-architektura adr --tytul "Zażółć gęślą jaźń"
+  [ -f docs/04-architektura/adr/ADR-001-zazolc-gesla-jazn.md ]
+}
+
 @test "ADR bez tytulu: kod 2" {
   run --separate-stderr "$SHCTL" doc new 04-architektura adr
   [ "$status" -eq 2 ]

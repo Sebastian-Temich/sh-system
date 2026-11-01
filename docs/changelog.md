@@ -22,3 +22,4 @@
 - Wymagania `shctl doctor` i `shctl review run`, ostrzeżenie `install.sh` obejmuje `~/sh/projekty`.
 - Projekty SH bez hooków git: wrapper nie woła `.githooks/`, `SH_BEZ_HOOKOW_REPO` usunięte, kontrole w CI.
 - `shctl` część 1 (`scripts/shctl/`, `docs/shctl.md`): new-project, stage, doc, decision, escalate, ports, status, stop-all, doctor, testy bats.
+- `shctl obsidian link|unlink`, lekki klon `docs/` w vaulcie, kontrola klonów w `doctor`, `~/.config/sh/config`, kolejność w `stop-all --dry-run`.
