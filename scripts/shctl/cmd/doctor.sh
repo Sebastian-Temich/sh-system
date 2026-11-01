@@ -99,6 +99,23 @@ sprawdz_obsidian() {
   [ "$ile" -gt 0 ] || wpis "Obsidian" ok "brak klonów w $SH_OBSIDIAN_DIR"
 }
 
+# Lista jest utrzymywana ręcznie: repo usuwa właściciel, potem kasuje wiersz.
+sprawdz_do_usuniecia() {
+  local plik="$STAN/do-usuniecia.md" nazwy n
+  nazwy=""
+  if [ -f "$plik" ]; then
+    nazwy="$(awk -F'|' '/^\|/ && !/^\|[- |]*$/ {
+      p = $2; gsub(/^[ \t`]+|[ \t`]+$/, "", p)
+      if (p != "Nazwa" && p != "") print p }' "$plik")"
+  fi
+  if [ -z "$nazwy" ]; then
+    wpis "repo do usunięcia" ok "0"
+    return 0
+  fi
+  n="$(printf '%s\n' "$nazwy" | wc -l | tr -d ' ')"
+  wpis "repo do usunięcia" uwaga "$n: $(printf '%s\n' "$nazwy" | paste -sd ' ' -)"
+}
+
 komenda_main() {
   local test=0 bledy
   while [ $# -gt 0 ]; do
@@ -115,6 +132,7 @@ komenda_main() {
   sprawdz_notify "$test"
   sprawdz_srodowisko
   sprawdz_obsidian
+  sprawdz_do_usuniecia
 
   bledy="$(awk -F'\t' '$2 == "blad" { n++ } END { print n + 0 }' "$SHCTL_TMP/doctor")"
   if [ "$JSON" -eq 1 ]; then

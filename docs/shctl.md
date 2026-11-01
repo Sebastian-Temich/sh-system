@@ -324,8 +324,8 @@ shctl doctor [--test-notify]
 
 Sprawdza narzędzia, logowania gh, codex i claude, Docker, serwer herdr, `notify.sh` i temat ntfy,
 globalny `core.hooksPath`, lokalny `core.hooksPath` w repo z `~/sh/projekty`, wolne miejsce,
-`porty.md` oraz klony w `SH_OBSIDIAN_DIR`: czy są czyste i zgodne z origin (`git ls-remote`, bez
-pobierania; różnica to `uwaga`). Stany: `ok`, `uwaga`, `blad`; tylko `blad` daje kod 1. Domyślnie nic nie wysyła, a
+`porty.md`, klony w `SH_OBSIDIAN_DIR` (czy są czyste i zgodne z origin, przez `git ls-remote`, bez
+pobierania; różnica to `uwaga`) oraz liczbę repo w `~/sh/stan/do-usuniecia.md` (`uwaga`, gdy są). Stany: `ok`, `uwaga`, `blad`; tylko `blad` daje kod 1. Domyślnie nic nie wysyła, a
 `--test-notify` wysyła prawdziwe powiadomienie.
 
 ```json
@@ -341,9 +341,13 @@ bats scripts/shctl/tests
 ```
 
 Testy używają atrap `gh`, `herdr`, `notify` i `lsof` oraz projektu w katalogu tymczasowym. Pełny test
-na GitHubie jest domyślnie pomijany:
+na GitHubie jest domyślnie pomijany. Uruchamiamy go wyłącznie po wyraźnej zgodzie właściciela w danej
+rozmowie (`serwer.md`, „Praca nad systemem”):
 
 ```sh
 SHCTL_E2E=1 bats scripts/shctl/tests/new-project-e2e.bats
-gh repo delete Sebastian-Temich/sh-test-shctl --yes   # wymaga zakresu delete_repo
 ```
+
+Test zakłada prywatne repo `sh-test-RRRRMMDD-HHMM` i przed utworzeniem dopisuje je do
+`~/sh/stan/do-usuniecia.md`. Repo usuwa właściciel (`gh repo delete` wymaga zakresu `delete_repo`), a
+potem kasuje wiersz z listy.
