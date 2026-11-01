@@ -98,6 +98,7 @@ komenda_main() {
     fi
   fi
 
+  krok "włącz usuwanie gałęzi po merge'u"
   krok "załóż etykiety (setup-labels.sh)"
   krok "ustaw konfigurację: tryb ${tryb_arg:-M}, etap_wdrozenia A, data"
   krok "zarezerwuj blok portów"
@@ -122,6 +123,7 @@ komenda_main() {
   fi
 
   [ -f "$KONFIG" ] || die "$E_BRAK" "$katalog nie ma docs/konfiguracja.md"
+  gh repo edit "$slug" --delete-branch-on-merge >/dev/null || die "$E_WYKONANIE" "gh repo edit $slug nieudane"
   rzeczy="$(bash "$ROOT/scripts/setup-labels.sh" --repo "$slug" 2>&1)" || die "$E_WYKONANIE" "setup-labels: $rzeczy"
 
   poprz="$(fm_get "$KONFIG" data)"

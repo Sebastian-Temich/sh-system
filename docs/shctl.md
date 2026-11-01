@@ -62,7 +62,8 @@ shctl new-project NAZWA [--tryb S|M] [--public] [--opis "..."]
 ```
 
 Kolejno: repo `SH_GH_OWNER/NAZWA` z szablonu (domyślnie prywatne), klon do `~/sh/projekty/NAZWA`,
-`setup-labels.sh`, frontmatter `konfiguracja.md` (`tryb_procesu`, `etap_wdrozenia: A`, `data`,
+usuwanie gałęzi po merge'u (`gh repo edit --delete-branch-on-merge`), `setup-labels.sh`,
+frontmatter `konfiguracja.md` (`tryb_procesu`, `etap_wdrozenia: A`, `data`,
 `blok_portow`), blok portów, `supabase/config.toml`, jeśli istnieje, `pominiety` dla etapów spoza
 trybu, `status.md`, opis w `docs/00-intake/zrodlo.md`, `check-dod.sh`, commit i push na main. Na
 końcu zakłada lekki klon `docs/` w `SH_OBSIDIAN_DIR/NAZWA` (sekcja „obsidian”) i informuje, że w
