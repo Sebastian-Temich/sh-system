@@ -14,3 +14,13 @@ do `todo` z `iteracja: 0`, zapisuje cykl w `status.md` i w `metryki.md` oraz zos
 `CHANGELOG.md` i `AGENTS.md` bez zmian.
 
 Do tego czasu `sh-intake` proponuje właścicielowi podział na zlecenia S albo osobny projekt.
+
+## sh-system (2026-11-02): drobne uwagi z raportu QA do backlogu
+
+`shctl task close` przenosi „Drobne uwagi” z `T-NR.md` do `docs/backlog-drobne.md`, ale raport QA
+`docs/08-qa/raport-MN.md` nie ma takiej komendy, więc orkiestrator dopisuje wiersze ręcznie.
+
+Propozycja: `shctl qa close MN` (albo krok w `stage`), który czyta „Drobne uwagi” z
+`raport-MN.md` tym samym parserem co `task close` i dopisuje `| DATA | QA MN | uwaga | otwarta |`
+bez dublowania.
+

@@ -59,6 +59,8 @@ def pola: ["id","tytul","cel","kryteria","pliki","testy","zaleznosci","typ","try
         (if ($z.milestone // "") | type == "string" then empty else "\($kto): milestone to tekst" end),
         (if ($z.waga // "") | IN("", "krytyczne", "istotne", "drobne") then empty
           else "\($kto): waga: krytyczne, istotne albo drobne" end),
+        (if ($z.typ // "") == "qa" and (($z.waga // "") | IN("krytyczne", "istotne") | not)
+          then "\($kto): typ qa wymaga wagi krytyczne albo istotne (drobne idą do „Drobnych uwag” raportu QA)" else empty end),
         (($z.zaleznosci // []) | if type != "array" then "\($kto): zaleznosci to lista"
           else .[] | select((test("^#[0-9]+$") or (. as $d | $ids | index($d)) != null) | not)
             | "\($kto): nieznana zależność \(.)" end)
