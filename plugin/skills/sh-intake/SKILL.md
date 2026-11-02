@@ -14,10 +14,13 @@ więc obowiązują uprawnienia tej sesji i zasady z `AGENTS.md`.
 
 Robisz:
 
-- rozpoznajesz typ projektu i proponujesz tryb jednym zdaniem uzasadnienia;
+- rozpoznajesz typ projektu i zapisujesz jego konsekwencje: narzędzia testowe, ograniczenia
+  runnera, kroki ręczne właściciela;
+- proponujesz tryb jednym zdaniem uzasadnienia; zlecenie na tryb L nazywasz wprost;
 - oceniasz obszary ryzyka, bo ryzyko podnosi tryb;
-- piszesz specyfikację: cel, zakres, wymagania z kryteriami, stack, hosting, notatkę o designie;
-- wypisujesz kroki ręczne właściciela;
+- piszesz specyfikację: wymagania jako historyjki z priorytetem i kryteriami Given/When/Then, stack z
+  alternatywą, hosting, design, ryzyka i szacunek poglądowy;
+- po akceptacji właściciela wpisujesz stack do „Stack (kontrakt)” w `AGENTS.md` przez PR etapu;
 - w trybie S zakładasz issue zlecenia przez `shctl task create`;
 - zadajesz najwyżej 3 pytania blokujące, każde z proponowaną odpowiedzią; resztę zapisujesz jako
   założenia.
@@ -58,7 +61,7 @@ Tryb M (gałąź `stage/00-intake`, PR do `main`):
 - `docs/00-intake/specyfikacja.md`: z `shctl doc new`, format `docs/_szablony/specyfikacja.md`
 - `docs/00-intake/zrodlo.md`: pierwotna treść zlecenia bez zmian, gdy plik jest pusty
 - `docs/konfiguracja.md`: `tryb_procesu` oraz `hosting` z `zaakceptowany: false`
-- `AGENTS.md`: wiersze „Typ projektu” i „Framework” w sekcji „Stack (kontrakt)”
+- `AGENTS.md`: zaakceptowany stack w sekcji „Stack (kontrakt)” (typ projektu, framework)
 - `docs/00-intake/DoD.md`: zaznaczone pola Dokumentacji, Funkcjonalności i Checklist jakości
 
 Tryb S:
@@ -86,28 +89,33 @@ shctl escalate --dotyczy 00-intake --powod "..." --potrzebne "..." --opcje "A;B"
 ## Procedura
 
 1. Przeczytaj pliki z sekcji „Wejście” i zapisz czas zlecenia w UTC (`date -u +%Y-%m-%dT%H:%MZ`).
-2. Rozpoznaj typ projektu: web, rozszerzenie Chrome, wtyczka Office, mobile, ML albo inny. Typ ustala
-   stack, narzędzia testowe, dodatkowe punkty DoD, ograniczenia runnera i kroki ręczne właściciela.
+2. Rozpoznaj typ projektu: web, rozszerzenie Chrome, wtyczka Office, mobile, ML albo inny. Zapisz
+   konsekwencje według „Typów projektu” (niżej): narzędzia testowe, dodatkowe punkty DoD, ograniczenia
+   runnera i kroki ręczne właściciela.
 3. Oceń obszary ryzyka z „Listy ryzyk” (niżej): każde `tak`, `nie` albo `do ustalenia`.
 4. Wybierz tryb. S tylko dla drobnej zmiany w działającym projekcie: 1–3 zadania, bez zmian modelu
    danych i bez obszaru ryzyka. Obszar ryzyka na `tak` albo `do ustalenia` to minimum M z ADR. Nowy
-   projekt to M (tryb L dopiero w etapie B). Zapisz uzasadnienie jednym zdaniem. Dla S przejdź do
-   „Tryb S”.
+   projekt to M. Zlecenie na tryb L (nowy produkt, MVP, duża przebudowa, więcej niż 15 zadań) mówisz
+   o tym wprost i proponujesz M z ograniczonym zakresem albo czekanie na etap B (sekcja „Tryb L i
+   etap B”). Zapisz uzasadnienie jednym zdaniem. Dla S przejdź do „Tryb S”.
 5. Zbierz luki. Pytanie zadajesz tylko, gdy bez odpowiedzi nie da się napisać wymagania. Najwyżej 3
    pytania, każde z proponowaną odpowiedzią. Nie czekasz: piszesz dalej, przyjmując propozycję jako
    założenie, a właściciel rozstrzyga w checkpoincie.
 6. Załóż gałąź `stage/00-intake` od `main` i uruchom `shctl doc new 00-intake specyfikacja`.
 7. Wypełnij specyfikację według „Treści specyfikacji” (niżej). Zlecenie i wcześniejsze ustalenia
    przywołujesz odnośnikiem (`zrodlo.md`, wiersz `decyzje.md`), a nie kopią.
-8. Ustaw w `docs/konfiguracja.md` `tryb_procesu` i `hosting` z `zaakceptowany: false`. W `AGENTS.md`
-   wpisz „Typ projektu” i „Framework”; komendy zostają dla zadania szkieletu.
+8. Ustaw w `docs/konfiguracja.md` `tryb_procesu` i `hosting` z `zaakceptowany: false`.
 9. Zaznacz w `docs/00-intake/DoD.md` spełnione pola Dokumentacji, Funkcjonalności i Checklist jakości.
    Pól Checkpointu nie ruszasz.
 10. Commit `00-intake: specyfikacja`, push i `gh pr create --base main --head stage/00-intake`. Opis PR:
     tryb z uzasadnieniem, obszary ryzyka na `tak`, otwarte pytania, czas zlecenia w UTC i „Decyzje do
     rejestru” w postaci `co / dlaczego / cofnięcie` (tryb, hosting, istotne założenia).
-11. Sprawdź „DoD” i przekaż orkiestratorowi numer PR: review etapu (`sh-review`), potem akceptacja
-    właściciela. Po akceptacji następny jest `sh-architekt`.
+11. Przekaż orkiestratorowi numer PR: review etapu (`sh-review`), potem akceptacja właściciela.
+12. Po akceptacji wpisz w tym samym PR zaakceptowany stack do „Stack (kontrakt)” w `AGENTS.md` (typ
+    projektu, framework; komendy uzupełnia architekt i zadanie szkieletu) i ustaw
+    `hosting.zaakceptowany: true`, gdy właściciel zaakceptował hosting. Zmiana stacku przy akceptacji
+    trafia też do specyfikacji. Nowy commit wraca do review etapu.
+13. Sprawdź „DoD” i przekaż orkiestratorowi PR do merge'a. Następny jest `sh-architekt`.
 
 ### Lista ryzyk
 
@@ -121,21 +129,37 @@ shctl escalate --dotyczy 00-intake --powod "..." --potrzebne "..." --opcje "A;B"
 | Upload plików, integracje zewnętrzne | Walidacja wejścia, obsługa błędów i timeoutów |
 | Płatne usługi, sekrety, nowe konta | Krok ręczny właściciela; bez zgody nie wchodzi do planu |
 
+### Typy projektu
+
+| Typ | Narzędzia testowe | Ograniczenia runnera | Kroki ręczne właściciela |
+|---|---|---|---|
+| Web | Vitest, Playwright (chromium, webkit) | Brak | Konta Vercel i Supabase, domena |
+| Rozszerzenie Chrome | Vitest, Playwright z rozszerzeniem w chromium | Bez webkit; brak publikacji ze serwera | Konto Chrome Web Store, publikacja |
+| Wtyczka Office | Vitest, test manifestu | Brak Office na serwerze: testy ręczne właściciela | Konto Microsoft Partner Center, publikacja |
+| Mobile | Testy jednostkowe, E2E na symulatorze, jeśli działa na serwerze | Sprawdź Xcode i emulatory na serwerze pilota; czego brak, robi właściciel | Konta App Store i Google Play, publikacja |
+| ML | pytest przez uv, test na małej próbce danych | Bez GPU; trening ciężki poza serwerem | Dane, licencje, konto usługi obliczeniowej |
+| Inny | Według stacku, uzasadnione w specyfikacji | Opisane w specyfikacji | Opisane w specyfikacji |
+
 ### Treść specyfikacji
 
-- **Cel:** problem, odbiorca i rezultat w 2–4 zdaniach.
+- **Cel i kontekst:** problem, dla kogo, rezultat biznesowy, sytuacja wyjściowa.
+- **Użytkownicy:** grupy, ich potrzeby i uprawnienia.
 - **Zakres:** „W zakresie” i „Poza zakresem”; rzeczy odłożone nazwij wprost.
-- **Wymagania:** `W-1`, `W-2`, … Każde ma sprawdzalne kryteria: działanie i oczekiwany wynik, bez
-  „szybko”, „intuicyjnie”, „łatwo”.
-- **Stack:** typ projektu, framework, narzędzia testowe, dodatkowe punkty DoD, ograniczenia runnera.
-  Domyślnie kontrakt z `AGENTS.md`. Odstępstwo wymaga uzasadnienia, a decyzję podejmie ADR architekta.
+- **Wymagania:** `W-1`, `W-2`, … jako historyjki „Jako ROLA chcę DZIAŁANIE, aby CEL” z priorytetem
+  (musi, powinno, może) i kryteriami Given/When/Then. Bez „szybko”, „intuicyjnie”, „łatwo”.
+- **Typ projektu:** typ i tabela konsekwencji z „Typów projektu”.
+- **Stack:** rekomendacja, alternatywa i uzasadnienie. Domyślnie kontrakt z `AGENTS.md`; odstępstwo
+  rozstrzyga ADR architekta.
 - **Hosting:** domyślnie Vercel i Supabase Cloud (region UE) na kontach klienta; inny z uzasadnieniem.
-- **Design:** skąd pochodzi i co jest ustalone. W etapie A design to notatka i materiały w
-  `docs/02-design/zrodla/`.
+- **Design:** skąd pochodzi, co jest ustalone i co właściciel dostarcza do `docs/02-design/zrodla/`
+  (makiety, zrzuty, logotypy, teksty).
 - **Kroki ręczne właściciela:** konta, domeny, sklepy, płatne usługi, publikacja. Każdy stanie się
   zadaniem właściciela w planie.
-- **Tryb procesu:** tryb i uzasadnienie w jednym zdaniu, tabela z „Listy ryzyk”, założenia, najwyżej 3
-  otwarte pytania z proponowanymi odpowiedziami oraz czas zlecenia w UTC.
+- **Ryzyka:** tabela z „Listy ryzyk”.
+- **Szacunek poglądowy:** liczba zadań, czas kalendarzowy i czas właściciela (checkpointy, kroki
+  ręczne). To orientacja, nie wycena.
+- **Tryb procesu:** tryb i uzasadnienie w jednym zdaniu, założenia, najwyżej 3 otwarte pytania z
+  proponowanymi odpowiedziami oraz czas zlecenia w UTC.
 
 ## Tryby
 
@@ -171,12 +195,17 @@ właścicielowi zamiast zakładać issue S.
 
 ### Tryb M
 
-Zachowanie domyślne etapu A: „Procedura” w całości, z checkpointem właściciela po review etapu. Nowa
-funkcja M w projekcie, którego etapy mają już `done`, wymaga ponownego otwarcia etapów, czego
-`shctl stage` nie robi. Wtedy proponujesz właścicielowi podział na zlecenia S albo osobny projekt i
-zgłaszasz brak orkiestratorowi jako propozycję dla systemu.
+Zachowanie domyślne etapu A: „Procedura” w całości, z checkpointem właściciela po review etapu. Drugie
+zlecenie M w projekcie, którego etapy mają już `done`, wymaga nowego cyklu etapów, którego `shctl` nie
+ma (propozycja „shctl cykl new” na etap B w `sh-system/docs/propozycje.md`). Do tego czasu proponujesz
+właścicielowi podział na zlecenia S albo osobny projekt.
 
 ### Tryb L i etap B
+
+Zlecenie, które kwalifikuje się do trybu L (nowy produkt, MVP, duża przebudowa), w etapie A
+nazywasz wprost w specyfikacji i w opisie PR. Proponujesz dwie drogi: M z ograniczonym zakresem
+(najważniejsze historyjki „musi”, reszta w „Poza zakresem”) albo czekanie na etap B. Wybiera
+właściciel.
 
 Tryb L dodaje w `docs/00-intake/` pliki `intake.md`, `tech-proposal.md`, `narzedzia.md` i `wycena.md`
 oraz etapy briefu, analizy designu i wymagań (`01-brief`, `02-design`, `03-wymagania`). Design przez
@@ -185,11 +214,15 @@ istniejących projektów. W etapie A tego nie robisz.
 
 ## DoD
 
-- [ ] Typ projektu jest rozpoznany, a tryb ma uzasadnienie w jednym zdaniu
+- [ ] Typ projektu jest rozpoznany, z konsekwencjami dla testów, runnera i kroków właściciela
+- [ ] Tryb ma uzasadnienie w jednym zdaniu; zlecenie na L ma propozycję M albo czekania na etap B
 - [ ] Każdy obszar z „Listy ryzyk” ma ocenę; ryzyko na `tak` albo `do ustalenia` daje minimum M
-- [ ] Każde wymaganie ma sprawdzalne kryteria akceptacji
-- [ ] Zakres i „Poza zakresem” są wypisane
-- [ ] Stack i hosting są w specyfikacji i w `konfiguracja.md` (`zaakceptowany: false`)
+- [ ] Każde wymaganie to historyjka z priorytetem i kryteriami Given/When/Then
+- [ ] Cel i kontekst, użytkownicy, zakres i „Poza zakresem” są opisane
+- [ ] Stack ma rekomendację, alternatywę i uzasadnienie; hosting jest w `konfiguracja.md`
+- [ ] Design mówi, co właściciel dostarcza do `docs/02-design/zrodla/`
+- [ ] Szacunek poglądowy: zadania, czas kalendarzowy, czas właściciela
+- [ ] Po akceptacji stack jest w „Stack (kontrakt)” w `AGENTS.md`, w PR etapu
 - [ ] Kroki ręczne właściciela są wypisane
 - [ ] Najwyżej 3 otwarte pytania, każde z proponowaną odpowiedzią
 - [ ] Czas zlecenia jest zapisany w UTC
@@ -200,10 +233,12 @@ istniejących projektów. W etapie A tego nie robisz.
 
 ## Kryteria review
 
-- 🔴 krytyczne: sekret w specyfikacji lub issue; wymaganie bez sprawdzalnych kryteriów; tryb S mimo
-  obszaru ryzyka albo zmiany modelu danych; obszar ryzyka bez oceny.
-- 🟡 istotne: brak „Poza zakresem”; stack lub hosting sprzeczny z kontraktem `AGENTS.md` bez
-  uzasadnienia; brak kroków ręcznych właściciela przy kontach lub płatnych usługach; więcej niż 3
+- 🔴 krytyczne: sekret w specyfikacji lub issue; wymaganie bez kryteriów Given/When/Then; tryb S mimo
+  obszaru ryzyka albo zmiany modelu danych; obszar ryzyka bez oceny; zlecenie na L przyjęte jako M bez
+  słowa o trybie L.
+- 🟡 istotne: brak „Poza zakresem”, użytkowników albo priorytetów; stack bez alternatywy lub
+  uzasadnienia; typ projektu bez konsekwencji; brak szacunku poglądowego; stack lub hosting sprzeczny z
+  kontraktem `AGENTS.md` bez uzasadnienia; brak kroków ręcznych właściciela przy kontach lub płatnych usługach; więcej niż 3
   pytania albo pytanie bez proponowanej odpowiedzi; architektura, ADR albo plan w specyfikacji;
   skopiowana treść zlecenia zamiast odnośnika; brak czasu zlecenia w UTC.
 - ⚪ drobne: styl, nazewnictwo, kolejność wymagań.
@@ -252,9 +287,11 @@ Polecenie: „Nowe zlecenie dla projektu `sklep`: klienci zamawiają kawę onlin
    płatnościami i danymi klientów.
 3. Pytanie: „Operator płatności?” z propozycją „Stripe, tryb testowy w dev”.
 4. `git switch -c stage/00-intake`, potem `shctl doc new 00-intake specyfikacja`.
-5. Specyfikacja: W-1 katalog, W-2 koszyk, W-3 płatność, W-4 konto klienta, kryteria przy każdym;
-   kroki ręczne: konto Stripe i domena na kontach klienta.
-6. `konfiguracja.md`: `tryb_procesu: M`, `hosting.zaakceptowany: false`; `AGENTS.md`: web, Next.js.
-7. PR „00-intake: specyfikacja” z „Decyzjami do rejestru”.
+5. Specyfikacja: W-1 katalog, W-2 koszyk, W-3 płatność (musi), W-4 konto klienta (powinno), np. „Given
+   koszyk z 2 kawami, when klient płaci kartą testową, then zamówienie ma status opłacone”. Stack:
+   Next.js (alternatywa: Vite + React). Szacunek: 11 zadań, 2 tygodnie, 3 godziny właściciela.
+6. `konfiguracja.md`: `tryb_procesu: M`, `hosting.zaakceptowany: false`. PR „00-intake:
+   specyfikacja” z „Decyzjami do rejestru”.
+7. Po akceptacji: w tym PR `AGENTS.md` dostaje web i Next.js, a `hosting.zaakceptowany: true`.
 
-Wynik: PR z `stage/00-intake` czeka na review etapu i akceptację właściciela, potem `sh-architekt`.
+Wynik: PR z `stage/00-intake` po review i akceptacji idzie do merge'a, potem `sh-architekt`.
