@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>pl.iskt.softwarehouse.sh-watchdog</string>
+  <!-- Strażnik limitów: jeden przebieg co 5 minut, bez AI (docs/serwer.md). -->
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/bash</string>
+    <string>/Users/sebastiant./sh/bin/sh-watchdog.sh</string>
+  </array>
+  <key>StartInterval</key>
+  <integer>300</integer>
+  <key>RunAtLoad</key>
+  <true/>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key>
+    <string>/Users/sebastiant./.local/bin:/Users/sebastiant./sh/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+    <key>LANG</key>
+    <string>pl_PL.UTF-8</string>
+  </dict>
+  <key>WorkingDirectory</key>
+  <string>/Users/sebastiant./sh</string>
+  <!-- Skrypt sam pisze do watchdog.log; tu trafiają tylko nieprzechwycone błędy. -->
+  <key>StandardOutPath</key>
+  <string>/dev/null</string>
+  <key>StandardErrorPath</key>
+  <string>/Users/sebastiant./sh/logs/watchdog.log</string>
+</dict>
+</plist>

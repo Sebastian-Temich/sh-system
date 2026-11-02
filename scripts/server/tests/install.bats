@@ -10,8 +10,13 @@ setup() {
   PLIST="$T/agents/$LABEL.plist"
   mkdir -p "$T/sh" "$T/agents" "$T/mock"
 
+  # Stan i wywolania liczymy tylko dla sh-start; inne agenty (np. sh-watchdog) trafiaja do calls-inne.
   cat >"$T/mock/launchctl" <<MOCK
 #!/bin/sh
+case "\$*" in
+  *$LABEL*) ;;
+  *) echo "\$*" >>"$T/calls-inne"; exit 0 ;;
+esac
 echo "\$1" >>"$T/calls"
 case "\$1" in
   print) [ -f "$T/loaded" ] ;;
@@ -25,7 +30,8 @@ echo "\$*" >>"$T/notified"
 [ ! -f "$T/notify-fail" ]
 MOCK
   chmod +x "$T/mock/launchctl" "$T/mock/notify"
-  cp "$REPO/scripts/server/$LABEL.plist" "$PLIST"
+  # Wszystkie plisty juz na miejscu: bez zmiany install.sh nie wola plutil (brak go w CI na Linuksie).
+  cp "$REPO"/scripts/server/*.plist "$T/agents/"
   : >"$T/calls"
 }
 
@@ -168,4 +174,26 @@ globalny_hooks_path() {
   install
   [ "$status" -eq 0 ]
   grep -q "ok:      $T/codex/reviewer.config.toml" <<<"$output"
+}
+
+@test "plista sh-watchdog: kopia i zaladowanie" {
+  wymaga_plutil
+  rm "$T/agents/pl.iskt.softwarehouse.sh-watchdog.plist"
+  install
+  [ "$status" -eq 0 ]
+  cmp "$REPO/scripts/server/pl.iskt.softwarehouse.sh-watchdog.plist" "$T/agents/pl.iskt.softwarehouse.sh-watchdog.plist"
+  grep -q 'bootstrap .*sh-watchdog.plist' "$T/calls-inne"
+  [ "$(readlink "$T/sh/bin/sh-watchdog.sh")" = "$REPO/scripts/server/sh-watchdog.sh" ]
+}
+
+@test "wzorce straznika: kopia gdy brak, poprawki wlasciciela zostaja" {
+  install
+  [ "$status" -eq 0 ]
+  cmp "$REPO/scripts/server/watchdog-wzorce.txt" "$T/sh/watchdog-wzorce.txt"
+  [ ! -L "$T/sh/watchdog-wzorce.txt" ]
+  echo 'claude  nowy wzorzec' >>"$T/sh/watchdog-wzorce.txt"
+  install
+  [ "$status" -eq 0 ]
+  grep -q 'nowy wzorzec' "$T/sh/watchdog-wzorce.txt"
+  [[ "$stderr" == *"watchdog-wzorce.txt rozni sie"* ]]
 }
