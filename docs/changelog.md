@@ -2,6 +2,8 @@
 
 ## 2026-11-02
 
+- Plugin `software-house` (`plugin/`) z lokalnym marketplace `sh-system` (`.claude-plugin/marketplace.json`), kontrakt `SKILL.md`, szablon skilla i `scripts/plugin/sprawdz-skille.sh` w CI.
+- `templates/review.md`: format wyniku review z wagami 🔴🟡⚪; shctl czyta też komentarze review pisane ręcznie.
 - `shctl` część 2: `task create|ready|dispatch|iter|close|resume-check`, `review run`, `reset-dryrun`, testy bats ze stanowymi atrapami, test e2e `task-e2e.bats`.
 - Tymczasowy prompt review `codex/sh-review-tymczasowy.md` i schemat odpowiedzi `codex/sh-review.schema.json`.
 - `stop-all` zachowuje mapę zadań w `~/sh/stan/NAZWA.json`.

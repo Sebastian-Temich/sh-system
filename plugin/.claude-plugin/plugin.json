@@ -1,0 +1,11 @@
+{
+  "name": "software-house",
+  "displayName": "Software House",
+  "version": "0.1.0",
+  "description": "Skille procesu AI Software House v1 (sh-system/docs/proces-v1.md): kontrakt SKILL.md, szablon i role sh-*",
+  "author": {
+    "name": "Sebastian-Temich"
+  },
+  "repository": "https://github.com/Sebastian-Temich/sh-system",
+  "keywords": ["software-house", "proces", "shctl"]
+}

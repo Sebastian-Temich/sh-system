@@ -553,7 +553,9 @@ kontekstem: repo, PR, zadanie, zakres diffu i treść issue jako dane. Profil
 tylko odczyt i model reviewera; bez niego komenda ostrzega i działa na konfiguracji bazowej.
 `-s read-only` jest podawane zawsze.
 
-Werdykt liczy shctl ze zgłoszeń: FAIL, gdy jest choć jedno `krytyczne` albo `istotne`, inaczej PASS.
+Format komentarza opisuje `templates/review.md`. Wynik czytany przez `task iter` i `task close`
+pochodzi z ukrytej linii danych, którą dopisuje `review run`, a gdy jej nie ma (komentarz napisany
+przez skill albo ręcznie), z treści komentarza w tym formacie. Werdykt liczy shctl ze zgłoszeń: FAIL, gdy jest choć jedno `krytyczne` albo `istotne`, inaczej PASS.
 Rozbieżny werdykt modelu jest odnotowany w komentarzu. Kod wyjścia 0 przy obu werdyktach. Powtórka dla
 tego samego commita nie woła Codexa i zwraca wynik z komentarza (`"ponownie":true`). Nowy commit w PR
 wymaga nowego review.
@@ -598,7 +600,7 @@ niezacommitowane zmiany albo commity spoza PR. Potem, na main po `git pull --ff-
 |---|---|
 | „Decyzje” z `docs/07-realizacja/T-NR.md` | `docs/decyzje.md`; `pytanie → decyzja` dzieli kolumny, inaczej Pytanie to `-` |
 | „Drobne uwagi” z raportu | `docs/backlog-drobne.md`, stan `otwarta` |
-| Zgłoszenia ⚪ z ostatniego review | `docs/backlog-drobne.md`, źródło `review PR #N` |
+| Zgłoszenia ⚪ z ostatniego review (komentarz w PR) | `docs/backlog-drobne.md`, źródło `review PR #N` |
 | Czas od dispatchu, iteracje, eskalacje | Wiersz `| #NR tytuł | tryb | czas | 1 | iteracje | eskalacje | PR #N |` w `docs/metryki.md` |
 | Tytuł i PR | `- #NR: tytuł (PR #N)` w sekcji „Niewydane” `CHANGELOG.md` |
 | „Propozycje dla systemu” | PR do `sh-system`: gałąź `propozycje/NAZWA-T-NR`, wpis w `docs/propozycje.md` |

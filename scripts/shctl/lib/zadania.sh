@@ -124,13 +124,28 @@ JQ_CI='def ci:
       | ($s != "" and $s != "COMPLETED") or $t == "PENDING" or $t == "EXPECTED") then "pending"
     else "pass" end;'
 
-# Ostatni wynik shctl review dla commita: {werdykt, zgloszenia, ...} albo pusto.
+# Wynik review z treści komentarza w formacie sh-system/templates/review.md: zgłoszenia z linii
+# „- IKONA WAGA [`plik[:linia]`]: opis”, werdykt liczony z wag (FAIL przy krytyczne lub istotne).
+JQ_PARSUJ_REVIEW='def parsuj_review($h):
+  split("\n") as $l
+  | ([range(0; $l | length) | select($l[.] | startswith("<!-- shctl:review head="))][0]) as $m
+  | ([range(0; $l | length) | select($l[.] == "### Zgłoszenia")][0] // ($l | length)) as $k
+  | [$l[] | capture("^- (?:🔴|🟡|⚪) (?<waga>krytyczne|istotne|drobne)(?: `(?<plik>[^`]*?)(?::(?<linia>[0-9]+))?`)?: (?<opis>.+)$")
+      | {waga, plik: (.plik // ""), linia: ((.linia // "0") | tonumber), opis}] as $z
+  | {werdykt: (if any($z[]; .waga != "drobne") then "FAIL" else "PASS" end),
+     podsumowanie: ([$l[($m + 1):$k][] | select(length > 0 and (startswith("Commit `") | not))] | join(" ")),
+     zgloszenia: $z, head: $h};'
+
+# Ostatni wynik review dla commita: {werdykt, zgloszenia, ...} albo pusto. Ukryte dane z shctl review
+# run mają pierwszeństwo; bez nich wynik pochodzi z treści komentarza.
 review_dla_heada() {
   local pr="$1" head="$2"
-  gh pr view "$pr" --repo "$SLUG" --json comments 2>/dev/null | jq -c --arg h "$head" '
+  gh pr view "$pr" --repo "$SLUG" --json comments 2>/dev/null | jq -c --arg h "$head" "$JQ_PARSUJ_REVIEW"'
     [.comments[].body | select(contains("<!-- shctl:review head=" + $h + " "))]
     | last // empty
-    | (capture("<!-- shctl:review-dane (?<d>[A-Za-z0-9+/=]+) -->").d | @base64d | fromjson)'
+    | if test("<!-- shctl:review-dane [A-Za-z0-9+/=]+ -->")
+      then capture("<!-- shctl:review-dane (?<d>[A-Za-z0-9+/=]+) -->").d | @base64d | fromjson
+      else parsuj_review($h) end'
 }
 
 # --- Konfiguracja wykonawców ------------------------------------------------------------------
