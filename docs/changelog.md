@@ -2,6 +2,7 @@
 
 ## 2026-11-02
 
+- Skille `sh-orkiestrator` (panel herdr w `~/sh`, Remote Control; stan zawsze z plików i GitHuba; etapy S i M, pętla realizacji `task ready` → `dispatch` → monitoring → `review run` → `close` albo `iter`, szkielet sam przed resztą, `shctl doctor` przed pierwszym dispatchem, QA po kamieniu, punkt przekazania, odbiór, rejestr autoryzacji, limity i „wznów”, „STOP”, podniesienie trybu; commit plików wspólnych na `main` po każdej operacji shctl) i `sh-status` (tylko odczyt: `shctl status show` i liczby z GitHuba). `docs/propozycje.md`: brakujące komendy orkiestratora.
 - `sh-qa`: issue tylko dla 🔴 i 🟡; ⚪ w sekcji „Drobne uwagi” raportu, orkiestrator przenosi je do `backlog-drobne.md`. `shctl task create` odrzuca `typ: qa` bez wagi `krytyczne` albo `istotne`. `sh-review` sprawdza to w review etapu `08-qa`.
 - Skille `sh-review` (review PR i review etapu, wynik w formacie `templates/review.md`, w iteracji N najpierw zgłoszenia z N-1, w iteracji 3 nowe istotne jako drobne; działa w Codex przez `shctl review run` i w Claude Code) i `sh-qa` (QA zbiorcze kamienia: E2E chromium + webkit, przepływy między funkcjami, zgodność z `W-n`, raport `docs/08-qa/raport-MN.md`, błędy `typ:qa` z wagą przez `shctl task create`).
 - `codex/sh-review.md` generowany ze skilla przez `scripts/sync-codex.sh` (`--check` w CI); prompt tymczasowy usunięty.

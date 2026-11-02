@@ -24,3 +24,17 @@ Propozycja: `shctl qa close MN` (albo krok w `stage`), który czyta „Drobne uw
 `raport-MN.md` tym samym parserem co `task close` i dopisuje `| DATA | QA MN | uwaga | otwarta |`
 bez dublowania.
 
+
+## sh-system (2026-11-02): komendy dla orkiestratora
+
+`sh-orkiestrator` wykonuje dziś ręcznie operacje, których shctl nie ma:
+
+- merge PR etapu (`gh pr merge PR --squash --match-head-commit SHA`) po zielonym CI, PASS i
+  akceptacji właściciela; propozycja: `shctl stage merge PR` z tymi samymi bramkami co `task close`;
+- pola Checkpointu w `DoD.md` na `main` (review z komentarza PASS, akceptacja z wiersza `wlasciciel`
+  w `decyzje.md`), podbicie `iteracja` etapu po FAIL i zgłoszenia ⚪ z review etapu do
+  `backlog-drobne.md`; propozycja: kroki w `stage merge` i `stage iter ETAP`;
+- polecenie dla działającego workera (dokończenie zadania, iteracja od nowa po limicie) przez
+  `herdr agent prompt`; propozycja: `shctl task nudge NR --powod kontynuuj|od-nowa`;
+- wpis „Punktu przekazania” w `status.md`; propozycja: `shctl handoff` z danymi `status show`,
+  wynikiem `doctor` i wierszem autoryzacji.
