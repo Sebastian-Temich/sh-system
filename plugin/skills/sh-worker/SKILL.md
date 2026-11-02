@@ -50,8 +50,7 @@ to w raporcie.
 
 - kod, testy i docs obszaru zadania w plikach z „Zakresu” issue
 - `supabase/migrations/RRRRMMDDGGMMSS_slug.sql`: tylko w zadaniu z `db:migracja`, nowy plik
-- `.env.example`: nazwy nowych zmiennych, bez wartości. Gdy profil odmawia edycji (deny `Edit(.env*)`),
-  nie obchodzisz blokady: nazwy wpisujesz w opis PR i w „Propozycje dla systemu”
+- `.env.example`: nazwy nowych zmiennych, bez wartości; innych plików `.env*` profil nie pozwala edytować
 - `docs/07-realizacja/T-NR.md`: raport w formacie „Raport” (niżej)
 - gałąź `task/NR-slug` (już istnieje) i PR do `main` z `Closes #NR` i checklistą
   `.github/PULL_REQUEST_TEMPLATE.md`
@@ -118,6 +117,8 @@ shctl escalate --dotyczy "#NR" --powod "..." --potrzebne "..." --opcje "A;B"
 - Bez `DROP`, `RENAME` i zmiany typu kolumny używanej przez obecny kod w tym samym wydaniu.
 - Sprawdzenie: `supabase db reset` od zera przechodzi, testy po nim są zielone. Wynik w „Testach”.
 - Nowe tabele z danymi użytkowników mają RLS i testy uprawnień pozytywne i negatywne.
+- Portów w `supabase/config.toml` nie zmieniasz: to blok `blok_portow` (`AGENTS.md`, „Migracje”).
+  Wyjątek: zadanie szkieletu po `supabase init` ustawia wszystkie porty na ten blok.
 
 ### Raport
 
@@ -133,8 +134,6 @@ dokładnie w tej kolejności i z tymi nazwami, bo `shctl task close` czyta je po
 | 4 | `Drobne uwagi` | Rzeczy poza zakresem |
 | 5 | `Ryzyka` | Co może nie działać i czego nie sprawdziłeś |
 | 6 | `Propozycje dla systemu` | Zmiany w procesie, skillach, shctl albo szablonie |
-
-Szablon może jeszcze nie mieć sekcji `Ryzyka`: wtedy dodajesz ją przed „Propozycjami dla systemu”.
 
 - „Decyzje”: jedna pozycja listy na decyzję, z `→` między pytaniem a decyzją; `task close` przenosi je do
   `decyzje.md`. Tu też pliki spoza „Zakresu” i dodatkowo przeczytane źródła.
@@ -185,7 +184,8 @@ lokalnego Supabase i `.env.local`. W etapie A tego nie robisz: zawsze Claude, lo
   `deploy-prod`; luka bezpieczeństwa (brak RLS, brak walidacji wejścia, dane osobowe w logach).
 - 🟡 istotne: kryterium bez testu; błąd logiki; zmiany poza „Zakresem” bez decyzji w raporcie; w
   iteracji 2+ zmiany poza zgłoszeniami z review; brak raportu albo sekcji raportu; nowa zmienna bez
-  wpisu w `.env.example`; PR bez `Closes #NR`.
+  wpisu w `.env.example`; PR bez `Closes #NR`; zmiana portów w `supabase/config.toml` (poza
+  ustawieniem bloku w zadaniu szkieletu).
 - ⚪ drobne: nazewnictwo, styl, komentarze, drobne uproszczenia.
 
 Wynik review ma format `sh-system/templates/review.md`.
