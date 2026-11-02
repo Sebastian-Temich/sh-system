@@ -1,0 +1,14 @@
+{
+  "name": "sh-system",
+  "description": "Lokalny marketplace sh-system: plugin software-house z repo ~/sh/sh-system",
+  "owner": {
+    "name": "Sebastian-Temich"
+  },
+  "plugins": [
+    {
+      "name": "software-house",
+      "source": "./plugin",
+      "description": "Skille procesu AI Software House v1"
+    }
+  ]
+}

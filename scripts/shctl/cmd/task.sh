@@ -648,9 +648,12 @@ task_close() {
       uwaga "brak raportu docs/07-realizacja/T-$nr.md; decyzje i uwagi nie zostały przeniesione"
     fi
     # Drobne zgłoszenia ⚪ z ostatniego review.
+    # Źródło: komentarz review w PR (także pisany ręcznie), a gdy go brak, lokalna kopia z review run.
     rev_plik="$STAN/review/$PROJEKT-$nr/$head.json"
-    if [ -f "$rev_plik" ]; then
-      r_n="$(przenies_uwagi "$(jq -r '.zgloszenia[] | select(.waga == "drobne") | "- \(.opis)\(if .plik != "" then " (`\(.plik)\(if .linia > 0 then ":\(.linia)" else "" end)`)" else "" end)"' "$rev_plik")" "review PR #$prn")"
+    [ -n "${rev:-}" ] || rev="$(review_dla_heada "$prn" "$head")"
+    if [ -z "$rev" ] && [ -f "$rev_plik" ]; then rev="$(cat "$rev_plik")"; fi
+    if [ -n "$rev" ]; then
+      r_n="$(przenies_uwagi "$(jq -r '.zgloszenia[] | select(.waga == "drobne") | "- \(.opis)\(if .plik != "" then " (`\(.plik)\(if .linia > 0 then ":\(.linia)" else "" end)`)" else "" end)"' <<<"$rev")" "review PR #$prn")"
     fi
     if ! grep -q "^| #$nr " "$ROOT_G/docs/metryki.md"; then
       tryb_z="$(jq -r '[.labels[].name | select(startswith("tryb:")) | ltrimstr("tryb:")][0] // ""' <<<"$j")"
