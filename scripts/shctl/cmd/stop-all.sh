@@ -44,11 +44,14 @@ stan_git() {
 }
 
 zapisz_stan() {
-  local p="$1" panele="$2" orch="$3" plik r git_j='{}' etap=""
+  local p="$1" panele="$2" orch="$3" plik r git_j='{}' etap="" zadania='{}'
   plik="$STAN/$p.json"
   r="$PROJEKTY/$p"
+  # Mapę zadań (NR → panel) zapisuje task dispatch; stop jej nie kasuje.
+  if [ -f "$plik" ]; then zadania="$(jq -c '.zadania // {}' "$plik" 2>/dev/null || echo '{}')"; fi
   # Powtórka po zamknięciu paneli nie może skasować listy tego, co działało.
-  if [ "$(jq 'length' <<<"$panele")" -eq 0 ] && [ -f "$plik" ]; then
+  if [ "$(jq 'length' <<<"$panele")" -eq 0 ] && [ -f "$plik" ] &&
+    [ "$(jq -r '.powod // ""' "$plik" 2>/dev/null)" = stop-all ]; then
     info "$p: stan zachowany bez zmian ($plik)"
     return 1
   fi
@@ -60,8 +63,8 @@ zapisz_stan() {
   fi
   mkdir -p "$STAN"
   jq -n --arg p "$p" --arg t "$(date '+%FT%T%z')" --argjson k "$panele" --argjson g "$git_j" \
-    --arg e "$etap" --argjson o "$orch" \
-    '{projekt:$p, czas:$t, powod:"stop-all", panele:$k, orkiestrator_zatrzymany:($o == 1), etap:$e, git:$g}' >"$plik"
+    --arg e "$etap" --argjson o "$orch" --argjson z "$zadania" \
+    '{projekt:$p, czas:$t, powod:"stop-all", panele:$k, orkiestrator_zatrzymany:($o == 1), etap:$e, git:$g, zadania:$z}' >"$plik"
   return 0
 }
 

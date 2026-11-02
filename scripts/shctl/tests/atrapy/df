@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+# Atrapa df -Pk: wolne miejsce w GB z $DF_GB (domyślnie 100).
+gb="${DF_GB:-100}"
+echo "Filesystem 1024-blocks Used Available Capacity Mounted on"
+echo "/dev/atrapa 500000000 1 $((gb * 1048576)) 1% /"

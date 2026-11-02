@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+# Atrapa claude: zapisuje katalog, SH_NOTIFY i argumenty.
+echo "$PWD | SH_NOTIFY=${SH_NOTIFY:-} | $*" >>"${CLAUDE_ATRAPA:?}/calls"

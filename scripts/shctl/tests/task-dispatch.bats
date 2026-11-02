@@ -1,0 +1,113 @@
+#!/usr/bin/env bats
+load helper-zadania
+
+setup() { zadania_setup; }
+
+WT() { echo "$SH_DIR/projekty/wt/$1"; }
+
+@test "dispatch: worktree na galezi z transliteracja, env, panel, claude, etykiety, stan" {
+  issue 12 "Zażółć gęślą jaźń: Łódź" "status:todo,runner:local,wykonawca:claude"
+  yq -i --front-matter=process '.env_files = ["config/dev.json"]' docs/konfiguracja.md
+  mkdir -p config
+  echo '{"k":1}' >config/dev.json
+  run --separate-stderr "$SHCTL" task dispatch 12 --json
+  echo "$output $stderr"
+  [ "$status" -eq 0 ]
+  [ "$(git -C "$(WT 12)" symbolic-ref --short HEAD)" = task/12-zazolc-gesla-jazn-lodz ]
+  cmp .env.local "$(WT 12)/.env.local"
+  cmp config/dev.json "$(WT 12)/config/dev.json"
+  [ "$(jq -r '.wynik.env | join(",")' <<<"$output")" = ".env.local,config/dev.json" ]
+  [ "$(etykiety_paneli)" = "worker:demo:12" ]
+  grep -q "/wt/12 | SH_NOTIFY=1 | --settings .claude/roles/worker/settings.json --model opus Zrealizuj issue #12 skillem sh-worker." "$CLAUDE_ATRAPA/calls"
+  [ "$(etykiety 12)" = "iter:1,runner:local,status:in-progress,wykonawca:claude" ]
+  [ "$(jq -r '.zadania["12"] | .label, .galaz, .uruchomiono' "$SH_DIR/stan/demo.json" | tr '\n' ' ')" = "worker:demo:12 task/12-zazolc-gesla-jazn-lodz true " ]
+  jq -e '.zadania["12"].panel | startswith("w1:p")' "$SH_DIR/stan/demo.json"
+}
+
+@test "dispatch: powtorka nie dubluje panelu ani startu claude" {
+  issue 12 "Zadanie" "status:todo"
+  "$SHCTL" task dispatch 12
+  run --separate-stderr "$SHCTL" task dispatch 12 --json
+  [ "$status" -eq 0 ]
+  [ "$(jq -r .wynik.zmiana <<<"$output")" = false ]
+  [ "$(wc -l <"$CLAUDE_ATRAPA/calls" | tr -d ' ')" -eq 1 ]
+  [ "$(grep -c '^tab create' "$HERDR_ATRAPA/calls")" -eq 1 ]
+}
+
+@test "dispatch: niespelniona zaleznosc to odmowa" {
+  issue 3 "Baza" "status:in-progress"
+  issue 12 "Zadanie" "status:todo" "$(printf '### Zależności\n\n#3\n')"
+  run --separate-stderr "$SHCTL" task dispatch 12
+  [ "$status" -eq 4 ]
+  [[ "$stderr" == *"zależność #3 otwarta"* ]] || false
+  [ ! -e "$(WT 12)" ]
+}
+
+@test "dispatch: max_local liczony z workerow wszystkich projektow" {
+  panel w1:p5 worker:inny:4 claude
+  issue 12 "Zadanie" "status:todo"
+  run --separate-stderr "$SHCTL" task dispatch 12
+  [ "$status" -eq 4 ]
+  [[ "$stderr" == *"max_local=1"* ]] || false
+  [ ! -s "$CLAUDE_ATRAPA/calls" ]
+}
+
+@test "dispatch: brak miejsca na dysku blokuje i powiadamia" {
+  issue 12 "Zadanie" "status:todo"
+  DF_GB=10 run --separate-stderr "$SHCTL" task dispatch 12
+  [ "$status" -eq 4 ]
+  [[ "$stderr" == *"wolne 10 GB"* ]] || false
+  grep -q '^high Brak miejsca' "$T/notified"
+}
+
+@test "dispatch: status inny niz todo to odmowa" {
+  issue 12 "Zadanie" "status:review"
+  run --separate-stderr "$SHCTL" task dispatch 12
+  [ "$status" -eq 4 ]
+}
+
+@test "dispatch: ../wt/NR zajety przez inny projekt to odmowa" {
+  issue 12 "Zadanie" "status:todo"
+  git init -q "$(WT 12)"
+  run --separate-stderr "$SHCTL" task dispatch 12
+  [ "$status" -eq 4 ]
+  [[ "$stderr" == *"nie jest worktree projektu demo"* ]] || false
+}
+
+@test "dispatch: env_files poza projektem to blad uzycia" {
+  issue 12 "Zadanie" "status:todo"
+  yq -i --front-matter=process '.env_files = ["../sekret"]' docs/konfiguracja.md
+  run --separate-stderr "$SHCTL" task dispatch 12
+  [ "$status" -eq 2 ]
+}
+
+@test "dispatch --dry-run niczego nie zmienia" {
+  issue 12 "Zadanie" "status:todo"
+  run --separate-stderr "$SHCTL" task dispatch 12 --dry-run --json
+  [ "$status" -eq 0 ]
+  [ ! -e "$(WT 12)" ]
+  [ ! -s "$CLAUDE_ATRAPA/calls" ]
+  [ "$(etykiety 12)" = "status:todo" ]
+  ! grep -q 'issue edit' "$GH_ATRAPA/calls" || false
+  [ ! -e "$SH_DIR/stan/demo.json" ]
+}
+
+@test "dispatch z worktree: projekt z biezacego katalogu worktree" {
+  issue 12 "Zadanie" "status:todo"
+  issue 13 "Drugie" "status:todo"
+  "$SHCTL" task dispatch 12
+  cd "$(WT 12)"
+  sed -i.bak 's/^max_local: 1/max_local: 2/' "$P/docs/konfiguracja.md"
+  run --separate-stderr "$SHCTL" task dispatch 13
+  echo "$stderr"
+  [ "$status" -eq 0 ]
+  [ -d "$(WT 13)" ]
+}
+
+@test "stop-all zachowuje mape zadan" {
+  issue 12 "Zadanie" "status:todo"
+  "$SHCTL" task dispatch 12
+  run --separate-stderr "$SHCTL" stop-all --projekt demo
+  [ "$status" -eq 0 ]
+  [ "$(jq -r '.powod, .zadania["12"].label' "$SH_DIR/stan/demo.json" | tr '\n' ' ')" = "stop-all worker:demo:12 " ]
+}

@@ -1,0 +1,156 @@
+#!/usr/bin/env bash
+# Atrapa gh ze stanem w plikach JSON ($GH_ATRAPA): issue, PR z komentarzami i CI, milestone'y.
+# Obsługuje tylko wywołania używane przez shctl. Merge robi prawdziwy squash na zdalnym repo
+# (adres GitHuba przekierowany przez url.insteadOf w testach). Plik $GH_ATRAPA/fail-KOMENDA-PODKOMENDA
+# wymusza błąd danej komendy.
+set -euo pipefail
+D="${GH_ATRAPA:?}"
+mkdir -p "$D"
+for f in issues prs milestones; do [ -f "$D/$f.json" ] || echo '[]' >"$D/$f.json"; done
+[ -f "$D/licznik" ] || echo 0 >"$D/licznik"
+echo "$*" >>"$D/calls"
+
+k1="${1:-}"
+k2="${2:-}"
+shift 2 || true
+[ ! -f "$D/fail-$k1-$k2" ] || { echo "atrapa: wymuszony błąd $k1 $k2" >&2; exit 1; }
+# gh api nie ma podkomendy: drugi argument wraca do listy.
+if [ "$k1" = api ]; then set -- "$k2" "$@"; k2=""; fi
+[ ! -f "$D/fail-$k1-$k2" ] || { echo "atrapa: wymuszony błąd $k1 $k2" >&2; exit 1; }
+
+repo="" state="" label="" jqe="" title="" body="" body_file="" milestone="" reason="" comment="" head="" base=""
+match="" metoda=GET poz=()
+add=() rem=() pola=()
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --repo) repo="$2"; shift 2 ;;
+    --state) state="$2"; shift 2 ;;
+    --label) label="$2"; shift 2 ;;
+    --jq) jqe="$2"; shift 2 ;;
+    --json | --limit) shift 2 ;;
+    --title) title="$2"; shift 2 ;;
+    --body) body="$2"; shift 2 ;;
+    --body-file) body_file="$2"; shift 2 ;;
+    --milestone) milestone="$2"; shift 2 ;;
+    --add-label) add+=("$2"); shift 2 ;;
+    --remove-label) rem+=("$2"); shift 2 ;;
+    --reason) reason="$2"; shift 2 ;;
+    --comment) comment="$2"; shift 2 ;;
+    --head) head="$2"; shift 2 ;;
+    --base) base="$2"; shift 2 ;;
+    --match-head-commit) match="$2"; shift 2 ;;
+    -X) metoda="$2"; shift 2 ;;
+    -f) pola+=("$2"); shift 2 ;;
+    --paginate | --squash | --delete-branch | --force | --silent) shift ;;
+    --color | --description) shift 2 ;;
+    *) poz+=("$1"); shift ;;
+  esac
+done
+[ -z "$body_file" ] || body="$(cat "$body_file")"
+
+wyjscie() { if [ -n "$jqe" ]; then jq -r "$jqe"; else cat; fi; }
+zapisz() { local f="$D/$1.json"; jq "$2" "${@:3}" "$f" >"$f.n" && mv "$f.n" "$f"; }
+nastepny() { local n; n=$(($(cat "$D/licznik") + 1)); echo "$n" >"$D/licznik"; echo "$n"; }
+lista_etykiet() { printf '%s\n' "$@" | tr ',' '\n' | jq -Rsc 'split("\n") | map(select(length > 0))'; }
+stan_gh() { case "$1" in open) echo OPEN ;; closed) echo CLOSED ;; merged) echo MERGED ;; *) echo "" ;; esac; }
+
+case "$k1 $k2" in
+  "issue list")
+    s="$(stan_gh "${state:-open}")"
+    jq -c --arg r "$repo" --arg s "$s" --arg l "$label" '
+      map(select(.repo == $r and ($s == "" or .state == $s) and ($l == "" or ([.labels[].name] | index($l) != null)))
+        | del(.repo))' "$D/issues.json" | wyjscie
+    ;;
+  "issue view")
+    n="${poz[0]}"
+    jq -e --arg r "$repo" --argjson n "$n" '.[] | select(.repo == $r and .number == $n)' "$D/issues.json" >/dev/null ||
+      { echo "GraphQL: Could not resolve to an issue" >&2; exit 1; }
+    jq -c --arg r "$repo" --argjson n "$n" '.[] | select(.repo == $r and .number == $n) | del(.repo)' "$D/issues.json" | wyjscie
+    ;;
+  "issue create")
+    if [ -n "$milestone" ] && ! jq -e --arg r "$repo" --arg m "$milestone" 'any(.[]; .repo == $r and .title == $m)' "$D/milestones.json" >/dev/null; then
+      echo "could not add to milestone '$milestone': not found" >&2
+      exit 1
+    fi
+    n="$(nastepny)"
+    zapisz issues '. + [{repo: $r, number: $n, title: $t, body: $b, state: "OPEN", stateReason: null,
+      labels: ($l | map({name: .})), milestone: (if $m == "" then null else {title: $m} end),
+      createdAt: "2026-11-01T10:00:00Z"}]' \
+      --arg r "$repo" --argjson n "$n" --arg t "$title" --arg b "$body" --arg m "$milestone" \
+      --argjson l "$(lista_etykiet ${add[@]+"${add[@]}"} "$label")"
+    echo "https://github.com/$repo/issues/$n"
+    ;;
+  "issue edit")
+    n="${poz[0]}"
+    zapisz issues 'map(if .repo == $r and .number == $n then
+        .labels = ([.labels[].name] + $a - $d | unique | map({name: .}))
+        | (if $ub then .body = $b else . end) else . end)' \
+      --arg r "$repo" --argjson n "$n" --argjson a "$(lista_etykiet ${add[@]+"${add[@]}"})" \
+      --argjson d "$(lista_etykiet ${rem[@]+"${rem[@]}"})" --arg b "$body" \
+      --argjson ub "$([ -n "$body_file" ] && echo true || echo false)"
+    ;;
+  "issue close")
+    n="${poz[0]}"
+    zapisz issues 'map(if .repo == $r and .number == $n then .state = "CLOSED"
+        | .stateReason = (if $p == "not planned" then "NOT_PLANNED" else "COMPLETED" end) else . end)' \
+      --arg r "$repo" --argjson n "$n" --arg p "$reason"
+    ;;
+  "pr list")
+    s="$(stan_gh "${state:-open}")"
+    jq -c --arg r "$repo" --arg s "$s" --arg h "$head" '
+      map(select(.repo == $r and ($s == "" or .state == $s) and ($h == "" or .headRefName == $h)) | del(.repo))' \
+      "$D/prs.json" | wyjscie
+    ;;
+  "pr view")
+    n="${poz[0]}"
+    jq -e --arg r "$repo" --argjson n "$n" '.[] | select(.repo == $r and .number == $n)' "$D/prs.json" >/dev/null ||
+      { echo "GraphQL: Could not resolve to a PullRequest" >&2; exit 1; }
+    jq -c --arg r "$repo" --argjson n "$n" '.[] | select(.repo == $r and .number == $n) | del(.repo)' "$D/prs.json" | wyjscie
+    ;;
+  "pr comment")
+    n="${poz[0]}"
+    zapisz prs 'map(if .repo == $r and .number == $n then .comments += [{body: $b}] else . end)' \
+      --arg r "$repo" --argjson n "$n" --arg b "$body"
+    ;;
+  "pr merge")
+    n="${poz[0]}"
+    pr="$(jq -c --arg r "$repo" --argjson n "$n" '.[] | select(.repo == $r and .number == $n)' "$D/prs.json")"
+    [ "$(jq -r .state <<<"$pr")" = OPEN ] || { echo "PR nie jest otwarty" >&2; exit 1; }
+    [ -z "$match" ] || [ "$(jq -r .headRefOid <<<"$pr")" = "$match" ] || { echo "Head branch was modified" >&2; exit 1; }
+    tmp="$(mktemp -d)"
+    git clone -q "https://github.com/$repo.git" "$tmp/k"
+    git -C "$tmp/k" merge -q --squash "origin/$(jq -r .headRefName <<<"$pr")" >/dev/null
+    git -C "$tmp/k" commit -qm "$(jq -r .title <<<"$pr") (#$n)"
+    git -C "$tmp/k" push -q origin HEAD:main
+    rm -rf "$tmp"
+    zapisz prs 'map(if .repo == $r and .number == $n then .state = "MERGED" else . end)' --arg r "$repo" --argjson n "$n"
+    for i in $(jq -r '.closingIssuesReferences[].number' <<<"$pr"); do
+      zapisz issues 'map(if .repo == $r and .number == $i then .state = "CLOSED" | .stateReason = "COMPLETED" else . end)' \
+        --arg r "$repo" --argjson i "$i"
+    done
+    ;;
+  "pr close")
+    n="${poz[0]}"
+    zapisz prs 'map(if .repo == $r and .number == $n then .state = "CLOSED" else . end)' --arg r "$repo" --argjson n "$n"
+    ;;
+  "pr create")
+    n="$(nastepny)"
+    zapisz prs '. + [{repo: $r, number: $n, title: $t, state: "OPEN", headRefName: $h, headRefOid: "",
+      closingIssuesReferences: [], url: ("https://github.com/" + $r + "/pull/" + ($n | tostring)),
+      createdAt: "2026-11-01T10:00:00Z", comments: [], statusCheckRollup: []}]' \
+      --arg r "$repo" --argjson n "$n" --arg t "$title" --arg h "$head"
+    echo "https://github.com/$repo/pull/$n"
+    ;;
+  "api ")
+    sciezka="${poz[0]}"
+    r="$(printf '%s' "$sciezka" | sed -nE 's#^repos/([^/]+/[^/]+)/milestones.*#\1#p')"
+    [ -n "$r" ] || { echo "atrapa gh api: nieobsługiwane $sciezka" >&2; exit 2; }
+    if [ "$metoda" = POST ]; then
+      zapisz milestones '. + [{repo: $r, title: $t}]' --arg r "$r" --arg t "${pola[0]#title=}"
+    else
+      jq -c --arg r "$r" 'map(select(.repo == $r) | {title})' "$D/milestones.json"
+    fi
+    ;;
+  "label create" | "repo view" | "repo edit") ;;
+  *) echo "atrapa gh: nieobsługiwane: $k1 $k2" >&2; exit 2 ;;
+esac

@@ -1,0 +1,45 @@
+#!/usr/bin/env bash
+# Atrapa herdr ze stanem paneli w $HERDR_ATRAPA/panele.json. „pane run” wykonuje komendę od razu
+# (claude i codex to atrapy), więc review kończy się synchronicznie. Plik $HERDR_ATRAPA/down: serwer
+# nie odpowiada.
+set -euo pipefail
+D="${HERDR_ATRAPA:?}"
+mkdir -p "$D"
+[ -f "$D/panele.json" ] || echo '[]' >"$D/panele.json"
+[ -f "$D/licznik" ] || echo 10 >"$D/licznik"
+echo "$*" >>"$D/calls"
+[ ! -f "$D/down" ] || { echo "server not running" >&2; exit 1; }
+zapisz() { jq "$@" "$D/panele.json" >"$D/p.n" && mv "$D/p.n" "$D/panele.json"; }
+
+case "${1:-} ${2:-}" in
+  "workspace list") echo '{"result":{"workspaces":[{"workspace_id":"w1","label":"sh"}]}}' ;;
+  "pane list")
+    jq -c --arg w "$4" '{result:{panes:map(select(.workspace_id == $w))}}' "$D/panele.json" ;;
+  "tab create")
+    shift 2
+    ws="" cwd="" label=""
+    while [ $# -gt 0 ]; do
+      case "$1" in
+        --workspace) ws="$2"; shift 2 ;;
+        --cwd) cwd="$2"; shift 2 ;;
+        --label) label="$2"; shift 2 ;;
+        --env) shift 2 ;;
+        *) shift ;;
+      esac
+    done
+    n=$(($(cat "$D/licznik") + 1)); echo "$n" >"$D/licznik"
+    zapisz -c --arg p "$ws:p$n" --arg w "$ws" --arg c "$cwd" '. + [{pane_id:$p, workspace_id:$w, label:null, cwd:$c}]'
+    jq -nc --arg p "$ws:p$n" --arg l "$label" '{result:{root_pane:{pane_id:$p}, tab:{tab_id:"w1:t9", label:$l}}}'
+    ;;
+  "pane rename") zapisz -c --arg p "$3" --arg l "$4" 'map(if .pane_id == $p then .label = $l else . end)' ;;
+  "pane run")
+    p="$3"
+    jq -e --arg p "$p" 'any(.[]; .pane_id == $p)' "$D/panele.json" >/dev/null || { echo "pane not found" >&2; exit 1; }
+    printf '%s\t%s\n' "$p" "$4" >>"$D/run"
+    case "$4" in *claude*) zapisz -c --arg p "$p" 'map(if .pane_id == $p then .agent = "claude" else . end)' ;; esac
+    bash -c "$4" >>"$D/wyjscie" 2>&1 || true
+    ;;
+  "pane read") echo "atrapa: wyjście panelu $3" ;;
+  "pane close") zapisz -c --arg p "$3" 'map(select(.pane_id != $p))' ;;
+  *) echo "atrapa herdr: nieobsługiwane: $*" >&2; exit 2 ;;
+esac
