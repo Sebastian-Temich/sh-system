@@ -5,7 +5,7 @@ setup() {
   zadania_setup
   issue 12 "Zadanie" "status:todo" "$(printf '### Cel\n\nx\n\n### Komenda testów\n\n```sh\ntest -f src/app.txt\n```\n\n### Typ\n\nfeature\n')"
   "$SHCTL" task dispatch 12 >/dev/null
-  WT12="$SH_DIR/projekty/wt/12"
+  WT12="$SH_DIR/wt/demo/12"
 }
 
 @test "resume-check: zmiany, roznica z main i testy z issue" {

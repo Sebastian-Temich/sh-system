@@ -8,7 +8,7 @@ setup() {
   cat >"$T/panele.json" <<JSON
 [{"pane_id":"w1:p1","label":"orkiestrator","agent":"claude","agent_status":"idle","cwd":"$SH_DIR"},
  {"pane_id":"w1:p2","label":"powloka","cwd":"$SH_DIR/projekty/demo"},
- {"pane_id":"w1:p3","label":"worker:demo:12","agent":"claude","agent_status":"working","cwd":"$SH_DIR/projekty/wt/12"},
+ {"pane_id":"w1:p3","label":"worker:demo:12","agent":"claude","agent_status":"working","cwd":"$SH_DIR/wt/demo/12"},
  {"pane_id":"w1:p4","label":"","agent":"claude","agent_status":"idle","cwd":"$SH_DIR/projekty/inny/src"},
  {"pane_id":"w1:p5","label":"","cwd":"$SH_DIR/projekty/demo"},
  {"pane_id":"w1:p6","label":"edytor","cwd":"/tmp"}]
@@ -118,4 +118,12 @@ zamkniete() { grep '^pane close' "$T/herdr.calls" | awk '{print $3}' | tr '\n' '
   run --separate-stderr "$SHCTL" stop-all
   [ "$status" -eq 1 ]
   [ "$(zamkniete)" = "w1:p3 w1:p4 w1:p1 " ]
+}
+
+@test "agent bez etykiety w ~/sh/wt/NAZWA nalezy do projektu" {
+  jq --arg c "$SH_DIR/wt/demo/7" '. + [{"pane_id":"w1:p8","label":"","agent":"claude","cwd":$c}]' "$T/panele.json" >"$T/p"
+  mv "$T/p" "$T/panele.json"
+  run "$SHCTL" stop-all --projekt demo
+  [ "$status" -eq 0 ]
+  [ "$(zamkniete)" = "w1:p3 w1:p8 " ]
 }

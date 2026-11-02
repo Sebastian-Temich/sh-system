@@ -33,7 +33,7 @@ otwarte() { jq -r '[.[] | select(.state == "OPEN") | .number] | join(",")' "$GH_
   jq -r '.[] | select(.number == 1) | .body' "$GH_ATRAPA/issues.json" | grep -q 'shctl:archiwum-id=D1'
   [ "$(git rev-parse main)" = "$BASE" ]
   [ "$(git -C "$T/remote.git" rev-parse main)" = "$BASE" ]
-  [ ! -e "$SH_DIR/projekty/wt/1" ]
+  [ ! -e "$SH_DIR/wt/demo/1" ]
   [ -z "$(git branch --list 'task/*')" ]
   [ "$(etykiety_paneli)" = "" ]
   [ "$(otwarte)" = "10,11" ]
@@ -64,7 +64,7 @@ otwarte() { jq -r '[.[] | select(.state == "OPEN") | .number] | join(",")' "$GH_
   "$SHCTL" task dispatch 1 >/dev/null
   run --separate-stderr "$SHCTL" reset-dryrun --dry-run --json
   [ "$status" -eq 0 ]
-  [ -d "$SH_DIR/projekty/wt/1" ]
+  [ -d "$SH_DIR/wt/demo/1" ]
   [ "$(otwarte)" = "1,2" ]
   ! grep -qE '^(pr close|issue close)' "$GH_ATRAPA/calls" || false
 }

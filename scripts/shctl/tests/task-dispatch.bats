@@ -3,7 +3,7 @@ load helper-zadania
 
 setup() { zadania_setup; }
 
-WT() { echo "$SH_DIR/projekty/wt/$1"; }
+WT() { echo "$SH_DIR/wt/demo/$1"; }
 
 @test "dispatch: worktree na galezi z transliteracja, env, panel, claude, etykiety, stan" {
   issue 12 "Zażółć gęślą jaźń: Łódź" "status:todo,runner:local,wykonawca:claude"
@@ -18,10 +18,31 @@ WT() { echo "$SH_DIR/projekty/wt/$1"; }
   cmp config/dev.json "$(WT 12)/config/dev.json"
   [ "$(jq -r '.wynik.env | join(",")' <<<"$output")" = ".env.local,config/dev.json" ]
   [ "$(etykiety_paneli)" = "worker:demo:12" ]
-  grep -q "/wt/12 | SH_NOTIFY=1 | --settings .claude/roles/worker/settings.json --model opus Zrealizuj issue #12 skillem sh-worker." "$CLAUDE_ATRAPA/calls"
+  grep -q "/wt/demo/12 | SH_NOTIFY=1 | --settings .claude/roles/worker/settings.json --model opus Zrealizuj issue #12 skillem sh-worker." "$CLAUDE_ATRAPA/calls"
   [ "$(etykiety 12)" = "iter:1,runner:local,status:in-progress,wykonawca:claude" ]
   [ "$(jq -r '.zadania["12"] | .label, .galaz, .uruchomiono' "$SH_DIR/stan/demo.json" | tr '\n' ' ')" = "worker:demo:12 task/12-zazolc-gesla-jazn-lodz true " ]
   jq -e '.zadania["12"].panel | startswith("w1:p")' "$SH_DIR/stan/demo.json"
+  [ "$(jq -r .wynik.zaufanie_dopisane <<<"$output")" = true ]
+  [ "$(jq -r --arg p "$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")" '.projects[$p].hasTrustDialogAccepted' "$SH_CLAUDE_JSON")" = true ]
+}
+
+@test "dispatch: zaufanie dopisane do istniejacego ~/.claude.json bez utraty innych pol" {
+  issue 12 "Zadanie" "status:todo"
+  echo '{"numStartups":5,"projects":{"/inny":{"x":1}}}' >"$SH_CLAUDE_JSON"
+  run --separate-stderr "$SHCTL" task dispatch 12 --json
+  [ "$status" -eq 0 ]
+  [ "$(jq -r '.numStartups, .projects["/inny"].x, ([.projects[] | select(.hasTrustDialogAccepted)] | length)' "$SH_CLAUDE_JSON" | tr '\n' ' ')" = "5 1 1 " ]
+  [ "$(ls -l "$SH_CLAUDE_JSON" | cut -c1-10)" = "-rw-------" ]
+  run --separate-stderr "$SHCTL" task dispatch 12 --json
+  [ "$(jq -r .wynik.zaufanie_dopisane <<<"$output")" = false ]
+}
+
+@test "dispatch: uszkodzony ~/.claude.json to blad, plik nietkniety" {
+  issue 12 "Zadanie" "status:todo"
+  echo 'nie json' >"$SH_CLAUDE_JSON"
+  run --separate-stderr "$SHCTL" task dispatch 12
+  [ "$status" -eq 1 ]
+  [ "$(cat "$SH_CLAUDE_JSON")" = "nie json" ]
 }
 
 @test "dispatch: powtorka nie dubluje panelu ani startu claude" {
@@ -66,7 +87,7 @@ WT() { echo "$SH_DIR/projekty/wt/$1"; }
   [ "$status" -eq 4 ]
 }
 
-@test "dispatch: ../wt/NR zajety przez inny projekt to odmowa" {
+@test "dispatch: katalog worktree zajety przez inny projekt to odmowa" {
   issue 12 "Zadanie" "status:todo"
   git init -q "$(WT 12)"
   run --separate-stderr "$SHCTL" task dispatch 12
@@ -90,6 +111,7 @@ WT() { echo "$SH_DIR/projekty/wt/$1"; }
   [ "$(etykiety 12)" = "status:todo" ]
   ! grep -q 'issue edit' "$GH_ATRAPA/calls" || false
   [ ! -e "$SH_DIR/stan/demo.json" ]
+  [ ! -e "$SH_CLAUDE_JSON" ]
 }
 
 @test "dispatch z worktree: projekt z biezacego katalogu worktree" {

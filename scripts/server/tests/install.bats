@@ -31,7 +31,7 @@ MOCK
 
 install() {
   GIT_CONFIG_NOSYSTEM=1 GIT_CONFIG_GLOBAL="$T/gitconfig" \
-    PATH="$T/mock:$PATH" SH_DIR="$T/sh" SH_AGENTS="$T/agents" SH_NOTIFY_CMD="$T/mock/notify" \
+    PATH="$T/mock:$PATH" SH_DIR="$T/sh" CODEX_HOME="$T/codex" SH_AGENTS="$T/agents" SH_NOTIFY_CMD="$T/mock/notify" \
     run --separate-stderr bash "$REPO/scripts/server/install.sh"
 }
 
@@ -159,4 +159,13 @@ globalny_hooks_path() {
   install
   [ "$status" -eq 0 ]
   [ -f "$T/loaded" ]
+}
+
+@test "profil Codex reviewer: symlink do repo, powtorka bez zmian" {
+  install
+  [ "$status" -eq 0 ]
+  [ "$(readlink "$T/codex/reviewer.config.toml")" = "$REPO/codex/reviewer.config.toml" ]
+  install
+  [ "$status" -eq 0 ]
+  grep -q "ok:      $T/codex/reviewer.config.toml" <<<"$output"
 }

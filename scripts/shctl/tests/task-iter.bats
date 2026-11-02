@@ -13,7 +13,7 @@ wyslane() { grep -c 'Iteracja' "$HERDR_ATRAPA/run" || true; }
 
 # Nowy commit workera po iteracji, potem kolejny FAIL.
 kolejny_fail() {
-  wt="$SH_DIR/projekty/wt/12"
+  wt="$SH_DIR/wt/demo/12"
   echo "$1" >>"$wt/src/praca-12.txt"
   git -C "$wt" commit -qam "#12: poprawka $1"
   git -C "$wt" push -q origin HEAD "HEAD:refs/pull/20/head" --force
@@ -62,7 +62,7 @@ kolejny_fail() {
 @test "iter: bez FAIL dla biezacego commita to odmowa" {
   kolejny_fail c
   wynik_codex PASS '[]'
-  wt="$SH_DIR/projekty/wt/12"
+  wt="$SH_DIR/wt/demo/12"
   echo d >>"$wt/src/praca-12.txt"
   git -C "$wt" commit -qam "#12: d"
   jq --arg s "$(git -C "$wt" rev-parse HEAD)" 'map(if .number == 20 then .headRefOid = $s else . end)' "$GH_ATRAPA/prs.json" >"$T/x" && mv "$T/x" "$GH_ATRAPA/prs.json"
