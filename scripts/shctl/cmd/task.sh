@@ -38,7 +38,7 @@ argument_nr() {
 
 JQ_WALIDACJA='
 def tekst: type == "string" and length > 0;
-def pola: ["id","tytul","cel","kryteria","pliki","testy","zaleznosci","typ","tryb","db_migracja","milestone"];
+def pola: ["id","tytul","cel","kryteria","pliki","testy","zaleznosci","typ","tryb","db_migracja","milestone","waga"];
 ([.[].id]) as $ids
 | [to_entries[] | .key as $k | .value as $z
     | ("zadanie \($k + 1)" + (if ($z.id | type) == "string" then " (\($z.id))" else "" end)) as $kto
@@ -57,6 +57,8 @@ def pola: ["id","tytul","cel","kryteria","pliki","testy","zaleznosci","typ","try
         (if ($z.tryb // "") | IN("", "S", "M") then empty else "\($kto): tryb S albo M (L od etapu B)" end),
         (if ($z.db_migracja // false) | type == "boolean" then empty else "\($kto): db_migracja to true albo false" end),
         (if ($z.milestone // "") | type == "string" then empty else "\($kto): milestone to tekst" end),
+        (if ($z.waga // "") | IN("", "krytyczne", "istotne", "drobne") then empty
+          else "\($kto): waga: krytyczne, istotne albo drobne" end),
         (($z.zaleznosci // []) | if type != "array" then "\($kto): zaleznosci to lista"
           else .[] | select((test("^#[0-9]+$") or (. as $d | $ids | index($d)) != null) | not)
             | "\($kto): nieznana zależność \(.)" end)
@@ -209,7 +211,8 @@ task_create() {
     jq -r --argjson mapa "$mapa" "$JQ_TRESC" <<<"$z" >"$tresc"
     etyk="$(jq -r '["status:todo", "runner:local", "wykonawca:claude", "typ:\(.typ // "feature")"]
       + (if (.tryb // "") != "" then ["tryb:\(.tryb)"] else [] end)
-      + (if .db_migracja then ["db:migracja"] else [] end) | join(",")' <<<"$z")"
+      + (if .db_migracja then ["db:migracja"] else [] end)
+      + (if (.waga // "") != "" then ["sev:\(.waga)"] else [] end) | join(",")' <<<"$z")"
     utw="$(jq -c --arg i "$id" '. + [$i]' <<<"$utw")"
     if [ "$DRY" -eq 1 ]; then
       mapa="$(jq -c --arg i "$id" '. + {($i): null}' <<<"$mapa")"

@@ -151,7 +151,7 @@ qa, orkiestrator.
 | `adr` | `04-architektura` | `adr/ADR-NNN-slug.md` | `--tytul` |
 | `plan` | `05-plan` | `plan.md` | |
 | `raport-zadania` | `07-realizacja` | `T-NR.md` | `--nr` |
-| `raport-qa` | `08-qa` | `raport-qa-slug.md` | `--tytul` |
+| `raport-qa` | `08-qa` | `raport-MN.md` | `--tytul` zaczynający się od kamienia, np. `"M1 Szkielet"` |
 | `wydanie-techniczna` | `wydanie` | `techniczna/techniczna.md` | |
 | `wydanie-produktowa` | `wydanie` | `produktowa/produktowa.md` | |
 
@@ -406,10 +406,11 @@ zadania:
     tryb: M                    # S albo M; bez pola brak etykiety tryb:
     db_migracja: true          # etykieta db:migracja
     milestone: M1 Szkielet
+    waga: istotne              # krytyczne, istotne, drobne; etykieta sev:X (błędy z QA)
 ```
 
-Etykiety: `status:todo`, `runner:local`, `wykonawca:claude`, `typ:X`, opcjonalnie `tryb:X` i
-`db:migracja`. Treść issue ma sekcje formularza (Cel, Kryteria akceptacji, Zakres, Komenda testów, Typ,
+Etykiety: `status:todo`, `runner:local`, `wykonawca:claude`, `typ:X`, opcjonalnie `tryb:X`,
+`db:migracja` i `sev:X`. Treść issue ma sekcje formularza (Cel, Kryteria akceptacji, Zakres, Komenda testów, Typ,
 Zależności, Baza danych) i znacznik `<!-- shctl:id=T1 -->`. Issue powstają w kolejności zależności, więc
 zależności mają już numery. Brakujące milestone'y komenda zakłada.
 
@@ -417,7 +418,7 @@ Na końcu dopisuje mapę do sekcji „Mapa zadań z planu” w `docs/06-zadania/
 `shctl:mapa`, poza tabelą `sync-status`) i uruchamia `scripts/sync-status.sh`.
 
 Powtórka rozpoznaje issue po znaczniku i niczego nie dubluje; przerwane tworzenie dokańcza. Nieznane
-pole, nieznana zależność, cykl, zły typ lub tryb dają kod 2 przed jakąkolwiek zmianą. ID użyte już
+pole, nieznana zależność, cykl, zły typ, tryb lub waga dają kod 2 przed jakąkolwiek zmianą. ID użyte już
 przez issue o innym tytule daje kod 4.
 
 ```json
@@ -535,9 +536,11 @@ nie liczą. Inne linie (tytuł, akapity, komentarze) są ignorowane.
 shctl review run PR [--timeout SEKUNDY]
 ```
 
-Zadanie wynika z `Closes #NR` albo gałęzi `task/NR-`. Kolejno:
+Zadanie wynika z `Closes #NR` albo gałęzi `task/NR-` (review PR). PR z gałęzi `stage/ETAP` bez
+`Closes` to review etapu: wymaga `docs/ETAP/DoD.md`, nie ma issue ani etykiet, a worktree, panel i
+pliki robocze mają w nazwie `ETAP` zamiast `NR`. Kolejno:
 
-1. etykieta `status:review` na issue, na czas oczekiwania;
+1. etykieta `status:review` na issue (tylko review PR), na czas oczekiwania;
 2. przy wstrzymaniu Codexa w `limity.md` koniec z kodem 4: PR czeka w kolejce;
 3. czysty worktree `~/sh/wt/NAZWA/review-NR` na commicie PR (`git fetch origin pull/PR/head`), bez plików
    env; plik `.env*` (poza `.env.example`) w samym PR daje kod 4;
@@ -547,8 +550,12 @@ Zadanie wynika z `Closes #NR` albo gałęzi `task/NR-`. Kolejno:
 6. komentarz w PR z werdyktem i zgłoszeniami;
 7. usunięcie worktree review i zamknięcie panelu, także po błędzie.
 
-Prompt to `codex/sh-review.md`, a dopóki go nie ma, `codex/sh-review-tymczasowy.md`, z dopisanym
-kontekstem: repo, PR, zadanie, zakres diffu i treść issue jako dane. Profil
+Prompt to `codex/sh-review.md`, generowany ze skilla `sh-review` przez `scripts/sync-codex.sh`
+(brak pliku to kod 3), z dopisanym kontekstem: repo, tryb review (PR albo
+etap), PR i gałąź, zadanie albo etap z `DoD.md`, iteracja, zakres diffu, treść issue jako dane i
+poprzednie review jako dane. Iteracja pochodzi z etykiety `iter:N` issue albo z pola `iteracja` w
+`docs/ETAP/DoD.md` na commicie PR. Poprzednie review to ostatni komentarz review w PR dla innego
+commita (bez ukrytej linii danych); w pierwszej iteracji „Brak.”. Profil
 `$CODEX_HOME/reviewer.config.toml` (źródło `codex/reviewer.config.toml`, `serwer.md`, „Codex”) ustawia
 tylko odczyt i model reviewera; bez niego komenda ostrzega i działa na konfiguracji bazowej.
 `-s read-only` jest podawane zawsze.
@@ -560,12 +567,15 @@ Rozbieżny werdykt modelu jest odnotowany w komentarzu. Kod wyjścia 0 przy obu 
 tego samego commita nie woła Codexa i zwraca wynik z komentarza (`"ponownie":true`). Nowy commit w PR
 wymaga nowego review.
 
+W review etapu `nr` jest `null`, a `etap` to nazwa folderu. `task iter` i `task close` dotyczą tylko
+zadań: iterację etapu podbija orkiestrator w `DoD.md`, a status zmienia `shctl stage`.
+
 Pliki robocze: `~/sh/stan/review/NAZWA-NR/` (prompt, wynik, `codex.log` z wyjściem panelu). Błąd
 Codexa (np. limit) daje kod 1, a issue zostaje w `status:review`.
 
 ```json
 {"ok":true,"komenda":"review","dry_run":false,"wynik":{
-  "pr":20,"nr":12,"head":"68373f5...","werdykt":"FAIL","podsumowanie":"...",
+  "pr":20,"nr":12,"etap":null,"head":"68373f5...","werdykt":"FAIL","podsumowanie":"...",
   "zgloszenia":[{"waga":"istotne","plik":"src/a.ts","linia":4,"opis":"brak walidacji"}],
   "blokujace":1,"ponownie":false}}
 ```

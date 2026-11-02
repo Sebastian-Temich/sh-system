@@ -2,6 +2,9 @@
 
 ## 2026-11-02
 
+- Skille `sh-review` (review PR i review etapu, wynik w formacie `templates/review.md`, w iteracji N najpierw zgłoszenia z N-1, w iteracji 3 nowe istotne jako drobne; działa w Codex przez `shctl review run` i w Claude Code) i `sh-qa` (QA zbiorcze kamienia: E2E chromium + webkit, przepływy między funkcjami, zgodność z `W-n`, raport `docs/08-qa/raport-MN.md`, błędy `typ:qa` z wagą przez `shctl task create`).
+- `codex/sh-review.md` generowany ze skilla przez `scripts/sync-codex.sh` (`--check` w CI); prompt tymczasowy usunięty.
+- `shctl review run`: review etapu dla PR z gałęzi `stage/ETAP` (iteracja z `DoD.md`), w kontekście promptu tryb, iteracja i poprzednie review. `shctl task create`: pole `waga` (etykieta `sev:X`). `shctl doc new 08-qa raport-qa`: plik `raport-MN.md`.
 - Profil workera w szablonie: edycja `.env.example` i `supabase/`, `supabase init`; porty `supabase/config.toml` bez zmian (🟡 w review); sekcja „Ryzyka” w szablonie raportu. `sh-worker`, `sh-zadania` i prompt review dostosowane, propozycja z `docs/propozycje.md` zdjęta.
 - Skille `sh-zadania` (plik `docs/06-zadania/zadania.yaml` na `stage/06-zadania`, review etapu, potem `shctl task create` na `main` i tabela dla właściciela; szkielet jako `T1`) i `sh-worker` (jedno issue w `~/sh/wt/NAZWA/NR`, testy, PR „Closes #NR”, raport `T-NR.md` z sekcją „Ryzyka”, iteracja 2+ tylko zgłoszenia z review). `docs/propozycje.md`: luki profilu workera (`.env.example`, `supabase init`).
 - `sh-intake`: historyjki z Given/When/Then i priorytetem, typy projektu z konsekwencjami, stack z alternatywą, szacunek poglądowy, zlecenie na tryb L, stack w `AGENTS.md` po akceptacji. `sh-architekt`: środowiska i droga na produkcję, migracje zgodne wstecz, zadania właściciela (konta, DNS, `STAGING_DB_URL`, zmienne prod), dokumentacja wydania jako ostatnie zadanie. `docs/propozycje.md`: „shctl cykl new” na etap B.

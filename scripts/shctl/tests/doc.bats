@@ -36,8 +36,6 @@ setup() { wspolny_setup; projekt_demo; }
   run --separate-stderr "$SHCTL" doc new 04-architektura adr --tytul "Zażółć gęślą jaźń" --json
   [ "$status" -eq 0 ]
   [ "$(jq -r .wynik.plik <<<"$output")" = docs/04-architektura/adr/ADR-001-zazolc-gesla-jazn.md ]
-  "$SHCTL" doc new 08-qa raport-qa --tytul "ĄĆĘŁŃÓŚŹŻ ąćęłńóśźż"
-  [ -f docs/08-qa/raport-qa-acelnoszz-acelnoszz.md ]
 }
 
 @test "slug nie zalezy od locale" {
@@ -78,9 +76,15 @@ setup() { wspolny_setup; projekt_demo; }
 }
 
 @test "raport QA i dokumentacja techniczna trafiaja do swoich folderow" {
-  "$SHCTL" doc new 08-qa raport-qa --tytul "Kamień 1"
-  [ -f docs/08-qa/raport-qa-kamien-1.md ]
-  grep -qx '# Raport QA: Kamień 1' docs/08-qa/raport-qa-kamien-1.md
+  "$SHCTL" doc new 08-qa raport-qa --tytul "M1 Szkielet"
+  [ -f docs/08-qa/raport-M1.md ]
+  grep -qx '# Raport QA: M1 Szkielet' docs/08-qa/raport-M1.md
+  run "$SHCTL" doc new 08-qa raport-qa --tytul "M1 inny opis" --json
+  [ "$(jq -r .wynik.utworzono <<<"$output")" = false ]
+  run "$SHCTL" doc new 08-qa raport-qa --tytul "Kamień 1"
+  [ "$status" -eq 2 ]
+  run "$SHCTL" doc new 08-qa raport-qa --tytul "M1a"
+  [ "$status" -eq 2 ]
   "$SHCTL" doc new wydanie wydanie-techniczna
   [ "$(fm docs/wydanie/techniczna/techniczna.md rola)" = orkiestrator ]
 }
