@@ -69,3 +69,47 @@ obsidian_stan() {
     echo "różni się od origin"
   fi
 }
+
+# --- Synchronizacja klonów (shctl obsidian sync) ---------------------------------------------
+
+# Klon docs/ sh-system w vaulcie; domyślnie obok katalogu projektów.
+obsidian_kat_systemu() {
+  printf '%s' "${SH_OBSIDIAN_SYSTEM:-$(dirname "$SH_OBSIDIAN_DIR")/sh-system}"
+}
+
+# Klony do synchronizacji, po jednym w linii: projekty z SH_OBSIDIAN_DIR i klon sh-system.
+obsidian_klony() {
+  local k s
+  for k in "$SH_OBSIDIAN_DIR"/*/; do
+    [ -e "$k.git" ] && printf '%s\n' "${k%/}"
+  done
+  s="$(obsidian_kat_systemu)"
+  [ ! -e "$s/.git" ] || printf '%s\n' "$s"
+}
+
+# Jeden klon: tylko git pull --ff-only, nigdy merge ani reset. Wypisuje „ok:opis” albo „pominiety:powód”.
+obsidian_sync_klon() {
+  local kat="$1" zmiany g przed po ahead behind
+  zmiany="$(git -C "$kat" status --porcelain 2>/dev/null || echo blad)"
+  if [ -n "$zmiany" ]; then
+    echo "pominiety:lokalne zmiany (plików: $(printf '%s\n' "$zmiany" | wc -l | tr -d ' '))"
+    return 0
+  fi
+  g="$(git -C "$kat" symbolic-ref --short -q HEAD || true)"
+  [ -n "$g" ] || { echo "pominiety:odłączony HEAD"; return 0; }
+  z_limitem 60 git -C "$kat" fetch -q origin "$g" 2>/dev/null || { echo "pominiety:fetch z origin nieudany"; return 0; }
+  ahead="$(git -C "$kat" rev-list --count "FETCH_HEAD..HEAD" 2>/dev/null || echo x)"
+  behind="$(git -C "$kat" rev-list --count "HEAD..FETCH_HEAD" 2>/dev/null || echo x)"
+  case "$ahead$behind" in *x*) echo "pominiety:nie można porównać z origin/$g"; return 0 ;; esac
+  if [ "$ahead" -gt 0 ] && [ "$behind" -gt 0 ]; then
+    echo "pominiety:rozjechany z origin/$g ($ahead lokalnych, $behind zdalnych commitów)"
+    return 0
+  fi
+  [ "$ahead" -eq 0 ] || { echo "pominiety:niewypchnięte commity: $ahead"; return 0; }
+  [ "$behind" -gt 0 ] || { echo "ok:aktualny"; return 0; }
+  przed="$(git -C "$kat" rev-parse --short HEAD)"
+  z_limitem 120 git -C "$kat" pull -q --ff-only origin "$g" >/dev/null 2>&1 ||
+    { echo "pominiety:git pull --ff-only nieudany"; return 0; }
+  po="$(git -C "$kat" rev-parse --short HEAD)"
+  echo "ok:$przed..$po (commitów: $behind)"
+}

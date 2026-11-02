@@ -6,7 +6,7 @@ setup() { wspolny_setup; szablon_remote; V="$SH_OBSIDIAN_DIR/demo"; }
 @test "link tworzy klon tylko z docs/ w katalogu ze spacja" {
   run "$SHCTL" obsidian link demo
   [ "$status" -eq 0 ]
-  [[ "$output" == *"wystarczy włączyć Obsidian Git"* ]] || false
+  [[ "$output" == *"Synchronizację robi serwer co 5 minut"* ]] || false
   [ -f "$V/docs/konfiguracja.md" ]
   [ ! -e "$V/src" ]
   [ ! -e "$V/README.md" ]

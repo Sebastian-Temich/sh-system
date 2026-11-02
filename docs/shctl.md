@@ -297,6 +297,7 @@ zawiera panele, etap, gałąź, HEAD, liczbę niezacommitowanych plików i list�
 ```sh
 shctl obsidian link NAZWA
 shctl obsidian unlink NAZWA
+shctl obsidian sync [--agent]
 ```
 
 Obsidian działa na tym samym Macu i służy **głównie do czytania** dokumentacji. Odpowiedzi na
@@ -305,9 +306,9 @@ vaulcie. Źródłem prawdy pozostaje repo w `~/sh/projekty`.
 
 `link` zakłada dla projektu założonego wcześniej to samo, co `new-project`: klon
 `git clone --filter=blob:none --sparse` i `git sparse-checkout set --no-cone /docs/`. Klon ma tylko
-`docs/`, bez kodu, `node_modules` i plików z katalogu głównego; tryb cone zostawiłby te ostatnie. W
-Obsidianie wystarczy włączyć Obsidian Git dla tego folderu. Powtórka nic nie zmienia, a katalog
-będący czymś innym niż klon tego repo daje kod 4.
+`docs/`, bez kodu, `node_modules` i plików z katalogu głównego; tryb cone zostawiłby te ostatnie.
+Aktualizuje go `sync`, a w Obsidianie nie trzeba niczego włączać. Powtórka nic nie zmienia, a
+katalog będący czymś innym niż klon tego repo daje kod 4.
 
 `unlink` usuwa klon przy archiwizacji. Odmawia (kod 4) przy niezacommitowanych zmianach, plikach
 nieśledzonych i niewypchniętych commitach oraz gdy katalog nie jest klonem tego repo. Brak klonu to
@@ -324,6 +325,52 @@ shctl obsidian link sklep --json
 
 `unlink` zwraca `{"katalog":"...","usunieto":true}`.
 
+### obsidian sync
+
+Wtyczka Obsidian Git obsługuje jedno repo na vault, a `SH` ma wiele niezależnych klonów. Dlatego
+synchronizację robi serwer: LaunchAgent `pl.iskt.softwarehouse.obsidian-sync` uruchamia
+`shctl obsidian sync --agent` co 5 minut i przy logowaniu (`docs/serwer.md`, „Synchronizacja
+Obsidiana”).
+
+Klony: każdy katalog z `.git` w `SH_OBSIDIAN_DIR` oraz klon `docs/` repo `sh-system` w
+`SH_OBSIDIAN_SYSTEM` (domyślnie `sh-system` obok `SH_OBSIDIAN_DIR`, czyli
+`Obsidian Vault/SH/sh-system`). Synchronizacja jest jednokierunkowa, z GitHuba do vaulta. W każdym
+klonie: `git fetch`, potem `git pull --ff-only`. Nigdy nie robi merge'a, resetu ani pusha.
+
+| Stan klonu | Wynik |
+|---|---|
+| Czysty, za origin | `git pull --ff-only`, wpis `ok` w logu |
+| Czysty, zgodny z origin | nic |
+| Lokalne zmiany (także pliki nieśledzone) | pominięty |
+| Niewypchnięte commity | pominięty |
+| Rozjechany z origin (commity po obu stronach) | pominięty |
+| Odłączony HEAD, nieudany fetch albo pull | pominięty |
+
+Pominięcie trafia do `~/sh/logs/obsidian-sync.log` (`POMINIĘTY KATALOG: powód`), a przy ręcznym
+uruchomieniu także na stderr. Ten sam klon pominięty w dwóch kolejnych przebiegach daje jedno
+powiadomienie `notify.sh default` „Obsidian: klon bez synchronizacji”. Kolejne powiadomienie dla tego
+klonu przychodzi dopiero wtedy, gdy problem ustąpi i wróci. Klon z problemem naprawia właściciel
+albo orkiestrator (np. `git -C KLON stash` albo usunięcie i `shctl obsidian link`), nie `sync`.
+
+Stan zapisuje w `~/sh/stan/obsidian-sync.json`:
+
+```json
+{"ostatni_przebieg":"2026-11-02T23:50:06+0100","ostatnia_udana":"2026-11-02T23:50:06+0100",
+ "ostatnia_udana_epoch":1793659809,
+ "problemy":{"/.../Projekty/sklep":{"powod":"lokalne zmiany (1 plików)","od":"...","przebiegi":2,"zgloszone":true}}}
+```
+
+Udana synchronizacja to przebieg, w którym wszystkie klony są `ok`. Jej datę pokazuje `doctor`.
+Z `--agent` flaga `~/sh/stan/obsidian-sync.off` wyłącza przebieg (wynik `{"wylaczona":true}`).
+Ręczne `shctl obsidian sync` działa także z flagą. Dwa przebiegi naraz wyklucza blokada
+`~/sh/stan/obsidian-sync.lock`. Kod wyjścia to 0 także przy pominięciach. `--dry-run` tylko wypisuje
+klony.
+
+```json
+{"ok":true,"komenda":"obsidian","dry_run":false,"wynik":{"wylaczona":false,"pominiete":0,"klony":[
+  {"katalog":"/Users/.../Obsidian Vault/SH/sh-system","stan":"ok","opis":"9c9dca4..30b26ec (commitów: 1)"}]}}
+```
+
 ## doctor
 
 ```sh
@@ -333,7 +380,10 @@ shctl doctor [--test-notify]
 Sprawdza narzędzia, logowania gh, codex i claude, Docker, serwer herdr, `notify.sh` i temat ntfy,
 globalny `core.hooksPath`, lokalny `core.hooksPath` w repo z `~/sh/projekty`, wolne miejsce,
 `porty.md`, klony w `SH_OBSIDIAN_DIR` (czy są czyste i zgodne z origin, przez `git ls-remote`, bez
-pobierania; różnica to `uwaga`) oraz repo z `~/sh/stan/do-usuniecia.md` (`uwaga`, gdy są).
+pobierania; różnica to `uwaga`), datę ostatniej udanej synchronizacji Obsidiana z
+`~/sh/stan/obsidian-sync.json` (`uwaga`, gdy przebiegu nie było, jest starsza niż 30 minut, klon ma
+problem albo flaga `obsidian-sync.off` wyłącza agenta) oraz repo z `~/sh/stan/do-usuniecia.md`
+(`uwaga`, gdy są).
 
 Repo z listy `doctor` sprawdza przez `gh repo view` i zdejmuje wiersze tych, których już nie ma. To
 jego jedyny zapis; przy `--dry-run` tylko je wskazuje. Błąd sieci lub logowania niczego nie zdejmuje

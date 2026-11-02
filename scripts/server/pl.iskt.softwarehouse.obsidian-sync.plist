@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>pl.iskt.softwarehouse.obsidian-sync</string>
+  <!-- Synchronizacja klonów docs/ w vaulcie Obsidiana: git pull --ff-only co 5 minut (docs/serwer.md). -->
+  <!-- Wyłączenie: ~/sh/stan/obsidian-sync.off (przebieg się pomija, install.sh nie ładuje agenta). -->
+  <key>ProgramArguments</key>
+  <array>
+    <string>/Users/sebastiant./sh/bin/shctl</string>
+    <string>obsidian</string>
+    <string>sync</string>
+    <string>--agent</string>
+  </array>
+  <key>StartInterval</key>
+  <integer>300</integer>
+  <key>RunAtLoad</key>
+  <true/>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key>
+    <string>/Users/sebastiant./.local/bin:/Users/sebastiant./sh/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+    <key>LANG</key>
+    <string>pl_PL.UTF-8</string>
+  </dict>
+  <key>WorkingDirectory</key>
+  <string>/Users/sebastiant./sh</string>
+  <!-- shctl sam pisze do obsidian-sync.log; tu trafiają tylko nieprzechwycone błędy. -->
+  <key>StandardOutPath</key>
+  <string>/dev/null</string>
+  <key>StandardErrorPath</key>
+  <string>/Users/sebastiant./sh/logs/obsidian-sync.log</string>
+</dict>
+</plist>

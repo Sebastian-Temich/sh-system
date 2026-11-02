@@ -205,3 +205,22 @@ globalny_hooks_path() {
   jq -e '.skillOverrides["tworca-wymagan"] == "off" and (.permissions.deny | index("Skill(tworca-wymagan)"))' \
     "$T/sh/.claude/settings.json" >/dev/null
 }
+
+@test "plista obsidian-sync: kopia i zaladowanie" {
+  wymaga_plutil
+  rm "$T/agents/pl.iskt.softwarehouse.obsidian-sync.plist"
+  install
+  [ "$status" -eq 0 ]
+  cmp "$REPO/scripts/server/pl.iskt.softwarehouse.obsidian-sync.plist" "$T/agents/pl.iskt.softwarehouse.obsidian-sync.plist"
+  grep -q 'bootstrap .*obsidian-sync.plist' "$T/calls-inne"
+}
+
+@test "flaga obsidian-sync.off: agent obsidian-sync bez launchctl, sh-start dalej ladowany" {
+  mkdir -p "$T/sh/stan"
+  touch "$T/sh/stan/obsidian-sync.off"
+  install
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"obsidian-sync: agent synchronizacji Obsidiana wyłączony przez właściciela"* ]]
+  ! grep -q obsidian-sync "$T/calls-inne" 2>/dev/null
+  [ -f "$T/loaded" ]
+}

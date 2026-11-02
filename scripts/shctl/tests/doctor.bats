@@ -154,3 +154,16 @@ MOCK
   run --separate-stderr "$SHCTL" doctor --json
   [ "$(do_usuniecia)" = "ok:0" ]
 }
+
+@test "Obsidian sync: brak przebiegu, potem data ostatniej udanej, flaga wylaczenia" {
+  mkdir -p "$SH_OBSIDIAN_DIR"
+  run --separate-stderr "$SHCTL" doctor --json
+  [ "$(jq -r '.wynik.kontrole | map(select(.nazwa == "Obsidian sync"))[0].stan' <<<"$output")" = uwaga ]
+  "$SHCTL" obsidian sync >/dev/null
+  run --separate-stderr "$SHCTL" doctor --json
+  [ "$(jq -r '.wynik.kontrole | map(select(.nazwa == "Obsidian sync"))[0].stan' <<<"$output")" = ok ]
+  [[ "$(jq -r '.wynik.kontrole | map(select(.nazwa == "Obsidian sync"))[0].szczegoly' <<<"$output")" == "ostatnia udana "20* ]] || false
+  touch "$SH_DIR/stan/obsidian-sync.off"
+  run --separate-stderr "$SHCTL" doctor
+  [[ "$output" == *"wyłączona flagą"* ]] || false
+}

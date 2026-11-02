@@ -11,6 +11,7 @@
 # Agent z RunAtLoad wystartuje wtedy ponownie. Nieudany bootstrap to kod bledu, komenda
 # do recznego zaladowania i notify.sh high. Flaga ~/sh/stan/autostart.off wstrzymuje
 # ladowanie agenta sh-start; plista jest nadal kopiowana, bez dotykania launchd.
+# Tak samo ~/sh/stan/obsidian-sync.off dla agenta obsidian-sync (shctl obsidian sync co 5 minut).
 # Git: globalny core.hooksPath na scripts/server/git-hooks. Inna wartosc to blad, nie nadpisujemy.
 # Repo z lokalnym core.hooksPath w SH_DIR i SH_DIR/projekty dostaje ostrzezenie, bo wygrywa on z globalnym.
 # Katalogi docelowe: SH_DIR, SH_BIN, SH_AGENTS. Powiadomienie: SH_NOTIFY_CMD.
@@ -24,6 +25,8 @@ CODEX_DIR="${CODEX_HOME:-$HOME/.codex}"
 NOTIFY="${SH_NOTIFY_CMD:-$REPO/scripts/server/notify.sh}"
 AUTOSTART_LABEL=pl.iskt.softwarehouse.sh-start
 AUTOSTART_OFF="$SH_DIR/stan/autostart.off"
+OBSIDIAN_SYNC_LABEL=pl.iskt.softwarehouse.obsidian-sync
+OBSIDIAN_SYNC_OFF="$SH_DIR/stan/obsidian-sync.off"
 fail=0
 
 mkdir -p "$BIN" "$AGENTS"
@@ -53,13 +56,17 @@ link() {
 }
 
 plist() {
-  local src="$1" name dst domain label off=0 changed=""
+  local src="$1" name dst domain label off=0 changed="" co=autostart
   name="$(basename "$src")"
   dst="$AGENTS/$name"
   domain="gui/$(id -u)"
   label="${name%.plist}"
   if [ "$label" = "$AUTOSTART_LABEL" ] && [ -e "$AUTOSTART_OFF" ]; then
     off=1
+  fi
+  if [ "$label" = "$OBSIDIAN_SYNC_LABEL" ] && [ -e "$OBSIDIAN_SYNC_OFF" ]; then
+    off=1
+    co="agent synchronizacji Obsidiana"
   fi
 
   if ! cmp -s "$src" "$dst"; then
@@ -76,7 +83,7 @@ plist() {
   fi
 
   if [ "$off" = 1 ]; then
-    echo "pomijam: $label: autostart wyłączony przez właściciela"
+    echo "pomijam: $label: $co wyłączony przez właściciela"
     return
   fi
 

@@ -31,6 +31,7 @@ Użycie: shctl KOMENDA [argumenty] [--dry-run] [--json] [--projekt NAZWA]
   status show
   stop-all
   obsidian link|unlink NAZWA
+  obsidian sync [--agent]
   doctor [--test-notify]
   task create --plik zadania.yaml
   task ready
