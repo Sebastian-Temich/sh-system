@@ -29,6 +29,7 @@ BLOKADA=""
 SHCTL_TMP=""
 SHCTL_KOMENDA=""
 SHCTL_ARGI=""
+PRZY_WYJSCIU=""
 
 # Czyta plik jako dane, bez source: konfiguracja nie wykonuje kodu. Zmienna środowiska wygrywa.
 wczytaj_config() {
@@ -77,6 +78,8 @@ zapisz_log() {
 koniec_shctl() {
   local rc=$? nazwa
   trap - EXIT
+  # Sprzątanie komendy (np. worktree review) także po die.
+  [ -z "$PRZY_WYJSCIU" ] || "$PRZY_WYJSCIU" || true
   [ -z "$BLOKADA" ] || rmdir "$BLOKADA" 2>/dev/null || true
   if [ "$JSON" -eq 1 ] && [ "$WYNIK_WYSLANY" -eq 0 ] && [ "$rc" -ne 0 ]; then
     nazwa="$SHCTL_KOMENDA"

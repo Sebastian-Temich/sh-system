@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+# Atrapa codex exec: zapisuje argumenty, prompt i listę plików env w katalogu pracy, a jako wynik
+# (-o) kopiuje $CODEX_ATRAPA/wynik.json. Kod wyjścia z $CODEX_ATRAPA/rc (domyślnie 0).
+set -euo pipefail
+D="${CODEX_ATRAPA:?}"
+echo "$PWD | $*" >>"$D/calls"
+out=""
+while [ $# -gt 0 ]; do
+  case "$1" in
+    -o) out="$2"; shift 2 ;;
+    *) shift ;;
+  esac
+done
+cat >"$D/prompt"
+find . -name '.env*' ! -name .env.example ! -path './.git/*' >"$D/env-w-katalogu"
+rc="$(cat "$D/rc" 2>/dev/null || echo 0)"
+[ "$rc" = 0 ] || exit "$rc"
+cp "$D/wynik.json" "$out"

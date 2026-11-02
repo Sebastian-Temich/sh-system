@@ -1,0 +1,98 @@
+#!/usr/bin/env bats
+load helper-zadania
+
+setup() { zadania_setup; }
+
+zal() { printf '### Cel\n\nx\n\n### Zależności\n\n%s\n\n### Typ\n\nfeature\n' "$1"; }
+gotowe() { jq -r '[.wynik.gotowe[].nr] | join(",")' <<<"$output"; }
+
+@test "ready: tylko todo ze spelnionymi zaleznosciami" {
+  issue 1 "Gotowe" "status:todo"
+  issue 2 "Zamknięta zależność" "status:todo" "$(zal '#5')"
+  issue 3 "Otwarta zależność" "status:todo" "$(zal '#1')"
+  issue 4 "W toku" "status:in-progress"
+  issue 5 "Done" ""
+  zamknij_issue 5
+  issue 6 "Anulowana zależność" "status:todo" "$(zal '#7')"
+  issue 7 "Anulowane" ""
+  zamknij_issue 7 NOT_PLANNED
+  run --separate-stderr "$SHCTL" task ready --json
+  echo "$output $stderr"
+  [ "$status" -eq 0 ]
+  [ "$(gotowe)" = "1,2" ]
+  [ "$(jq -r '.wynik.zablokowane[] | "\(.nr):\(.powody[0])"' <<<"$output" | tr '\n' ';')" = "3:zależność #1 otwarta;6:zależność #7 anulowana;" ]
+  [ "$(jq -r .wynik.mozna_dispatch <<<"$output")" = true ]
+}
+
+@test "ready: max_local liczy panele workerow wszystkich projektow" {
+  issue 1 "Gotowe" "status:todo"
+  panel w1:p5 worker:inny:4 claude
+  panel w1:p6 review:demo:2 codex
+  run --separate-stderr "$SHCTL" task ready --json
+  [ "$(gotowe)" = "" ]
+  [ "$(jq -r '.wynik.blokady[0].rodzaj, .wynik.sloty.aktywne' <<<"$output" | tr '\n' ' ')" = "max_local 1 " ]
+  sed -i.bak 's/^max_local: 1/max_local: 2/' docs/konfiguracja.md
+  run --separate-stderr "$SHCTL" task ready --json
+  [ "$(gotowe)" = "1" ]
+}
+
+@test "ready: db:migracja maksymalnie jedna naraz w projekcie" {
+  issue 1 "Migracja A" "status:todo,db:migracja"
+  issue 2 "Migracja B" "status:todo,db:migracja"
+  issue 3 "Zwykłe" "status:todo"
+  run --separate-stderr "$SHCTL" task ready --json
+  [ "$(gotowe)" = "1,3" ]
+  [[ "$(jq -r '.wynik.zablokowane[0].powody[0]' <<<"$output")" == "db:migracja: w projekcie trwa #1" ]] || false
+  issue 4 "Migracja w toku" "status:review,db:migracja"
+  run --separate-stderr "$SHCTL" task ready --json
+  [ "$(gotowe)" = "3" ]
+}
+
+@test "ready: wstrzymanie Claude w limity.md blokuje, samo Codexa nie" {
+  issue 1 "Gotowe" "status:todo"
+  printf '# Limity\n\n- codex: limit do 18:00\n' >"$SH_DIR/limity.md"
+  run --separate-stderr "$SHCTL" task ready --json
+  [ "$(gotowe)" = "1" ]
+  printf '# Limity\n\n| Wykonawca | Do |\n|---|---|\n| claude | 2026-11-02 18:00 |\n' >"$SH_DIR/limity.md"
+  run --separate-stderr "$SHCTL" task ready --json
+  [ "$(gotowe)" = "" ]
+  [ "$(jq -r '.wynik.blokady[0].rodzaj' <<<"$output")" = limit ]
+  printf '# Limity\n\n- brak\n' >"$SH_DIR/limity.md"
+  run --separate-stderr "$SHCTL" task ready --json
+  [ "$(gotowe)" = "1" ]
+}
+
+@test "ready: brak miejsca blokuje i powiadamia raz dziennie" {
+  issue 1 "Gotowe" "status:todo"
+  DF_GB=14 run --separate-stderr "$SHCTL" task ready --json
+  [ "$(gotowe)" = "" ]
+  [ "$(jq -r '.wynik.blokady[0].rodzaj, .wynik.wolne_gb' <<<"$output" | tr '\n' ' ')" = "dysk 14 " ]
+  DF_GB=14 "$SHCTL" task ready >/dev/null
+  [ "$(grep -c 'Brak miejsca' "$T/notified")" -eq 1 ]
+  DF_GB=30 "$SHCTL" task ready >/dev/null
+  [ ! -e "$SH_DIR/stan/dysk-alarm" ]
+  yq -i --front-matter=process '.min_wolne_gb = 40' docs/konfiguracja.md
+  DF_GB=30 run --separate-stderr "$SHCTL" task ready --json
+  [ "$(gotowe)" = "" ]
+}
+
+@test "ready: kolejka review max_review_queue zatrzymuje dispatch" {
+  issue 1 "Gotowe" "status:todo"
+  issue 2 "R1" "status:review"
+  issue 3 "R2" "status:review"
+  run --separate-stderr "$SHCTL" task ready --json
+  [ "$(gotowe)" = "1" ]
+  issue 4 "R3" "status:review"
+  run --separate-stderr "$SHCTL" task ready --json
+  [ "$(gotowe)" = "" ]
+  [ "$(jq -r '.wynik.blokady[0].rodzaj, .wynik.kolejka_review.czeka' <<<"$output" | tr '\n' ' ')" = "kolejka_review 3 " ]
+}
+
+@test "ready: tekst dla czlowieka i serwer herdr niedostepny" {
+  issue 1 "Gotowe" "status:todo"
+  run --separate-stderr "$SHCTL" task ready
+  [[ "$output" == *"Gotowe: #1 Gotowe"* ]] || false
+  touch "$HERDR_ATRAPA/down"
+  run --separate-stderr "$SHCTL" task ready
+  [ "$status" -eq 3 ]
+}

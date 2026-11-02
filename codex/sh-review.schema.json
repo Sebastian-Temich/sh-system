@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Wynik review shctl",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["werdykt", "podsumowanie", "zgloszenia"],
+  "properties": {
+    "werdykt": { "type": "string", "enum": ["PASS", "FAIL"] },
+    "podsumowanie": { "type": "string" },
+    "zgloszenia": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["waga", "plik", "linia", "opis"],
+        "properties": {
+          "waga": { "type": "string", "enum": ["krytyczne", "istotne", "drobne"] },
+          "plik": { "type": "string" },
+          "linia": { "type": "integer" },
+          "opis": { "type": "string" }
+        }
+      }
+    }
+  }
+}

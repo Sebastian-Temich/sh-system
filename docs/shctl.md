@@ -1,8 +1,8 @@
 # shctl
 
 CLI z mechaniką procesu (`proces-v1.md`, „Automatyzacja: CLI shctl”). Agent decyduje i pisze treść,
-a shctl wykonuje operacje na plikach, GitHubie i panelach herdr. To część 1: bez `task`, `review` i
-`reset-dryrun`.
+a shctl wykonuje operacje na plikach, GitHubie i panelach herdr. Część 1: komendy projektu i etapów,
+część 2: `task`, `review run` i `reset-dryrun` (sekcja „Zadania”).
 
 Źródło: `scripts/shctl/` (`shctl`, `cmd/` z podkomendami, `lib/`, `tests/`). `install.sh` zakłada
 symlink `~/sh/bin/shctl`. Zależności: bash 3.2+, gh, jq, yq (mikefarah), git, herdr.
@@ -38,8 +38,10 @@ Format `--json`:
 Komunikaty błędów i ostrzeżenia idą na stderr. Każde wywołanie dopisuje linię do
 `~/sh/logs/shctl.log` (czas, kod, `dry`, projekt, komenda i argumenty ucięte do 400 znaków).
 
-shctl commituje tylko w `new-project`. Pozostałe komendy zostawiają zmiany w drzewie roboczym, a
-commit na main robi orkiestrator. Komendy zmieniające pliki wspólne ostrzegają poza gałęzią `main`.
+shctl commituje w projekcie tylko w `new-project`. Pozostałe komendy zostawiają zmiany w drzewie
+roboczym, a commit na main robi orkiestrator. Wyjątki poza plikami projektu: `task close` commituje
+propozycje w osobnej gałęzi `sh-system` i otwiera PR, a `reset-dryrun` przestawia main `sh-dryrun` na
+tag (force push). Komendy zmieniające pliki wspólne ostrzegają poza gałęzią `main`.
 
 Zmienne środowiska (dla testów i innego układu):
 
@@ -51,6 +53,11 @@ Zmienne środowiska (dla testów i innego układu):
 | `SH_NOTIFY_CMD` | `$SH_DIR/bin/notify.sh` |
 | `SH_CONFIG` | `~/.config/sh/config` |
 | `SH_OBSIDIAN_DIR` | Z `SH_CONFIG`; bez wartości `new-project` pomija klon w vaulcie |
+| `SH_SYSTEM_DIR` | `$SH_DIR/sh-system`; repo, do którego `task close` wysyła propozycje |
+| `SHCTL_REVIEW_TIMEOUT` | `3600`; limit czekania `review run` na Codexa, w sekundach |
+| `SHCTL_TEST_TIMEOUT` | `1800`; limit testów w `task resume-check`, w sekundach |
+| `SHCTL_DRYRUN_NAZWA` | `sh-dryrun`; jedyny projekt, na którym działa `reset-dryrun` |
+| `CODEX_HOME` | `~/.codex`; tu `review run` szuka profilu `reviewer.config.toml` |
 
 Plik `~/.config/sh/config` jest poza repo. shctl czyta z niego linię
 `SH_OBSIDIAN_DIR="/ścieżka/do/vaulta/SH/Projekty"` jako dane, bez `source`. Zmienna środowiska ma pierwszeństwo.
@@ -338,20 +345,283 @@ jego jedyny zapis; przy `--dry-run` tylko je wskazuje. Błąd sieci lub logowani
   {"nazwa":"hooki sklep","stan":"uwaga","szczegoly":"lokalny core.hooksPath (.husky) wyłącza globalny pre-push"}]}}
 ```
 
+## Zadania
+
+Cykl zadania w etapie A: `task create` → `task ready` → `task dispatch` → praca workera (PR) →
+`review run` → przy FAIL `task iter` i znów `review run` → `task close`. Każde zadanie ma `runner:local`
+i `wykonawca:claude`, a review robi Codex. Po przerwie: `task resume-check`.
+
+### Pliki, panele, stan
+
+| Rzecz | Miejsce |
+|---|---|
+| Worktree workera | `../wt/NR` obok repo (`~/sh/projekty/wt/NR`), gałąź `task/NR-slug` |
+| Worktree review | `../wt/review-NR`, odłączony HEAD na commicie PR, bez plików env |
+| Panel workera | Karta herdr w workspace `sh` z panelem `worker:NAZWA:NR` |
+| Panel review | Karta z panelem `review:NAZWA:NR`, zamykana po review |
+| Mapa NR → panel | `~/sh/stan/NAZWA.json`, klucz `zadania` (`stop-all` go zachowuje) |
+| Wynik review | Komentarz w PR ze znacznikiem `<!-- shctl:review head=SHA werdykt=... -->` |
+
+Katalog `../wt` jest wspólny dla projektów. Gdy `../wt/NR` należy do innego repo, komenda odmawia
+(kod 4).
+
+Slug gałęzi to tytuł issue z transliteracją polskich znaków, małe litery, do 40 znaków:
+„Zażółć gęślą jaźń: Łódź” daje `task/12-zazolc-gesla-jazn-lodz`. Istniejąca gałąź `task/NR-*` ma
+pierwszeństwo, więc zmiana tytułu nie zakłada nowej.
+
+Z `docs/konfiguracja.md` (frontmatter) zadania czytają:
+
+| Pole | Domyślnie | Użycie |
+|---|---|---|
+| `max_local` | 1 | Limit workerów, liczony z paneli `worker:*` we wszystkich projektach |
+| `max_review_queue` | 3 | Tyle otwartych issue w `status:review` zatrzymuje dispatch |
+| `min_wolne_gb` | 15 | Mniej wolnego miejsca na dysku projektu zatrzymuje dispatch |
+| `env_files` | brak | Lista dodatkowych plików env (ścieżki względne, bez `..`) dla workera |
+| `modele.worker` | `opus` | `claude --model`; `domyslny` pomija opcję |
+| `modele.reviewer.model` | `domyslny` | `codex exec -m`; „GPT-6.1 Terra” staje się `gpt-6.1-terra` |
+| `modele.reviewer.rozumowanie` | brak | `-c model_reasoning_effort="..."` |
+
+### task create
+
+```sh
+shctl task create --plik zadania.yaml
+```
+
+Hurtowo zakłada issue z pliku YAML: lista zadań albo mapa z kluczem `zadania`.
+
+```yaml
+zadania:
+  - id: T1                     # wymagane, unikalne w projekcie
+    tytul: Schemat bazy        # wymagane
+    cel: Tabela users.         # wymagane
+    kryteria: [migracja tworzy tabelę]   # wymagane, niepusta lista
+    pliki: [supabase/migrations/]
+    testy: pnpm test db
+    zaleznosci: [T0, "#40"]    # ID z pliku albo numer istniejącego issue
+    typ: feature               # feature (domyślnie), bug, qa, docs, cr
+    tryb: M                    # S albo M; bez pola brak etykiety tryb:
+    db_migracja: true          # etykieta db:migracja
+    milestone: M1 Szkielet
+```
+
+Etykiety: `status:todo`, `runner:local`, `wykonawca:claude`, `typ:X`, opcjonalnie `tryb:X` i
+`db:migracja`. Treść issue ma sekcje formularza (Cel, Kryteria akceptacji, Zakres, Komenda testów, Typ,
+Zależności, Baza danych) i znacznik `<!-- shctl:id=T1 -->`. Issue powstają w kolejności zależności, więc
+zależności mają już numery. Brakujące milestone'y komenda zakłada.
+
+Na końcu dopisuje mapę do sekcji „Mapa zadań z planu” w `docs/06-zadania/index.md` (znaczniki
+`shctl:mapa`, poza tabelą `sync-status`) i uruchamia `scripts/sync-status.sh`.
+
+Powtórka rozpoznaje issue po znaczniku i niczego nie dubluje; przerwane tworzenie dokańcza. Nieznane
+pole, nieznana zależność, cykl, zły typ lub tryb dają kod 2 przed jakąkolwiek zmianą. ID użyte już
+przez issue o innym tytule daje kod 4.
+
+```json
+{"ok":true,"komenda":"task","dry_run":false,"wynik":{
+  "mapa":{"T1":12,"T2":13},"utworzone":["T1","T2"],"istniejace":[],
+  "milestone_utworzone":["M1 Szkielet"],"indeks":"docs/06-zadania/index.md"}}
+```
+
+### task ready
+
+```sh
+shctl task ready
+```
+
+Tylko czyta. `kandydaci` to otwarte issue `status:todo`, których wszystkie zależności z sekcji
+„Zależności” są zamknięte jako wykonane. Zależność otwarta, anulowana lub nieistniejąca trafia do
+`zablokowane` z powodem. Z kilku zadań `db:migracja` kandydatem jest tylko pierwsze, a żadne, gdy w
+projekcie trwa już takie zadanie (status inny niż `todo`).
+
+Blokady całego dispatchu (`blokady`): brak wolnego slotu `max_local`, wolne miejsce poniżej
+`min_wolne_gb`, kolejka review pełna (`max_review_queue`), wstrzymanie Claude w `~/sh/limity.md`.
+`gotowe` to kandydaci, gdy blokad nie ma, inaczej pusta lista.
+
+Z `limity.md` liczą się pozycje list i wiersze tabel (bez nagłówka); wpis „brak” nie jest
+wstrzymaniem. Wpis ze słowem „codex” wstrzymuje tylko review, każdy inny wstrzymuje workerów Claude.
+Brak miejsca wysyła `notify.sh high` raz dziennie (znacznik `~/sh/stan/dysk-alarm`, kasowany, gdy
+miejsce wróci).
+
+```json
+{"ok":true,"komenda":"task","dry_run":false,"wynik":{
+  "gotowe":[{"nr":12,"tytul":"Schemat bazy","db_migracja":true}],"kandydaci":[...],
+  "zablokowane":[{"nr":13,"tytul":"Logowanie","db_migracja":false,"powody":["zależność #12 otwarta"]}],
+  "blokady":[],"sloty":{"max_local":1,"aktywne":0,"wolne":1},"kolejka_review":{"max":3,"czeka":0},
+  "wolne_gb":25,"min_wolne_gb":15,"mozna_dispatch":true}}
+```
+
+### task dispatch
+
+```sh
+shctl task dispatch NR
+```
+
+Przy `status:todo` sprawdza te same warunki co `ready` (własny panel nie zajmuje slotu) i przy
+niespełnionym odmawia kodem 4 z powodem. Potem:
+
+1. worktree `../wt/NR` na gałęzi `task/NR-slug`: istniejąca gałąź lokalna, zdalna albo nowa od
+   `origin/main`;
+2. kopia `.env.local` i `env_files` z repo głównego do worktree (prawa `go-rwx`); brak pliku to
+   ostrzeżenie;
+3. karta herdr z panelem `worker:NAZWA:NR` i w nim
+   `SH_NOTIFY=1 claude --settings .claude/roles/worker/settings.json --model MODEL 'Zrealizuj issue #NR skillem sh-worker.'`;
+4. etykiety `status:in-progress` i `iter:1`;
+5. wpis w `~/sh/stan/NAZWA.json`: panel, etykieta, worktree, gałąź, start, iteracja.
+
+Przy `status:in-progress` dokańcza brakujące kroki bez bramek; agenta, który już działa w panelu, nie
+uruchamia drugi raz. Inny status to kod 4. Brak `.claude/roles/worker/settings.json` to kod 3.
+
+```json
+{"ok":true,"komenda":"task","dry_run":false,"wynik":{
+  "nr":12,"galaz":"task/12-schemat-bazy","worktree":"/Users/.../sh/projekty/wt/12","panel":"w1:p7",
+  "label":"worker:sklep:12","env":[".env.local"],"uruchomiono":true,"polecenie":"cd ... && SH_NOTIFY=1 claude ...",
+  "zmiana":true,"kroki":["worktree ...","env: .env.local","panel worker:sklep:12 i start claude (model opus)"]}}
+```
+
+### review run
+
+```sh
+shctl review run PR [--timeout SEKUNDY]
+```
+
+Zadanie wynika z `Closes #NR` albo gałęzi `task/NR-`. Kolejno:
+
+1. etykieta `status:review` na issue, na czas oczekiwania;
+2. przy wstrzymaniu Codexa w `limity.md` koniec z kodem 4: PR czeka w kolejce;
+3. czysty worktree `../wt/review-NR` na commicie PR (`git fetch origin pull/PR/head`), bez plików
+   env; plik `.env*` (poza `.env.example`) w samym PR daje kod 4;
+4. karta z panelem `review:NAZWA:NR` i w nim
+   `codex exec -p reviewer -s read-only -m MODEL --output-schema codex/sh-review.schema.json -o ... - < prompt`;
+5. czekanie na wynik (limit `--timeout`, domyślnie `SHCTL_REVIEW_TIMEOUT`);
+6. komentarz w PR z werdyktem i zgłoszeniami;
+7. usunięcie worktree review i zamknięcie panelu, także po błędzie.
+
+Prompt to `codex/sh-review.md`, a dopóki go nie ma, `codex/sh-review-tymczasowy.md`, z dopisanym
+kontekstem: repo, PR, zadanie, zakres diffu i treść issue jako dane. Bez profilu
+`$CODEX_HOME/reviewer.config.toml` komenda ostrzega i działa na konfiguracji bazowej; `-s read-only`
+jest zawsze.
+
+Werdykt liczy shctl ze zgłoszeń: FAIL, gdy jest choć jedno `krytyczne` albo `istotne`, inaczej PASS.
+Rozbieżny werdykt modelu jest odnotowany w komentarzu. Kod wyjścia 0 przy obu werdyktach. Powtórka dla
+tego samego commita nie woła Codexa i zwraca wynik z komentarza (`"ponownie":true`). Nowy commit w PR
+wymaga nowego review.
+
+Pliki robocze: `~/sh/stan/review/NAZWA-NR/` (prompt, wynik, `codex.log` z wyjściem panelu). Błąd
+Codexa (np. limit) daje kod 1, a issue zostaje w `status:review`.
+
+```json
+{"ok":true,"komenda":"review","dry_run":false,"wynik":{
+  "pr":20,"nr":12,"head":"68373f5...","werdykt":"FAIL","podsumowanie":"...",
+  "zgloszenia":[{"waga":"istotne","plik":"src/a.ts","linia":4,"opis":"brak walidacji"}],
+  "blokujace":1,"ponownie":false}}
+```
+
+### task iter
+
+```sh
+shctl task iter NR
+```
+
+Tylko po FAIL review dla bieżącego commita otwartego PR; bez takiego wyniku albo przy PASS kod 4.
+Podbija `iter:N` na `iter:N+1`, ustawia `status:in-progress` i wysyła do panelu `worker:NAZWA:NR`
+polecenie: popraw wyłącznie zgłoszenia 🔴 i 🟡 z ostatniego review. Bez panelu otwiera go w
+`../wt/NR` i uruchamia claude z tym poleceniem.
+
+Powtórka dla tego samego review nie podbija licznika i nie wysyła polecenia drugi raz (stan w
+`~/sh/stan/NAZWA.json`). FAIL w iteracji 3 wywołuje `shctl escalate --dotyczy "#NR" --powod "3 iteracje
+bez PASS"`: wynik ma `"eskalowano":true` i numer eskalacji, a etykieta `iter:3` zostaje.
+
+### task close
+
+```sh
+shctl task close NR
+```
+
+Działa w repo głównym na `main` (inaczej kod 4). Przy otwartym PR merguje (squash,
+`--match-head-commit`) wyłącznie, gdy CI jest zielone (`pass`; `pending`, `fail` i brak kontroli to
+kod 4) i komentarz review dla bieżącego commita ma PASS. Odmawia też, gdy `../wt/NR` ma
+niezacommitowane zmiany albo commity spoza PR. Potem, na main po `git pull --ff-only`:
+
+| Źródło | Cel |
+|---|---|
+| „Decyzje” z `docs/07-realizacja/T-NR.md` | `docs/decyzje.md`; `pytanie → decyzja` dzieli kolumny, inaczej Pytanie to `-` |
+| „Drobne uwagi” z raportu | `docs/backlog-drobne.md`, stan `otwarta` |
+| Zgłoszenia ⚪ z ostatniego review | `docs/backlog-drobne.md`, źródło `review PR #N` |
+| Czas od dispatchu, iteracje, eskalacje | Wiersz `| #NR tytuł | tryb | czas | 1 | iteracje | eskalacje | PR #N |` w `docs/metryki.md` |
+| Tytuł i PR | `- #NR: tytuł (PR #N)` w sekcji „Niewydane” `CHANGELOG.md` |
+| „Propozycje dla systemu” | PR do `sh-system`: gałąź `propozycje/NAZWA-T-NR`, wpis w `docs/propozycje.md` |
+
+Pozycje sekcji to punkty listy (z kontynuacją) albo akapity; „brak” jest pomijane. Na końcu usuwa
+worktree, gałąź `task/NR-*` i panel, zamyka issue, zdejmuje etykiety `status:*`, uruchamia
+`scripts/sync-status.sh` i kasuje wpis zadania w stanie. Zmian w plikach wspólnych nie commituje.
+
+Powtórka po merge'u pomija gotowe kroki: wiersze nie są dopisywane drugi raz, a istniejący PR propozycji
+(także scalony) nie powstaje ponownie. Nieudany krok poboczny (PR propozycji, panel, sync-status) daje
+kod 1 po wykonaniu pozostałych; powtórka go dokańcza.
+
+### task resume-check
+
+```sh
+shctl task resume-check NR [--testy "..."] [--bez-testow]
+```
+
+Stan po przerwie, do decyzji orkiestratora (kontynuuj, rebase i kontynuuj, iteracja od nowa).
+Zwraca: status i iterację z etykiet, panel, a dla `../wt/NR` gałąź, HEAD, listę niezacommitowanych
+plików, liczbę commitów za i przed `origin/main`, niewypchnięte commity i wynik testów. Komenda testów
+pochodzi z sekcji „Komenda testów” issue albo z `--testy`; uruchamia się w worktree z limitem
+`SHCTL_TEST_TIMEOUT`. Pole `sugestia` to tylko podpowiedź.
+
+Komenda nie zmienia etykiet: przerwanie przez limit nie podbija iteracji.
+
+```json
+{"ok":true,"komenda":"task","dry_run":false,"wynik":{
+  "nr":12,"status":"in-progress","iteracja":1,"worktree":"/Users/.../wt/12","worktree_istnieje":true,
+  "git":{"galaz":"task/12-schemat-bazy","head":"...","ostatni_commit":"a1b2c3d #12: ...",
+    "niezacommitowane":["?? src/nowy.ts"],"za_main":1,"przed_main":2,"niewypchniete":0},
+  "testy":{"komenda":"pnpm test","kod":0,"wynik":"pass","koniec_wyjscia":"..."},
+  "panel":{"pane_id":"w1:p7","label":"worker:sklep:12","agent":"claude","agent_status":"idle"},
+  "sugestia":"rebase i kontynuuj","uwaga":"przerwanie przez limit nie podbija iteracji"}}
+```
+
+### reset-dryrun
+
+```sh
+shctl reset-dryrun
+```
+
+Przywraca projekt wzorcowy `sh-dryrun` do tagu `baseline` (`proces-v1.md`, „Projekt wzorcowy”). Inny
+projekt to kod 4, brak tagu albo pliku zadań w tagu to kod 3. Kolejno: zamyka panele projektu, usuwa
+jego worktree i gałęzie `task/*`, zamyka otwarte PR (z usunięciem gałęzi), otwarte issue zamyka jako
+„not planned” ze znacznikiem zmienionym na `shctl:archiwum-id`, resetuje main do tagu i wypycha go
+(`--force-with-lease`), czyści mapę zadań w stanie i odtwarza issue przez `task create` z
+`zadania.yaml` albo `docs/06-zadania/zadania.yaml` z tagu.
+
+Gdy main jest na tagu, nie ma otwartych PR, paneli ani worktree, a otwarte issue to dokładnie zadania z
+pliku w `status:todo` bez iteracji, komenda nic nie robi (`"zmiana":false`).
+
 ## Testy
 
 ```sh
 bats scripts/shctl/tests
 ```
 
-Testy używają atrap `gh`, `herdr`, `notify` i `lsof` oraz projektu w katalogu tymczasowym. Pełny test
-na GitHubie jest domyślnie pomijany. Uruchamiamy go wyłącznie po wyraźnej zgodzie właściciela w danej
-rozmowie (`serwer.md`, „Praca nad systemem”):
+Testy używają atrap `gh`, `herdr`, `notify` i `lsof` oraz projektu w katalogu tymczasowym. Testy zadań
+(`task-*.bats`, `review.bats`, `reset-dryrun.bats`) mają stanowe atrapy w `tests/atrapy/`: `gh`
+(issue, PR, komentarze, CI, milestone'y; merge to prawdziwy squash na lokalnym repo zdalnym), `herdr`
+(panele; `pane run` wykonuje komendę od razu), `codex`, `claude` i `df`.
+
+Pełne testy na GitHubie są domyślnie pomijane. Uruchamiamy je wyłącznie po wyraźnej zgodzie
+właściciela w danej rozmowie (`serwer.md`, „Praca nad systemem”):
 
 ```sh
 SHCTL_E2E=1 bats scripts/shctl/tests/new-project-e2e.bats
+SHCTL_E2E=1 bats scripts/shctl/tests/task-e2e.bats
 ```
 
-Test zakłada prywatne repo `sh-test-RRRRMMDD-HHMM` i przed utworzeniem dopisuje je do
+`task-e2e.bats` zakłada projekt z szablonu, `task create` z jednym trywialnym zadaniem, `dispatch`, pracę
+workera wykonuje sam (commit, push, PR), czeka na CI, uruchamia `review run` z prawdziwym Codexem i
+`task close`. herdr i claude są atrapami; `SHCTL_E2E_CODEX=atrapa` zastępuje też Codexa.
+
+Każdy test zakłada prywatne repo `sh-test-RRRRMMDD-HHMM` i przed utworzeniem dopisuje je do
 `~/sh/stan/do-usuniecia.md`. Repo usuwa właściciel (`gh repo delete` wymaga zakresu `delete_repo`), a
 wiersz z listy zdejmuje kolejny `shctl doctor`.
