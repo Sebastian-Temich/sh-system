@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-11-03
+
+- Podręcznik właściciela `docs/podrecznik/` (9 plików, linki Obsidiana): start, jak to działa, codzienna praca, skille, shctl, serwer i skrypty, przykład od zera (strona firmowa w trybie M i zlecenie S), gdy coś nie działa, słownik. Tylko stan etapu A; funkcje zapowiedziane jako „etap B (jeszcze niedostępne)”.
+- `scripts/docs/sprawdz-podrecznik.sh` z testem `scripts/docs/tests/sprawdz-podrecznik.bats` (CI): każda komenda `shctl` i każdy skill `sh-*` z podręcznika istnieje, `03-skille.md` i `04-shctl.md` są kompletne. `docs/serwer.md`, „Praca nad systemem”: zmiana shctl, skilli lub skryptów serwera aktualizuje podręcznik w tym samym PR.
+
 ## 2026-11-02
 
 - `shctl obsidian sync`: `git pull --ff-only` we wszystkich klonach `docs/` w vaulcie (`SH_OBSIDIAN_DIR` i `SH/sh-system`), bez merge'a i resetu; klony z lokalnymi zmianami, niewypchniętymi commitami albo rozjechane pomija i zapisuje w `~/sh/logs/obsidian-sync.log`, przy powtórce `notify.sh`. LaunchAgent `pl.iskt.softwarehouse.obsidian-sync` co 5 minut z flagą `~/sh/stan/obsidian-sync.off`, instalowany przez `install.sh`. `shctl doctor`: data ostatniej udanej synchronizacji. Zamiast wtyczki Obsidian Git; w Obsidianie tylko Dataview.

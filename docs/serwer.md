@@ -117,6 +117,12 @@ Zmiany w `sh-system` i `sh-template-projekt` idą przez gałąź i PR, bez bezpo
 Wyjątek: zmiana dotycząca bezpieczeństwa, dostępów albo produkcji czeka na zgodę właściciela także
 po zielonym CI.
 
+Zmiana w shctl, skillach lub skryptach serwera wymaga aktualizacji podręcznika właściciela
+(`docs/podrecznik/`) w tym samym PR. Podręcznik opisuje wyłącznie stan faktyczny, a funkcje
+zapowiedziane oznacza „etap B (jeszcze niedostępne)”. CI uruchamia
+`scripts/docs/sprawdz-podrecznik.sh`: każda komenda `shctl` i każdy skill `sh-*` z podręcznika musi
+istnieć, `03-skille.md` opisuje każdy skill, a `04-shctl.md` każdą komendę.
+
 Test na prawdziwym GitHubie uruchamiamy wyłącznie po wyraźnej zgodzie właściciela w danej rozmowie,
 tak jak zmiany dotyczące bezpieczeństwa. Dotyczy to `SHCTL_E2E=1` i każdego ręcznego wywołania, które
 może założyć repo lub zmienić je na GitHubie. Odczyt stanu repo zgody nie wymaga.

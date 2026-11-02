@@ -5,6 +5,7 @@ Centralne repozytorium software house'u prowadzonego przez agentów AI.
 | Katalog | Zawartość |
 |---|---|
 | `docs/` | Proces (`proces-v1.md`), decyzje systemu, changelog i opis serwera (`serwer.md`) |
+| `docs/podrecznik/` | Podręcznik właściciela (start: `00-start-tutaj.md`) |
 | `plugin/` | Plugin Claude Code `software-house`: kontrakt i szablon skilli (`plugin/README.md`) |
 | `.claude-plugin/` | Lokalny marketplace `sh-system` z pluginem `software-house` |
 | `codex/` | Konfiguracja i prompty Codex; `sh-review.md` generuje `scripts/sync-codex.sh` ze skilla `sh-review` |
@@ -12,6 +13,7 @@ Centralne repozytorium software house'u prowadzonego przez agentów AI.
 | `scripts/server/` | Skrypty serwera (m.in. strażnik limitów `sh-watchdog.sh`), plisty LaunchAgentów i Brewfile |
 | `scripts/shctl/` | Narzędzie `shctl` |
 | `scripts/plugin/` | `sprawdz-skille.sh`: zgodność skilli z kontraktem |
+| `scripts/docs/` | `sprawdz-podrecznik.sh`: komendy `shctl` i skille z podręcznika istnieją (CI) |
 | `scripts/sync-codex.sh` | Prompty Codexa ze skilli; `--check` w CI (`scripts/tests/sync-codex.bats`) |
 | `zrodla/skille-istniejace/` | Istniejące skille jako materiał źródłowy |
 
