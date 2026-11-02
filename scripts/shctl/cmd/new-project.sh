@@ -182,7 +182,7 @@ komenda_main() {
     zal="$(obsidian_polacz "$nazwa")"
     obs="$(jq -nc --arg k "$(obsidian_kat "$nazwa")" --argjson z "$zal" '{katalog:$k, utworzono:($z == 1)}')"
     info "Klon docs/: $(obsidian_kat "$nazwa")"
-    info "W Obsidianie wystarczy włączyć Obsidian Git dla tego folderu."
+    info "Synchronizację robi serwer co 5 minut (shctl obsidian sync); w Obsidianie nic nie włączasz."
   fi
   wynik_json "$(jq -nc --arg r "$slug" --arg k "$katalog" --argjson s "$KROKI" --argjson p "$porty" --argjson o "$obs" \
     --arg t "$tryb_proj" '{repo:$r, katalog:$k, tryb:$t, kroki:$s, porty:$p, obsidian:$o}')"

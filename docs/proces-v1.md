@@ -61,8 +61,9 @@ Wszystko inne w tym dokumencie to model docelowy, wdrażany w etapie B.
 
 - **Źródło prawdy:** GitHub Sebastian-Temich, jedno repo na projekt (kod, Issues, PR, `docs/`). Na
   tym koncie są też `sh-system` i szablon. Projekty klientów domyślnie prywatne.
-- **Obsidian:** widok na `docs/` projektów (synchronizacja przez git). Dokumentacja zawsze żyje w
-  repo.
+- **Obsidian:** widok tylko do odczytu na `docs/` projektów i `sh-system`. Serwer co 5 minut robi
+  `git pull --ff-only` w klonach (`shctl obsidian sync`), bez wtyczki Obsidian Git. Dokumentacja zawsze
+  żyje w repo.
 - **Serwer:** Mac (macOS Sonoma) z herdr, Claude Code, Codex CLI, Docker Desktop i Supabase CLI.
   Orkiestrator działa w panelu herdr, a właściciel rozmawia z nim przez Remote Control.
 - **Lekka izolacja:** zablokowane zdjęcia, pęk kluczy i profile wszystkich przeglądarek

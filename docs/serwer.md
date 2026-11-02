@@ -10,6 +10,7 @@ Legacy Patcher. Narzędzia, przeglądarki i testy działają natywnie. Docker s�
 - Porty: `~/sh/porty.md`
 - Chrome for Testing: `~/sh/browsers`
 - Strażnik limitów: `~/sh/bin/sh-watchdog.sh` co 5 minut (sekcja „Strażnik limitów”)
+- Obsidian: `shctl obsidian sync` co 5 minut (sekcja „Synchronizacja Obsidiana”)
 - Plugin Claude Code `software-house`: lokalny marketplace `sh-system` (sekcja „Plugin software-house”)
 
 ## Skrypty serwera
@@ -526,6 +527,41 @@ Bez `matcher` hook reaguje na każdy typ powiadomienia, także `auth_success` cz
 Format hooków: <https://code.claude.com/docs/en/hooks>. Hook jest asynchroniczny (`async`),
 więc nie blokuje Claude'a, a błąd wysyłki nie pojawia się w sesji. Diagnoza:
 `claude --debug` albo ręczne uruchomienie `notify.sh`.
+
+## Synchronizacja Obsidiana
+
+Obsidian na tym Macu służy właścicielowi do czytania `docs/`. Vault `~/Documents/Obsidian Vault`
+ma w `SH/` niezależne klony: `SH/sh-system` (docs `sh-system`) i `SH/Projekty/NAZWA` (docs
+projektów, zakłada je `shctl new-project` albo `shctl obsidian link`). Wtyczka Obsidian Git obsługuje
+jedno repo na vault, więc aktualizuje je serwer.
+
+LaunchAgent `pl.iskt.softwarehouse.obsidian-sync` (źródło `scripts/server/`, instaluje `install.sh`)
+uruchamia `~/sh/bin/shctl obsidian sync --agent` co 5 minut i przy logowaniu. W każdym klonie robi
+`git pull --ff-only`. Klon z lokalnymi zmianami albo rozjechany z origin pomija, zapisuje w
+`~/sh/logs/obsidian-sync.log`, a przy powtórce w kolejnym przebiegu wysyła powiadomienie. Nigdy nie robi
+merge'a ani resetu. Szczegóły: `docs/shctl.md`, „obsidian sync”.
+
+| Rzecz | Miejsce |
+|---|---|
+| Stan (ostatnia udana, problemy) | `~/sh/stan/obsidian-sync.json`, data także w `shctl doctor` |
+| Log | `~/sh/logs/obsidian-sync.log` |
+| Wyłączenie | `touch ~/sh/stan/obsidian-sync.off`: przebiegi się pomijają, `install.sh` nie ładuje agenta. Zatrzymanie od razu: `launchctl bootout gui/$(id -u)/pl.iskt.softwarehouse.obsidian-sync` |
+| Włączenie | `rm ~/sh/stan/obsidian-sync.off` i `~/sh/sh-system/scripts/server/install.sh` |
+| Ręcznie | `shctl obsidian sync` (działa także z flagą) |
+
+Test z 2026-11-02: pierwszy przebieg zaktualizował `SH/sh-system` o jeden commit, a `shctl doctor`
+pokazał „ostatnia udana 2026-11-02T23:50:06+0100”.
+
+### Obsidian: instrukcja dla właściciela
+
+- W vaulcie włączona jest tylko wtyczka społeczności **Dataview**. Obsidian Git nie jest potrzebny i
+  nie instalujemy go: w vaulcie z wieloma klonami commitowałby albo pomijał niewłaściwe repo.
+- Pliki w `SH/` tylko czytasz. Zmiana zapisana w Obsidianie zatrzymuje synchronizację klonu
+  (powiadomienie „Obsidian: klon bez synchronizacji”) i nie trafia do repo. Zmiany w dokumentach
+  zlecasz orkiestratorowi, a odpowiedzi na eskalacje dajesz w czacie.
+- Po powiadomieniu wystarczy cofnąć zmianę w Obsidianie albo poprosić orkiestratora o porządek z
+  klonem. Nowe dokumenty pojawiają się w ciągu 5 minut od pusha na GitHub.
+- Notatki własne trzymaj poza `SH/`, np. w `Witaj.md` albo nowym folderze w katalogu głównym vaulta.
 
 ## Strażnik limitów
 

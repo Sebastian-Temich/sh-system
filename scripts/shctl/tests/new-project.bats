@@ -21,7 +21,7 @@ K() { echo "$SH_DIR/projekty/demo/$1"; }
   [ "$(fm "$(K docs/04-architektura/DoD.md)" status)" = todo ]
   grep -q '`00-intake`: todo (następny)' "$(K docs/status.md)"
   grep -qx 'Aplikacja testowa' "$(K docs/00-intake/zrodlo.md)"
-  [[ "$output" == *"wystarczy włączyć Obsidian Git"* ]] || false
+  [[ "$output" == *"Synchronizację robi serwer co 5 minut"* ]] || false
   [ -z "$(git -C "$(K .)" status --porcelain)" ]
   [ "$(git -C "$T/remote.git" log -1 --format=%s main)" = "shctl: konfiguracja projektu demo (tryb M)" ]
 }
@@ -68,9 +68,9 @@ K() { echo "$SH_DIR/projekty/demo/$1"; }
   [ "$(fm "$v/docs/konfiguracja.md" tryb_procesu)" = M ]
 }
 
-@test "koncowy komunikat wskazuje Obsidian Git, powtorka nie klonuje drugi raz" {
+@test "koncowy komunikat wskazuje synchronizacje serwera, powtorka nie klonuje drugi raz" {
   run nowy
-  [[ "$output" == *"wystarczy włączyć Obsidian Git"* ]] || false
+  [[ "$output" == *"Synchronizację robi serwer co 5 minut"* ]] || false
   run --separate-stderr nowy --json
   [ "$status" -eq 0 ]
   [ "$(jq -r .wynik.obsidian.utworzono <<<"$output")" = false ]
