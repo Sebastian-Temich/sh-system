@@ -142,6 +142,23 @@ trwającym projekcie.
 5. Odbiór i dokumentacja (`wydanie/techniczna` + `wydanie/produktowa` w krótkiej formie, jako
    ostatnie zadanie planu).
 
+### Autoryzacja i kamienie milowe
+
+- **Rejestr autoryzacji.** Akceptacja architektury i planu przez właściciela to zgoda na realizację
+  planu. Orkiestrator zapisuje ją w `decyzje.md` przez `shctl decision add --rola wlasciciel`: kto
+  zatwierdził i gdzie (PR), na co (kamienie milowe planu), zakres (wymagania, dostępy, płatne usługi
+  z planu), do kiedy (domyślnie do odbioru zlecenia) i jak ją cofnąć. Sam plan nie jest zgodą.
+- **Automatyczny start kamienia.** Kolejny kamień milowy z zatwierdzonego planu startuje bez pytania
+  właściciela, gdy QA zbiorcze poprzedniego jest zakończone, a jego błędy są założone jako issue, nie
+  ma otwartej eskalacji tego kamienia, a zakres, koszty, dostępy i ryzyko mieszczą się w autoryzacji.
+- **Poza autoryzacją.** Nowy zakres, płatna usługa, dostęp, podniesienie trybu albo wygaśnięcie zgody
+  wymaga nowej decyzji właściciela przez `shctl escalate`. Zadania niezależne trwają.
+- **Checkpointy właściciela** są tylko te z tabeli trybów: specyfikacja, architektura i plan, odbiór.
+- **Gotowość środowiska.** Przed pierwszym `shctl task dispatch` projektu orkiestrator uruchamia
+  `shctl doctor`. Stan `blad` wstrzymuje dispatch: brakujące narzędzie, logowanie albo dostęp staje się
+  zadaniem właściciela albo eskalacją i blokuje zadania od niego zależne. Wynik z czasem UTC trafia do
+  „Punktu przekazania” w `status.md`.
+
 ### Etapy trybu L (etap B)
 
 | Nr | Etap |
@@ -161,7 +178,8 @@ trwającym projekcie.
 
 ### Zasady
 
-- Ryzyko podnosi tryb (auth, płatności, dane osobowe i migracje prod to minimum M z ADR).
+- Ryzyko podnosi tryb (auth i RLS, płatności, dane osobowe, AI przetwarzające dane użytkowników i
+  migracje prod to minimum M z ADR).
 - Nowy projekt zaczyna od M lub L.
 - Etapy, których tryb M lub L nie przewiduje, mają w DoD status `pominiety`. Tryb S nie ma DoD
   etapów.
