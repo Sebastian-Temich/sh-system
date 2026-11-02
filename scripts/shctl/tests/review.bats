@@ -16,15 +16,15 @@ ZGL='[{"waga":"istotne","plik":"src/a.ts","linia":4,"opis":"brak walidacji"},{"w
   [ "$status" -eq 0 ]
   [ "$(jq -r '.wynik.werdykt, .wynik.blokujace, (.wynik.zgloszenia | length)' <<<"$output" | tr '\n' ' ')" = "FAIL 1 2 " ]
   [ ! -s "$CODEX_ATRAPA/env-w-katalogu" ]
-  grep -q "/wt/review-12 | exec -p reviewer -s read-only -m gpt-6.1-terra" "$CODEX_ATRAPA/calls" ||
-    grep -q "/wt/review-12 | exec -p reviewer -s read-only" "$CODEX_ATRAPA/calls"
+  grep -q "/wt/demo/review-12 | exec -p reviewer -s read-only -m gpt-6.1-terra" "$CODEX_ATRAPA/calls" ||
+    grep -q "/wt/demo/review-12 | exec -p reviewer -s read-only" "$CODEX_ATRAPA/calls"
   grep -q -- '--output-schema' "$CODEX_ATRAPA/calls"
   grep -q 'Zadanie: #12' "$CODEX_ATRAPA/prompt"
   grep -q 'Prompt tymczasowy' "$CODEX_ATRAPA/prompt"
   komentarze 20 | grep -q '^## Review Codex: FAIL'
   komentarze 20 | grep -q -- '- 🟡 istotne `src/a.ts:4`: brak walidacji'
-  komentarze 20 | grep -q "<!-- shctl:review head=$(git -C "$SH_DIR/projekty/wt/12" rev-parse HEAD) werdykt=FAIL -->"
-  [ ! -e "$SH_DIR/projekty/wt/review-12" ]
+  komentarze 20 | grep -q "<!-- shctl:review head=$(git -C "$SH_DIR/wt/demo/12" rev-parse HEAD) werdykt=FAIL -->"
+  [ ! -e "$SH_DIR/wt/demo/review-12" ]
   [ -z "$(git worktree list --porcelain | grep review-12)" ]
   [ "$(etykiety_paneli)" = "worker:demo:12" ]
   grep -q '^tab create.*--label review:demo:12' "$HERDR_ATRAPA/calls"
@@ -70,13 +70,13 @@ ZGL='[{"waga":"istotne","plik":"src/a.ts","linia":4,"opis":"brak walidacji"},{"w
   run --separate-stderr "$SHCTL" review run 20
   [ "$status" -eq 1 ]
   [[ "$stderr" == *"kodem 3"* ]] || false
-  [ ! -e "$SH_DIR/projekty/wt/review-12" ]
+  [ ! -e "$SH_DIR/wt/demo/review-12" ]
   [ "$(etykiety_paneli)" = "worker:demo:12" ]
   [ -z "$(komentarze 20)" ]
 }
 
 @test "review: plik env w PR to odmowa" {
-  wt="$SH_DIR/projekty/wt/12"
+  wt="$SH_DIR/wt/demo/12"
   printf 'X=1\n' >"$wt/.env.test"
   git -C "$wt" add -f .env.test
   git -C "$wt" commit -qm env
@@ -85,7 +85,7 @@ ZGL='[{"waga":"istotne","plik":"src/a.ts","linia":4,"opis":"brak walidacji"},{"w
   run --separate-stderr "$SHCTL" review run 20
   [ "$status" -eq 4 ]
   [ ! -s "$CODEX_ATRAPA/calls" ]
-  [ ! -e "$SH_DIR/projekty/wt/review-12" ]
+  [ ! -e "$SH_DIR/wt/demo/review-12" ]
 }
 
 @test "review --dry-run: bez etykiet, worktree i Codexa" {

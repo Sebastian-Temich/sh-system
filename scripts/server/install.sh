@@ -2,7 +2,7 @@
 # scripts/server/install.sh - instaluje pliki serwera z repo sh-system (idempotentny).
 #
 # Symlinki: scripts/server/*.sh (bez install.sh) i pliki wykonywalne z scripts/shctl/ do
-# ~/sh/bin oraz Brewfile do ~/sh/Brewfile. Zwykly plik zastepuje tylko, gdy jest identyczny
+# ~/sh/bin, Brewfile do ~/sh/Brewfile i codex/reviewer.config.toml do $CODEX_HOME (~/.codex). Zwykly plik zastepuje tylko, gdy jest identyczny
 # z repo. Roznica to blad: nowsze zmiany trzeba najpierw przeniesc do repo.
 # Plisty: scripts/server/*.plist kopiuje do ~/Library/LaunchAgents tylko przy roznicy
 # i przeladowuje agenta. Niezaladowanego agenta laduje zawsze, takze bez zmiany plisty.
@@ -18,6 +18,7 @@ REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd -P)"
 SH_DIR="${SH_DIR:-$HOME/sh}"
 BIN="${SH_BIN:-$SH_DIR/bin}"
 AGENTS="${SH_AGENTS:-$HOME/Library/LaunchAgents}"
+CODEX_DIR="${CODEX_HOME:-$HOME/.codex}"
 NOTIFY="${SH_NOTIFY_CMD:-$REPO/scripts/server/notify.sh}"
 AUTOSTART_LABEL=pl.iskt.softwarehouse.sh-start
 AUTOSTART_OFF="$SH_DIR/stan/autostart.off"
@@ -127,6 +128,10 @@ for src in "$REPO"/scripts/shctl/*; do
 done
 
 link "$REPO/scripts/server/Brewfile" "$SH_DIR/Brewfile"
+
+# Profil Codex dla shctl review run (codex exec -p reviewer): tylko odczyt, model reviewera.
+mkdir -p "$CODEX_DIR"
+link "$REPO/codex/reviewer.config.toml" "$CODEX_DIR/reviewer.config.toml"
 
 for src in "$REPO"/scripts/server/*.plist; do
   plist "$src"

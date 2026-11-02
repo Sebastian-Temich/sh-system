@@ -7,7 +7,7 @@ SLUG=""
 WT=""
 MAKS_ITERACJI=3
 
-# Projekt, repo główne (także gdy shctl działa z worktree), slug GitHuba i katalog worktree ../wt.
+# Projekt, repo główne (także gdy shctl działa z worktree), slug GitHuba i katalog worktree ~/sh/wt/NAZWA.
 zadania_init() {
   local wspolny
   znajdz_projekt
@@ -21,7 +21,7 @@ zadania_init() {
   ROOT="$ROOT_G"
   SLUG="$(slug_repo)"
   [ -n "$SLUG" ] || die "$E_BRAK" "origin projektu $PROJEKT nie wskazuje repo GitHub"
-  WT="$(dirname "$ROOT_G")/wt"
+  WT="$SH_DIR/wt/$PROJEKT"
 }
 
 # Wartość z frontmattera konfiguracja.md albo domyślna.
@@ -323,7 +323,7 @@ worktree_tego_repo() {
   [ "$w" = "$ROOT_G/.git" ]
 }
 
-# Katalog istnieje, ale należy do innego repo (../wt jest wspólny dla projektów).
+# Katalog istnieje, ale należy do innego repo (np. sklonowany ręcznie): niczego nie nadpisujemy.
 sprawdz_wolny_katalog() {
   [ -e "$1" ] || return 0
   worktree_tego_repo "$1" && return 0
@@ -364,3 +364,30 @@ czas_trwania() {
 }
 
 teraz_utc() { date -u +%Y-%m-%dT%H:%M:%SZ; }
+
+# --- Zaufanie folderu Claude Code ---------------------------------------------------------------
+
+# Claude Code w sesji interaktywnej pyta o zaufanie folderu. W repo klucz to katalog główny repo, a
+# w worktree katalog główny głównej kopii (code.claude.com/docs/en/permissions, „Project allow rules
+# and workspace trust”), więc wpis dla ~/sh/projekty/NAZWA obejmuje też ~/sh/wt/NAZWA/NR. Ręczny
+# wpis projects["<repo>"].hasTrustDialogAccepted w ~/.claude.json opisuje ta sama strona
+# („What runs before you trust a folder”). Wypisuje true, gdy wpis dodano (lub dodałby --dry-run).
+CLAUDE_JSON="${SH_CLAUDE_JSON:-$HOME/.claude.json}"
+zaufaj_projektowi() {
+  local f="$CLAUDE_JSON" t
+  if [ -f "$f" ] && jq -e --arg p "$ROOT_G" '.projects[$p].hasTrustDialogAccepted == true' "$f" >/dev/null 2>&1; then
+    echo false
+    return 0
+  fi
+  if [ "$DRY" -eq 1 ]; then echo true; return 0; fi
+  if [ -f "$f" ]; then
+    jq -e 'type == "object"' "$f" >/dev/null 2>&1 || die "$E_WYKONANIE" "$f nie jest poprawnym JSON; zaufanie folderu nie zostało zapisane"
+  fi
+  t="$(mktemp "$f.shctl.XXXXXX")"
+  if [ -f "$f" ]; then cat "$f"; else echo '{}'; fi |
+    jq --arg p "$ROOT_G" '.projects[$p] = ((.projects[$p] // {}) + {hasTrustDialogAccepted: true})' >"$t" ||
+    { rm -f "$t"; die "$E_WYKONANIE" "nie można zapisać zaufania folderu w $f"; }
+  chmod 600 "$t"
+  mv "$t" "$f"
+  echo true
+}

@@ -541,6 +541,25 @@ Test przez `codex exec`, uruchomiony w `~/sh`: zapis w katalogu roboczym działa
   review).
 - Ten sam plik czyta aplikacja ChatGPT, nie była testowana po zmianie.
 
+#### Profil reviewer
+
+`shctl review run` uruchamia `codex exec -p reviewer`. Profil to `~/.codex/reviewer.config.toml`,
+symlink zakładany przez `install.sh` do `sh-system/codex/reviewer.config.toml`. Nakłada się na
+`config.toml`:
+
+| Klucz | Wartość | Po co |
+|---|---|---|
+| `model` | `gpt-6.1-terra` | Model reviewera z `konfiguracja.md` szablonu („GPT-6.1 Terra”) |
+| `model_reasoning_effort` | `high` | Jak `modele.reviewer.rozumowanie` w szablonie |
+| `sandbox_mode` | `read-only` | Reviewer niczego nie zapisuje, testy uruchamia CI |
+| `approval_policy` | `never` | `codex exec` działa bez człowieka |
+
+shctl podaje też `-m` i `model_reasoning_effort` z `konfiguracja.md` projektu (wygrywają z profilem) i
+zawsze `-s read-only`. Test z 2026-11-02: nagłówek `codex exec -p reviewer` pokazał
+`model: gpt-6.1-terra`, `sandbox: read-only`, `approval: never`, `reasoning effort: high`, a `touch`
+w katalogu roboczym został zablokowany. Profil nie blokuje odczytu poza katalogiem roboczym (znane
+ograniczenie wyżej). Zmiana modelu: plik w repo i PR, tak jak `konfiguracja.md` szablonu.
+
 ### Poświadczenia w zasięgu agentów
 
 Przegląd z 2026-11-01 objął tylko ścieżki i nazwy zmiennych, bez otwierania plików, do głębokości

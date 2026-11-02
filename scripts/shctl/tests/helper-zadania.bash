@@ -6,7 +6,7 @@ zadania_setup() {
   wspolny_setup
   export PATH="$BATS_TEST_DIRNAME/atrapy:$PATH"
   export GH_ATRAPA="$T/gh" HERDR_ATRAPA="$T/herdr" CODEX_ATRAPA="$T/codex" CLAUDE_ATRAPA="$T/claude"
-  export CODEX_HOME="$T/codex-home" SH_SYSTEM_DIR="$T/sys" SHCTL_REVIEW_TIMEOUT=20
+  export CODEX_HOME="$T/codex-home" SH_SYSTEM_DIR="$T/sys" SHCTL_REVIEW_TIMEOUT=20 SH_CLAUDE_JSON="$T/claude.json"
   unset DF_GB SHCTL_DRYRUN_NAZWA
   mkdir -p "$GH_ATRAPA" "$HERDR_ATRAPA" "$CODEX_ATRAPA" "$CLAUDE_ATRAPA" "$CODEX_HOME"
   : >"$CLAUDE_ATRAPA/calls"
@@ -99,7 +99,7 @@ wynik_codex() {
 
 # Praca workera: commit w worktree, push gałęzi, PR w atrapie (z refs/pull/N/head). pr_workera NR PR [CI]
 pr_workera() {
-  local nr="$1" prn="$2" ci="${3:-SUCCESS}" wt="$SH_DIR/projekty/wt/$1" br sha
+  local nr="$1" prn="$2" ci="${3:-SUCCESS}" wt="$SH_DIR/wt/demo/$1" br sha
   br="$(git -C "$wt" symbolic-ref --short HEAD)"
   mkdir -p "$wt/docs/07-realizacja"
   cat >"$wt/docs/07-realizacja/T-$nr.md" <<MD

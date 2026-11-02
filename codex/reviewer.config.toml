@@ -1,0 +1,9 @@
+# Profil Codex „reviewer” dla shctl review run (codex exec -p reviewer).
+# Źródło: sh-system/codex/reviewer.config.toml; install.sh linkuje go do ~/.codex/reviewer.config.toml.
+# Nakłada się na ~/.codex/config.toml. Model i rozumowanie jak modele.reviewer w konfiguracja.md
+# szablonu; shctl i tak podaje -m z konfiguracji projektu, więc projekt może je nadpisać.
+model = "gpt-6.1-terra"
+model_reasoning_effort = "high"
+# Tylko odczyt: reviewer niczego nie zapisuje, a testy uruchamia CI.
+sandbox_mode = "read-only"
+approval_policy = "never"

@@ -42,7 +42,7 @@ pass() {
 
 @test "close: PASS dla starego commita nie wystarcza" {
   pass
-  wt="$SH_DIR/projekty/wt/12"
+  wt="$SH_DIR/wt/demo/12"
   echo x >>"$wt/src/praca-12.txt"
   git -C "$wt" commit -qam nowy
   git -C "$wt" push -q origin HEAD
@@ -68,8 +68,8 @@ pass() {
   git -C "$T/sys.git" show propozycje/demo-T-12:docs/propozycje.md | grep -q 'shctl mógłby sam uruchamiać lint'
   git -C "$T/sys.git" show propozycje/demo-T-12:docs/propozycje.md | grep -q '<!-- propozycje:demo:T-12 -->'
   [ -z "$(git -C "$SH_SYSTEM_DIR" status --porcelain)" ]
-  [ ! -e "$SH_DIR/projekty/wt/12" ]
-  [ ! -e "$SH_DIR/projekty/wt/sys-propozycje-demo-12" ]
+  [ ! -e "$SH_DIR/wt/demo/12" ]
+  [ ! -e "$SH_DIR/wt/demo/sys-propozycje-demo-12" ]
   [ -z "$(git branch --list 'task/*')" ]
   [ "$(etykiety_paneli)" = "" ]
   [ "$(stan_issue 12)" = CLOSED ]
@@ -92,7 +92,7 @@ pass() {
 
 @test "close: niezacommitowane zmiany w worktree to odmowa przed merge" {
   pass
-  echo brud >"$SH_DIR/projekty/wt/12/src/brud.txt"
+  echo brud >"$SH_DIR/wt/demo/12/src/brud.txt"
   run --separate-stderr "$SHCTL" task close 12
   [ "$status" -eq 4 ]
   ! grep -q '^pr merge' "$GH_ATRAPA/calls" || false
@@ -111,5 +111,5 @@ pass() {
   [ "$status" -eq 0 ]
   ! grep -q '^pr merge' "$GH_ATRAPA/calls" || false
   [ -z "$(git status --porcelain)" ]
-  [ -d "$SH_DIR/projekty/wt/12" ]
+  [ -d "$SH_DIR/wt/demo/12" ]
 }

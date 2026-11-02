@@ -329,7 +329,7 @@ kopiuj_env() {
 }
 
 task_dispatch() {
-  local nr j st label panele pane stan issues ocena powody br kat env uruchom=0 cmd start zmiana=0 iter
+  local nr j st label panele pane stan issues ocena powody br kat env uruchom=0 cmd start zmiana=0 iter zaufanie
   argument_nr "$@"
   nr="$NR_ARG"
   zadania_init
@@ -374,6 +374,8 @@ task_dispatch() {
     die "$E_BRAK" "brak .claude/roles/worker/settings.json w $kat (szablon projektu)"
   fi
 
+  zaufanie="$(zaufaj_projektowi)"
+  [ "$zaufanie" = false ] || krok "zaufanie folderu Claude Code dla $ROOT_G (~/.claude.json)"
   cmd="$(polecenie_workera "$kat" "Zrealizuj issue #$nr skillem sh-worker.")"
   if [ -z "$pane" ]; then
     krok "panel $label i start claude (model $(model_workera))"
@@ -410,8 +412,9 @@ task_dispatch() {
   info "#$nr: $( [ "$zmiana" -eq 1 ] && echo "dispatch" || echo "bez zmian") ($label, $kat)"
   wynik_json "$(jq -nc --argjson n "$nr" --arg g "$br" --arg w "$kat" --arg p "$pane" --arg l "$label" \
     --argjson e "$env" --argjson u "$uruchom" --argjson z "$zmiana" --argjson k "$KROKI" --arg c "$cmd" \
+    --argjson zf "$zaufanie" \
     '{nr:$n, galaz:$g, worktree:$w, panel:$p, label:$l, env:$e, uruchomiono:($u == 1), polecenie:$c,
-      zmiana:($z == 1), kroki:$k}')"
+      zaufanie_dopisane:$zf, zmiana:($z == 1), kroki:$k}')"
 }
 
 # =========================================================================================
@@ -474,6 +477,7 @@ task_iter() {
       herdr pane run "$pane" "$msg" >/dev/null || die "$E_WYKONANIE" "nie można wysłać polecenia do panelu $pane"
     else
       worktree_tego_repo "$kat" || die "$E_ODMOWA" "brak panelu $label i worktree $kat; sprawdź shctl task resume-check $nr"
+      zaufaj_projektowi >/dev/null
       pane="$(otworz_panel "$label" "$kat")"
       herdr pane run "$pane" "$(polecenie_workera "$kat" "$msg")" >/dev/null ||
         die "$E_WYKONANIE" "nie można uruchomić claude w panelu $pane"
@@ -568,7 +572,7 @@ pr_propozycji() {
     printf 'już na main'
     return 0
   fi
-  kat="$(dirname "$ROOT_G")/wt/sys-propozycje-$PROJEKT-$nr"
+  kat="$WT/sys-propozycje-$nr"
   [ ! -e "$kat" ] || git -C "$sys" worktree remove --force "$kat" 2>/dev/null || rm -rf "$kat"
   git -C "$sys" worktree prune
   git -C "$sys" worktree add -q -B "$galaz" "$kat" origin/main || { uwaga "worktree sh-system nie powstał"; return 1; }

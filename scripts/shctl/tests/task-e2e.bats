@@ -17,6 +17,7 @@ setup() {
   NAZWA="sh-test-$(date +%Y%m%d-%H%M)"
   SLUG="${SH_GH_OWNER:-Sebastian-Temich}/$NAZWA"
   export SH_DIR="$T/sh" SH_NOTIFY_CMD=/usr/bin/true SH_OBSIDIAN_DIR="$T/Obsidian" SH_SYSTEM_DIR="$T/brak-sh-system"
+  export SH_CLAUDE_JSON="$T/claude.json"
   export HERDR_ATRAPA="$T/herdr" CLAUDE_ATRAPA="$T/claude" CODEX_ATRAPA="$T/codex"
   mkdir -p "$SH_DIR" "$T/bin" "$HERDR_ATRAPA" "$CLAUDE_ATRAPA" "$CODEX_ATRAPA"
   cp "$HOME/sh/porty.md" "$SH_DIR/porty.md"
@@ -82,6 +83,8 @@ YAML
   WT="$(jq -r .wynik.worktree <<<"$output")"
   BR="$(jq -r .wynik.galaz <<<"$output")"
   grep -q "skillem sh-worker" "$CLAUDE_ATRAPA/calls"
+  [ "$WT" = "$SH_DIR/wt/$NAZWA/$NR" ]
+  [ "$(jq -r --arg p "$(cd "$P" && pwd -P)" '.projects[$p].hasTrustDialogAccepted' "$SH_CLAUDE_JSON")" = true ]
   [ "$(gh issue view "$NR" --repo "$SLUG" --json labels --jq '[.labels[].name] | index("status:in-progress") != null')" = true ]
 
   # Praca workera.
@@ -100,7 +103,7 @@ YAML
   [ "$status" -eq 0 ]
   WERDYKT="$(jq -r .wynik.werdykt <<<"$output")"
   gh pr view "$PR" --repo "$SLUG" --json comments --jq '.comments[].body' | grep -q "^## Review Codex: $WERDYKT"
-  [ ! -e "$SH_DIR/projekty/wt/review-$NR" ]
+  [ ! -e "$SH_DIR/wt/$NAZWA/review-$NR" ]
   if [ "$WERDYKT" != PASS ]; then
     run --separate-stderr "$SHCTL" task close "$NR" --projekt "$NAZWA"
     [ "$status" -eq 4 ]

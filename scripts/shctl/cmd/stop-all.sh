@@ -1,5 +1,5 @@
 # shctl stop-all [--projekt NAZWA]: awaryjny stop (proces-v1.md, „Awaryjny stop”).
-# Panele: worker:NAZWA:NR, review:NAZWA:NR, qa:NAZWA:NR, agent z katalogiem w projekty/NAZWA,
+# Panele: worker:NAZWA:NR, review:NAZWA:NR, qa:NAZWA:NR, agent z katalogiem w projekty/NAZWA lub wt/NAZWA,
 # orkiestrator:NAZWA oraz wspólny „orkiestrator”. Bez --projekt zatrzymuje wszystko.
 # Z --projekt tylko ten projekt: wspólny orkiestrator obsługuje też inne projekty i zostaje.
 # Panel „powloka” i panele bez agenta nie są ruszane. Worktree zostają. shctl nie wznawia sam.
@@ -9,7 +9,7 @@ wszystkie_panele() {
   local w
   herdr workspace list | jq -r '.result.workspaces[].workspace_id' | while IFS= read -r w; do
     herdr pane list --workspace "$w" | jq -c '.result.panes[]'
-  done | jq -sc --arg r "$PROJEKTY/" '
+  done | jq -sc --arg r "$PROJEKTY/" --arg wt "$SH_DIR/wt/" '
     map(. + {
       kat: (.foreground_cwd // .cwd // ""),
       l: (.label // "")
@@ -19,11 +19,12 @@ wszystkie_panele() {
         if .l == "orkiestrator" then "orkiestrator"
         elif (.l | test("^orkiestrator:")) then "orkiestrator"
         elif (.l | test("^(worker|review|qa):")) then "worker"
-        elif .l != "powloka" and (.agent // "") != "" and (.kat | startswith($r)) then "worker"
+        elif .l != "powloka" and (.agent // "") != "" and ((.kat | startswith($r)) or (.kat | startswith($wt))) then "worker"
         else "inny" end),
       projekt: (
         if (.l | test("^(worker|review|qa|orkiestrator):")) then (.l | split(":")[1])
         elif (.kat | startswith($r)) then (.kat | ltrimstr($r) | split("/")[0])
+        elif (.kat | startswith($wt)) then (.kat | ltrimstr($wt) | split("/")[0])
         else "" end)
     })
     | map(select(.rodzaj != "inny")

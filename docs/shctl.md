@@ -58,6 +58,7 @@ Zmienne środowiska (dla testów i innego układu):
 | `SHCTL_TEST_TIMEOUT` | `1800`; limit testów w `task resume-check`, w sekundach |
 | `SHCTL_DRYRUN_NAZWA` | `sh-dryrun`; jedyny projekt, na którym działa `reset-dryrun` |
 | `CODEX_HOME` | `~/.codex`; tu `review run` szuka profilu `reviewer.config.toml` |
+| `SH_CLAUDE_JSON` | `~/.claude.json`; tu `task dispatch` zapisuje zaufanie folderu projektu |
 
 Plik `~/.config/sh/config` jest poza repo. shctl czyta z niego linię
 `SH_OBSIDIAN_DIR="/ścieżka/do/vaulta/SH/Projekty"` jako dane, bez `source`. Zmienna środowiska ma pierwszeństwo.
@@ -286,7 +287,7 @@ zawiera panele, etap, gałąź, HEAD, liczbę niezacommitowanych plików i list�
 
 ```json
 {"ok":true,"komenda":"stop-all","dry_run":false,"wynik":{
-  "panele":[{"pane_id":"w1:p3","label":"worker:sklep:12","cwd":"/Users/.../wt/12","agent":"claude",
+  "panele":[{"pane_id":"w1:p3","label":"worker:sklep:12","cwd":"/Users/.../sh/wt/sklep/12","agent":"claude",
     "agent_status":"working","rodzaj":"worker","projekt":"sklep"}],
   "stan":["/Users/.../sh/stan/sklep.json"]}}
 ```
@@ -355,15 +356,18 @@ i `wykonawca:claude`, a review robi Codex. Po przerwie: `task resume-check`.
 
 | Rzecz | Miejsce |
 |---|---|
-| Worktree workera | `../wt/NR` obok repo (`~/sh/projekty/wt/NR`), gałąź `task/NR-slug` |
-| Worktree review | `../wt/review-NR`, odłączony HEAD na commicie PR, bez plików env |
+| Worktree workera | `~/sh/wt/NAZWA/NR`, gałąź `task/NR-slug` |
+| Worktree review | `~/sh/wt/NAZWA/review-NR`, odłączony HEAD na commicie PR, bez plików env |
+| Worktree propozycji | `~/sh/wt/NAZWA/sys-propozycje-NR`, gałąź w `sh-system`, usuwany po PR |
 | Panel workera | Karta herdr w workspace `sh` z panelem `worker:NAZWA:NR` |
 | Panel review | Karta z panelem `review:NAZWA:NR`, zamykana po review |
 | Mapa NR → panel | `~/sh/stan/NAZWA.json`, klucz `zadania` (`stop-all` go zachowuje) |
 | Wynik review | Komentarz w PR ze znacznikiem `<!-- shctl:review head=SHA werdykt=... -->` |
 
-Katalog `../wt` jest wspólny dla projektów. Gdy `../wt/NR` należy do innego repo, komenda odmawia
-(kod 4).
+Każdy projekt ma własny katalog `~/sh/wt/NAZWA`, więc te same numery issue w różnych projektach się
+nie zderzają. Gdy katalog worktree istnieje, ale nie jest worktree tego repo, komenda odmawia (kod 4) i
+niczego nie nadpisuje. `stop-all` traktuje agenta z katalogiem w `~/sh/wt/NAZWA` jak workera projektu
+`NAZWA`, także bez etykiety.
 
 Slug gałęzi to tytuł issue z transliteracją polskich znaków, małe litery, do 40 znaków:
 „Zażółć gęślą jaźń: Łódź” daje `task/12-zazolc-gesla-jazn-lodz`. Istniejąca gałąź `task/NR-*` ma
@@ -459,24 +463,71 @@ shctl task dispatch NR
 Przy `status:todo` sprawdza te same warunki co `ready` (własny panel nie zajmuje slotu) i przy
 niespełnionym odmawia kodem 4 z powodem. Potem:
 
-1. worktree `../wt/NR` na gałęzi `task/NR-slug`: istniejąca gałąź lokalna, zdalna albo nowa od
+1. worktree `~/sh/wt/NAZWA/NR` na gałęzi `task/NR-slug`: istniejąca gałąź lokalna, zdalna albo nowa od
    `origin/main`;
 2. kopia `.env.local` i `env_files` z repo głównego do worktree (prawa `go-rwx`); brak pliku to
    ostrzeżenie;
-3. karta herdr z panelem `worker:NAZWA:NR` i w nim
+3. zaufanie folderu Claude Code dla repo projektu (sekcja „Zaufanie folderu”);
+4. karta herdr z panelem `worker:NAZWA:NR` i w nim
    `SH_NOTIFY=1 claude --settings .claude/roles/worker/settings.json --model MODEL 'Zrealizuj issue #NR skillem sh-worker.'`;
-4. etykiety `status:in-progress` i `iter:1`;
-5. wpis w `~/sh/stan/NAZWA.json`: panel, etykieta, worktree, gałąź, start, iteracja.
+5. etykiety `status:in-progress` i `iter:1`;
+6. wpis w `~/sh/stan/NAZWA.json`: panel, etykieta, worktree, gałąź, start, iteracja.
 
 Przy `status:in-progress` dokańcza brakujące kroki bez bramek; agenta, który już działa w panelu, nie
 uruchamia drugi raz. Inny status to kod 4. Brak `.claude/roles/worker/settings.json` to kod 3.
 
 ```json
 {"ok":true,"komenda":"task","dry_run":false,"wynik":{
-  "nr":12,"galaz":"task/12-schemat-bazy","worktree":"/Users/.../sh/projekty/wt/12","panel":"w1:p7",
+  "nr":12,"galaz":"task/12-schemat-bazy","worktree":"/Users/.../sh/wt/sklep/12","panel":"w1:p7",
   "label":"worker:sklep:12","env":[".env.local"],"uruchomiono":true,"polecenie":"cd ... && SH_NOTIFY=1 claude ...",
-  "zmiana":true,"kroki":["worktree ...","env: .env.local","panel worker:sklep:12 i start claude (model opus)"]}}
+  "zaufanie_dopisane":false,"zmiana":true,"kroki":["worktree ...","env: .env.local","panel worker:sklep:12 i start claude (model opus)"]}}
 ```
+
+### Zaufanie folderu
+
+Interaktywny `claude` w nieznanym katalogu pyta o zaufanie i czeka na odpowiedź, co zatrzymałoby
+workera. Dokumentacja Claude Code (<https://code.claude.com/docs/en/permissions>, „Project allow rules
+and workspace trust” i „What runs before you trust a folder”) mówi, że:
+
+- w repo zaufanie dotyczy katalogu głównego repo, a w worktree katalogu głównego głównej kopii;
+- zaufanie można nadać ręcznie: `projects["<katalog główny repo>"].hasTrustDialogAccepted = true` w
+  `~/.claude.json`;
+- zaufanie samego katalogu nadrzędnego (np. `~/sh/wt`) nie wystarcza dla repo w środku.
+
+Dlatego `task dispatch` (i `task iter`, gdy otwiera nowy panel) dopisuje ten wpis dla
+`~/sh/projekty/NAZWA`, jeśli go nie ma. Pozostałe pola pliku zostają, zapis jest atomowy z prawami
+600, a plik, który nie jest poprawnym JSON, daje kod 1 bez zmian. Pole wyniku `zaufanie_dopisane` mówi,
+czy wpis powstał.
+
+Do sprawdzenia w pierwszym prawdziwym dispatchu: czy worker w `~/sh/wt/NAZWA/NR` startuje bez pytania.
+Dokumentacja nazywa `~/.claude.json` plikiem, który Claude Code zapisuje sam, więc działająca sesja może
+nadpisać wpis starszą kopią; kolejny dispatch dopisze go ponownie. Zaufanie włącza też ustawienia z
+repo (hooki, `env`, pomocnicze komendy), a repo projektów powstają z naszego szablonu.
+
+### Format ~/sh/limity.md
+
+Plik prowadzi strażnik limitów (A3.7), a `task ready`, `task dispatch` i `review run` go czytają. Jedna
+aktywna blokada to jedna pozycja listy albo jeden wiersz tabeli; nagłówek tabeli i jej separator się
+nie liczą. Inne linie (tytuł, akapity, komentarze) są ignorowane.
+
+```markdown
+# Limity
+
+| Wykonawca | Od | Do | Źródło |
+|---|---|---|---|
+| claude | 2026-11-02 14:05 | 2026-11-02 19:00 | panel worker:sklep:12 |
+| codex | 2026-11-02 15:30 | 2026-11-02 20:30 | review:sklep:14 |
+```
+
+- Wpis zawierający słowo `codex` (wielkość liter bez znaczenia) wstrzymuje tylko `review run`: PR
+  czeka w `status:review`, a dispatch działa dalej.
+- Każdy inny wpis wstrzymuje workerów Claude: `task ready` zgłasza blokadę `limit`, a `task dispatch`
+  odmawia (kod 4). Nazwę `claude` warto więc wpisywać jawnie.
+- Brak wstrzymań to plik bez pozycji i wierszy albo jedna pozycja `brak` (także `- (brak)`, `*brak*`,
+  `| brak |`). Brak pliku też oznacza brak wstrzymań.
+- Po odnowieniu limitu strażnik usuwa wpis. Godzina „Do” jest dla ludzi; shctl jej nie interpretuje.
+
+`status show` pokazuje te same wpisy jako „Wstrzymania”.
 
 ### review run
 
@@ -488,7 +539,7 @@ Zadanie wynika z `Closes #NR` albo gałęzi `task/NR-`. Kolejno:
 
 1. etykieta `status:review` na issue, na czas oczekiwania;
 2. przy wstrzymaniu Codexa w `limity.md` koniec z kodem 4: PR czeka w kolejce;
-3. czysty worktree `../wt/review-NR` na commicie PR (`git fetch origin pull/PR/head`), bez plików
+3. czysty worktree `~/sh/wt/NAZWA/review-NR` na commicie PR (`git fetch origin pull/PR/head`), bez plików
    env; plik `.env*` (poza `.env.example`) w samym PR daje kod 4;
 4. karta z panelem `review:NAZWA:NR` i w nim
    `codex exec -p reviewer -s read-only -m MODEL --output-schema codex/sh-review.schema.json -o ... - < prompt`;
@@ -497,9 +548,10 @@ Zadanie wynika z `Closes #NR` albo gałęzi `task/NR-`. Kolejno:
 7. usunięcie worktree review i zamknięcie panelu, także po błędzie.
 
 Prompt to `codex/sh-review.md`, a dopóki go nie ma, `codex/sh-review-tymczasowy.md`, z dopisanym
-kontekstem: repo, PR, zadanie, zakres diffu i treść issue jako dane. Bez profilu
-`$CODEX_HOME/reviewer.config.toml` komenda ostrzega i działa na konfiguracji bazowej; `-s read-only`
-jest zawsze.
+kontekstem: repo, PR, zadanie, zakres diffu i treść issue jako dane. Profil
+`$CODEX_HOME/reviewer.config.toml` (źródło `codex/reviewer.config.toml`, `serwer.md`, „Codex”) ustawia
+tylko odczyt i model reviewera; bez niego komenda ostrzega i działa na konfiguracji bazowej.
+`-s read-only` jest podawane zawsze.
 
 Werdykt liczy shctl ze zgłoszeń: FAIL, gdy jest choć jedno `krytyczne` albo `istotne`, inaczej PASS.
 Rozbieżny werdykt modelu jest odnotowany w komentarzu. Kod wyjścia 0 przy obu werdyktach. Powtórka dla
@@ -525,7 +577,7 @@ shctl task iter NR
 Tylko po FAIL review dla bieżącego commita otwartego PR; bez takiego wyniku albo przy PASS kod 4.
 Podbija `iter:N` na `iter:N+1`, ustawia `status:in-progress` i wysyła do panelu `worker:NAZWA:NR`
 polecenie: popraw wyłącznie zgłoszenia 🔴 i 🟡 z ostatniego review. Bez panelu otwiera go w
-`../wt/NR` i uruchamia claude z tym poleceniem.
+`~/sh/wt/NAZWA/NR` i uruchamia claude z tym poleceniem.
 
 Powtórka dla tego samego review nie podbija licznika i nie wysyła polecenia drugi raz (stan w
 `~/sh/stan/NAZWA.json`). FAIL w iteracji 3 wywołuje `shctl escalate --dotyczy "#NR" --powod "3 iteracje
@@ -539,7 +591,7 @@ shctl task close NR
 
 Działa w repo głównym na `main` (inaczej kod 4). Przy otwartym PR merguje (squash,
 `--match-head-commit`) wyłącznie, gdy CI jest zielone (`pass`; `pending`, `fail` i brak kontroli to
-kod 4) i komentarz review dla bieżącego commita ma PASS. Odmawia też, gdy `../wt/NR` ma
+kod 4) i komentarz review dla bieżącego commita ma PASS. Odmawia też, gdy `~/sh/wt/NAZWA/NR` ma
 niezacommitowane zmiany albo commity spoza PR. Potem, na main po `git pull --ff-only`:
 
 | Źródło | Cel |
@@ -566,7 +618,7 @@ shctl task resume-check NR [--testy "..."] [--bez-testow]
 ```
 
 Stan po przerwie, do decyzji orkiestratora (kontynuuj, rebase i kontynuuj, iteracja od nowa).
-Zwraca: status i iterację z etykiet, panel, a dla `../wt/NR` gałąź, HEAD, listę niezacommitowanych
+Zwraca: status i iterację z etykiet, panel, a dla `~/sh/wt/NAZWA/NR` gałąź, HEAD, listę niezacommitowanych
 plików, liczbę commitów za i przed `origin/main`, niewypchnięte commity i wynik testów. Komenda testów
 pochodzi z sekcji „Komenda testów” issue albo z `--testy`; uruchamia się w worktree z limitem
 `SHCTL_TEST_TIMEOUT`. Pole `sugestia` to tylko podpowiedź.
@@ -575,7 +627,7 @@ Komenda nie zmienia etykiet: przerwanie przez limit nie podbija iteracji.
 
 ```json
 {"ok":true,"komenda":"task","dry_run":false,"wynik":{
-  "nr":12,"status":"in-progress","iteracja":1,"worktree":"/Users/.../wt/12","worktree_istnieje":true,
+  "nr":12,"status":"in-progress","iteracja":1,"worktree":"/Users/.../sh/wt/sklep/12","worktree_istnieje":true,
   "git":{"galaz":"task/12-schemat-bazy","head":"...","ostatni_commit":"a1b2c3d #12: ...",
     "niezacommitowane":["?? src/nowy.ts"],"za_main":1,"przed_main":2,"niewypchniete":0},
   "testy":{"komenda":"pnpm test","kod":0,"wynik":"pass","koniec_wyjscia":"..."},

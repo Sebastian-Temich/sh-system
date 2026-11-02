@@ -5,6 +5,7 @@
 - `shctl` część 2: `task create|ready|dispatch|iter|close|resume-check`, `review run`, `reset-dryrun`, testy bats ze stanowymi atrapami, test e2e `task-e2e.bats`.
 - Tymczasowy prompt review `codex/sh-review-tymczasowy.md` i schemat odpowiedzi `codex/sh-review.schema.json`.
 - `stop-all` zachowuje mapę zadań w `~/sh/stan/NAZWA.json`.
+- Worktree w `~/sh/wt/NAZWA/` (osobno dla projektu), zaufanie folderu Claude Code w `task dispatch`, profil Codex `reviewer` linkowany przez `install.sh`, opis formatu `~/sh/limity.md`.
 
 ## 2026-11-01
 
