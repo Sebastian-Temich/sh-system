@@ -2,6 +2,7 @@
 
 ## 2026-11-02
 
+- `proces-v1.md`: rejestr autoryzacji w `decyzje.md` (`shctl decision add --rola wlasciciel`), automatyczny start kolejnego kamienia milowego z zatwierdzonego planu, `shctl doctor` przed pierwszym dispatchem projektu, AI przetwarzające dane i RLS wśród obszarów ryzyka.
 - Plugin `software-house` (`plugin/`) z lokalnym marketplace `sh-system` (`.claude-plugin/marketplace.json`), kontrakt `SKILL.md`, szablon skilla i `scripts/plugin/sprawdz-skille.sh` w CI.
 - `templates/review.md`: format wyniku review z wagami 🔴🟡⚪; shctl czyta też komentarze review pisane ręcznie.
 - `shctl` część 2: `task create|ready|dispatch|iter|close|resume-check`, `review run`, `reset-dryrun`, testy bats ze stanowymi atrapami, test e2e `task-e2e.bats`.
