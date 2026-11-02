@@ -26,7 +26,7 @@ Patrz wyłącznie na diff i kod, którego on dotyczy. Nie zgłaszaj rzeczy spoza
 | Waga | Kiedy | Skutek |
 |---|---|---|
 | `krytyczne` | Błąd bezpieczeństwa, utrata danych, niespełnione kryterium, sekret | Blokuje |
-| `istotne` | Błąd logiki, brak testu kryterium, migracja niezgodna wstecz | Blokuje |
+| `istotne` | Błąd logiki, brak testu kryterium, migracja niezgodna wstecz, zmiana portów w `supabase/config.toml` poza zadaniem szkieletu | Blokuje |
 | `drobne` | Styl, nazewnictwo, drobne usprawnienia | Nie blokuje, trafia do backlogu |
 
 Werdykt `FAIL` wtedy i tylko wtedy, gdy jest choć jedno zgłoszenie `krytyczne` albo `istotne`.

@@ -2,6 +2,7 @@
 
 ## 2026-11-02
 
+- Profil workera w szablonie: edycja `.env.example` i `supabase/`, `supabase init`; porty `supabase/config.toml` bez zmian (🟡 w review); sekcja „Ryzyka” w szablonie raportu. `sh-worker`, `sh-zadania` i prompt review dostosowane, propozycja z `docs/propozycje.md` zdjęta.
 - Skille `sh-zadania` (plik `docs/06-zadania/zadania.yaml` na `stage/06-zadania`, review etapu, potem `shctl task create` na `main` i tabela dla właściciela; szkielet jako `T1`) i `sh-worker` (jedno issue w `~/sh/wt/NAZWA/NR`, testy, PR „Closes #NR”, raport `T-NR.md` z sekcją „Ryzyka”, iteracja 2+ tylko zgłoszenia z review). `docs/propozycje.md`: luki profilu workera (`.env.example`, `supabase init`).
 - `sh-intake`: historyjki z Given/When/Then i priorytetem, typy projektu z konsekwencjami, stack z alternatywą, szacunek poglądowy, zlecenie na tryb L, stack w `AGENTS.md` po akceptacji. `sh-architekt`: środowiska i droga na produkcję, migracje zgodne wstecz, zadania właściciela (konta, DNS, `STAGING_DB_URL`, zmienne prod), dokumentacja wydania jako ostatnie zadanie. `docs/propozycje.md`: „shctl cykl new” na etap B.
 - Skille `sh-intake` (specyfikacja trybu M, zlecenie trybu S przez `shctl task create`) i `sh-architekt` (architektura, ADR, plan kamieni jako pionowych przekrojów, scenariusze odbioru, zakres autoryzacji, `shctl doctor`); źródła: skille briefu, wymagań i planowania z `zrodla/skille-istniejace/`.
