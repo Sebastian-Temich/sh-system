@@ -89,8 +89,24 @@ Zostały kopie, które czytają agenci Paperclip (usługa `ing.paperclip.papercl
 z 26–30.10.2026): `~/.claude/skills/iskt-softwarehouse-tworca-wymagan`, `tworca-wymagan` i
 `iskt-planista-realizacji` oraz `~/.codex/skills/iskt-softwarehouse-tworca-wymagan` i
 `tworca-wymagan`. Kto ich używa: `~/sh/archiwum/skille-20261102/README.md`. Przeniesiemy je po
-wyłączeniu Paperclipa. Do tego czasu widać je w Claude Code obok `sh-*`. Skrypty
+wyłączeniu Paperclipa. Skrypty
 `~/.softwarehouse/bin` i LaunchAgenty nie odwołują się do żadnego z sześciu skilli.
+
+Sesje SH ich nie widzą. Ustawienia ukrywają je przez `skillOverrides: "off"` (skill znika z listy
+modelu) i blokują przez `permissions.deny` `Skill(NAZWA)` (wywołanie kończy się „Skill execution
+blocked by permission rules”). Oba mechanizmy opisuje dokumentacja Claude Code, strona „Skills”,
+sekcje „Disabling skills” i „Hiding a skill from settings”.
+
+| Sesja | Plik |
+|---|---|
+| Orkiestrator (`~/sh`) | `~/sh/.claude/settings.json`, symlink z `install.sh` do `scripts/server/orkiestrator-settings.json` |
+| Worker, reviewer w Claude Code | `.claude/roles/worker/settings.json` i `.claude/roles/reviewer/settings.json` szablonu (`--settings`) |
+
+Ustawienia projektu działają tylko w sesji, której katalogiem roboczym jest `~/sh`, a `--settings`
+tylko w sesji, która go dostała. Paperclip działa w innych katalogach i bez tych profili, więc dalej
+widzi wszystkie trzy skille. Test z 2026-11-02 (Claude Code 2.1.316, `claude -p`): z ustawieniami
+lista nie zawiera żadnego z trzech, a `sh-*` jest 8. W katalogu bez ustawień są wszystkie trzy.
+Zmiana listy: oba pliki naraz, a w szablonie test `scripts/tests/profile-skille.bats`.
 
 ## Praca nad systemem
 

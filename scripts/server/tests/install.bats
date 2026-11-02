@@ -197,3 +197,11 @@ globalny_hooks_path() {
   grep -q 'nowy wzorzec' "$T/sh/watchdog-wzorce.txt"
   [[ "$stderr" == *"watchdog-wzorce.txt rozni sie"* ]]
 }
+
+@test "ustawienia orkiestratora: symlink ~/sh/.claude/settings.json do repo" {
+  install
+  [ "$status" -eq 0 ]
+  [ "$(readlink "$T/sh/.claude/settings.json")" = "$REPO/scripts/server/orkiestrator-settings.json" ]
+  jq -e '.skillOverrides["tworca-wymagan"] == "off" and (.permissions.deny | index("Skill(tworca-wymagan)"))' \
+    "$T/sh/.claude/settings.json" >/dev/null
+}

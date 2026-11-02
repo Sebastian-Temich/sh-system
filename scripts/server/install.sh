@@ -2,7 +2,8 @@
 # scripts/server/install.sh - instaluje pliki serwera z repo sh-system (idempotentny).
 #
 # Symlinki: scripts/server/*.sh (bez install.sh) i pliki wykonywalne z scripts/shctl/ do
-# ~/sh/bin, Brewfile do ~/sh/Brewfile i codex/reviewer.config.toml do $CODEX_HOME (~/.codex). Zwykly plik zastepuje tylko, gdy jest identyczny
+# ~/sh/bin, Brewfile do ~/sh/Brewfile, codex/reviewer.config.toml do $CODEX_HOME (~/.codex) i
+# orkiestrator-settings.json do ~/sh/.claude/settings.json. Zwykly plik zastepuje tylko, gdy jest identyczny
 # z repo. Roznica to blad: nowsze zmiany trzeba najpierw przeniesc do repo.
 # Wzorce straznika limitow: kopia scripts/server/watchdog-wzorce.txt do ~/sh, tylko gdy jej brak.
 # Plisty: scripts/server/*.plist kopiuje do ~/Library/LaunchAgents tylko przy roznicy
@@ -145,6 +146,10 @@ fi
 # Profil Codex dla shctl review run (codex exec -p reviewer): tylko odczyt, model reviewera.
 mkdir -p "$CODEX_DIR"
 link "$REPO/codex/reviewer.config.toml" "$CODEX_DIR/reviewer.config.toml"
+
+# Ustawienia sesji orkiestratora w ~/sh: stare skille zostawione dla Paperclipa ukryte i zablokowane.
+mkdir -p "$SH_DIR/.claude"
+link "$REPO/scripts/server/orkiestrator-settings.json" "$SH_DIR/.claude/settings.json"
 
 for src in "$REPO"/scripts/server/*.plist; do
   plist "$src"
