@@ -2,6 +2,7 @@
 
 ## 2026-11-02
 
+- `sh-qa`: issue tylko dla 🔴 i 🟡; ⚪ w sekcji „Drobne uwagi” raportu, orkiestrator przenosi je do `backlog-drobne.md`. `shctl task create` odrzuca `typ: qa` bez wagi `krytyczne` albo `istotne`. `sh-review` sprawdza to w review etapu `08-qa`.
 - Skille `sh-review` (review PR i review etapu, wynik w formacie `templates/review.md`, w iteracji N najpierw zgłoszenia z N-1, w iteracji 3 nowe istotne jako drobne; działa w Codex przez `shctl review run` i w Claude Code) i `sh-qa` (QA zbiorcze kamienia: E2E chromium + webkit, przepływy między funkcjami, zgodność z `W-n`, raport `docs/08-qa/raport-MN.md`, błędy `typ:qa` z wagą przez `shctl task create`).
 - `codex/sh-review.md` generowany ze skilla przez `scripts/sync-codex.sh` (`--check` w CI); prompt tymczasowy usunięty.
 - `shctl review run`: review etapu dla PR z gałęzi `stage/ETAP` (iteracja z `DoD.md`), w kontekście promptu tryb, iteracja i poprzednie review. `shctl task create`: pole `waga` (etykieta `sev:X`). `shctl doc new 08-qa raport-qa`: plik `raport-MN.md`.

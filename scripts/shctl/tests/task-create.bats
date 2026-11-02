@@ -106,6 +106,11 @@ tresc() { jq -r --argjson n "$1" '.[] | select(.number == $n) | .body' "$GH_ATRA
   run --separate-stderr "$SHCTL" task create --plik "$T/z4.yaml"
   [ "$status" -eq 2 ]
   [[ "$stderr" == *"waga: krytyczne, istotne albo drobne"* ]] || false
+  printf -- '- {id: A, tytul: x, cel: y, kryteria: [k], typ: qa, waga: drobne}\n- {id: B, tytul: x, cel: y, kryteria: [k], typ: qa}\n' >"$T/z5.yaml"
+  run --separate-stderr "$SHCTL" task create --plik "$T/z5.yaml"
+  [ "$status" -eq 2 ]
+  [[ "$stderr" == *"zadanie 1 (A): typ qa wymaga wagi krytyczne albo istotne"* ]] || false
+  [[ "$stderr" == *"zadanie 2 (B): typ qa wymaga wagi krytyczne albo istotne"* ]] || false
   run --separate-stderr "$SHCTL" task create --plik "$T/brak.yaml"
   [ "$status" -eq 3 ]
   [ ! -s "$GH_ATRAPA/issues.json" ] || [ "$(jq length "$GH_ATRAPA/issues.json")" -eq 0 ]

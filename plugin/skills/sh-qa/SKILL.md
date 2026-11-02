@@ -1,6 +1,6 @@
 ---
 name: sh-qa
-description: QA zbiorcze po kamieniu milowym trybu M. Zbiera zamknięte issue kamienia, uruchamia testy E2E Playwright (chromium i webkit), sprawdza przepływy między funkcjami, scenariusze odbioru kamienia i zgodność ze specyfikacją. Pisze raport docs/08-qa/raport-MN.md (shctl doc new) na gałęzi stage/08-qa, a błędy zakłada jako nowe issue typ:qa z wagą przez shctl task create. Użyj, gdy wszystkie zadania kamienia są zamknięte, a orkiestrator poleca „QA kamienia MN”, „QA zbiorcze”, „przetestuj kamień” albo „sprawdź kamień przed kolejnym”, oraz gdy trzeba poprawić raport QA po review etapu.
+description: QA zbiorcze po kamieniu milowym trybu M. Zbiera zamknięte issue kamienia, uruchamia testy E2E Playwright (chromium i webkit), sprawdza przepływy między funkcjami, scenariusze odbioru kamienia i zgodność ze specyfikacją. Pisze raport docs/08-qa/raport-MN.md (shctl doc new) na gałęzi stage/08-qa. Błędy krytyczne i istotne zakłada jako nowe issue typ:qa z wagą przez shctl task create, a drobne wpisuje do sekcji Drobne uwagi raportu. Użyj, gdy wszystkie zadania kamienia są zamknięte, a orkiestrator poleca „QA kamienia MN”, „QA zbiorcze”, „przetestuj kamień” albo „sprawdź kamień przed kolejnym”, oraz gdy trzeba poprawić raport QA po review etapu.
 ---
 
 # sh-qa
@@ -20,7 +20,8 @@ Robisz:
 - piszesz testy E2E przepływów między funkcjami i scenariuszy odbioru kamienia w `e2e/qa/`;
 - sprawdzasz zgodność z wymaganiami `W-n` kamienia;
 - piszesz raport `docs/08-qa/raport-MN.md` i plik błędów `docs/08-qa/zadania-MN.yaml`;
-- po review i merge'u zakładasz błędy jako issue `typ:qa` z wagą przez `shctl task create`.
+- po review i merge'u zakładasz błędy 🔴 i 🟡 jako issue `typ:qa` z wagą przez `shctl task create`;
+- zgłoszenia ⚪ wpisujesz wyłącznie do sekcji „Drobne uwagi” raportu, bez issue.
 
 Nie robisz:
 
@@ -54,8 +55,8 @@ Faza 1, gałąź `stage/08-qa` i PR do `main`:
 
 - `docs/08-qa/raport-MN.md`: z `docs/_szablony/raport-qa.md` przez `shctl doc new`, format „Raport”
   (niżej)
-- `docs/08-qa/zadania-MN.yaml`: błędy w formacie `shctl task create` (format „Plik błędów”, niżej);
-  bez błędów plik nie powstaje
+- `docs/08-qa/zadania-MN.yaml`: błędy 🔴 i 🟡 w formacie `shctl task create` (format „Plik błędów”,
+  niżej); bez takich błędów plik nie powstaje
 - `e2e/qa/MN-*.spec.ts`: testy przepływów i scenariuszy; test błędu oznaczony `test.fixme`
 - `docs/08-qa/DoD.md`: pola spełnione przez QA tego kamienia
 
@@ -110,8 +111,10 @@ shctl escalate --dotyczy 08-qa --powod "..." --potrzebne "..." --opcje "A;B"
    `niespełnione` z dowodem (test, komenda, krok scenariusza). Sprawdź też sekrety
    (`gitleaks git --redact --no-banner .`, gdy jest zainstalowany) i dane osobowe w logach aplikacji
    z przebiegu testów.
-9. Każdy problem to błąd z wagą według „Kryteriów review” (niżej, część „Waga błędów”). Zapisz go w
-   `docs/08-qa/zadania-MN.yaml` według „Pliku błędów” i w tabeli „Zgłoszenia” raportu, z tym samym ID.
+9. Każdemu problemowi nadaj wagę według „Kryteriów review” (niżej, część „Waga błędów”). Błąd 🔴 albo
+   🟡 zapisz w `docs/08-qa/zadania-MN.yaml` według „Pliku błędów” i w tabeli „Zgłoszenia” raportu, z
+   tym samym ID. Zgłoszenie ⚪ zapisz tylko jako pozycję listy w „Drobnych uwagach” raportu: bez ID i
+   bez issue.
 10. Uruchom `shctl task create --plik docs/08-qa/zadania-MN.yaml --dry-run --json` i popraw plik do
     kodu 0.
 11. Wypełnij raport według „Raportu”. Werdykt `FAIL`, gdy jest choć jeden błąd 🔴 albo 🟡, inaczej `PASS`.
@@ -128,7 +131,10 @@ shctl escalate --dotyczy 08-qa --powod "..." --potrzebne "..." --opcje "A;B"
 15. Faza 2, po merge'u: na `main` `git pull --ff-only`, potem `shctl task create` bez `--dry-run`.
     Bez pliku błędów pomijasz ten krok.
 16. Sprawdź „DoD” i przekaż orkiestratorowi: werdykt, numery issue z wyniku `mapa` z wagami, commit
-    `index.md` na `main`. Kolejny kamień startuje według „Autoryzacji i kamieni milowych” w procesie.
+    `index.md` na `main` i liczbę pozycji „Drobnych uwag”. Orkiestrator przenosi je do
+    `docs/backlog-drobne.md` jak `shctl task close` uwagi z raportu zadania: wiersz
+    `| DATA | QA MN | uwaga | otwarta |` na pozycję, bez dublowania. Komendy shctl na to nie ma, więc
+    robi to ręcznie (`sh-system/docs/propozycje.md`). Kolejny kamień startuje według „Autoryzacji i kamieni milowych” w procesie.
 
 ### Raport
 
@@ -140,7 +146,8 @@ shctl escalate --dotyczy 08-qa --powod "..." --potrzebne "..." --opcje "A;B"
 | `Zakres` | Kamień, zamknięte issue (`#NR tytuł`), pominięte („not planned”), przepływy i scenariusze |
 | `Wyniki testów` | Wiersze: E2E chromium, E2E webkit, Integracja, Testy QA (`e2e/qa/`); wynik `pass`/`fail` z liczbami i komendą, niestabilne testy w „Uwagach” |
 | `Zgodność z wymaganiami` | Każde `W-n` kamienia: wynik i dowód |
-| `Zgłoszenia` | `| QA-MN-k | waga | opis z krokami odtworzenia |`; bez błędów jeden wiersz `| brak | | |` |
+| `Zgłoszenia` | Tylko 🔴 i 🟡: `| QA-MN-k | waga | opis z krokami odtworzenia |`; bez nich jeden wiersz `| brak | | |` |
+| `Drobne uwagi` | Zgłoszenia ⚪, jedna pozycja listy na uwagę (z kontynuacją w kolejnych liniach); bez uwag jedna pozycja `brak` |
 | `Werdykt` | `PASS` albo `FAIL` i jedno zdanie uzasadnienia |
 
 Logów z sekretami i danymi osobowymi nie wklejasz: krótki fragment z zamaskowanymi wartościami.
@@ -166,8 +173,9 @@ zadania:
 ```
 
 - ID `QA-MN-k`, numerowane od 1 w kamieniu; nowe błędy w poprawce po review dostają kolejne numery.
-- `typ: qa` i `waga` (`krytyczne`, `istotne`, `drobne`) zawsze; shctl nadaje etykiety `typ:qa` i
-  `sev:WAGA`. `milestone` to kamień, w którym błąd znaleziono.
+- `typ: qa` i `waga` (`krytyczne` albo `istotne`) zawsze; shctl nadaje etykiety `typ:qa` i
+  `sev:WAGA`, a `typ: qa` z inną wagą albo bez niej odrzuca (kod 2). Zgłoszenia ⚪ nie trafiają do
+  pliku. `milestone` to kamień, w którym błąd znaleziono.
 - `kryteria` sprawdzalne testem, z oboma przeglądarkami, gdy błąd dotyczy UI. `pliki` to obszar
   podejrzany; worker może go poszerzyć decyzją w raporcie.
 - `db_migracja: true` tylko, gdy naprawa na pewno wymaga migracji. Pól `tryb` i `zaleznosci` nie
@@ -195,7 +203,8 @@ B także testy na stagingu i raport dla klienta. W etapie A tego nie robisz.
 - [ ] Pełne E2E uruchomione w chromium i webkit z `playwright_version` i `playwright_workers`, wynik w raporcie
 - [ ] Przepływy między funkcjami i scenariusze odbioru kamienia sprawdzone testami w `e2e/qa/` albo istniejącymi
 - [ ] Każde `W-n` kamienia ma wynik i dowód w „Zgodności z wymaganiami”
-- [ ] Każdy błąd ma ID `QA-MN-k`, wagę i kroki odtworzenia, w raporcie i w `zadania-MN.yaml`
+- [ ] Każdy błąd 🔴 i 🟡 ma ID `QA-MN-k`, wagę i kroki odtworzenia, w raporcie i w `zadania-MN.yaml`
+- [ ] Zgłoszenia ⚪ są wyłącznie w „Drobnych uwagach” raportu, bez issue
 - [ ] `shctl task create --dry-run` przechodzi; po merge'u issue założone (albo brak błędów)
 - [ ] Testy błędów oznaczone `test.fixme`, CI na PR zielone
 - [ ] Werdykt raportu zgodny z wagami: FAIL tylko przy 🔴 lub 🟡
@@ -212,7 +221,8 @@ Review etapu `08-qa` (`sh-review`) sprawdza:
 - 🟡 istotne: brak przebiegu w webkit albo chromium; wymaganie `W-n` kamienia bez wyniku lub dowodu;
   scenariusz odbioru kamienia albo przepływ między funkcjami niesprawdzony; błąd bez kroków
   odtworzenia lub z niesprawdzalnym kryterium; test błędu bez `test.fixme` (czerwone CI po merge'u);
-  zła waga błędu; zadanie kamienia otwarte, a QA wykonane.
+  zła waga błędu; zgłoszenie ⚪ w `zadania-MN.yaml` zamiast w „Drobnych uwagach”; brak sekcji
+  „Drobne uwagi”; zadanie kamienia otwarte, a QA wykonane.
 - ⚪ drobne: styl raportu, nazwy testów, literówki.
 
 ### Waga błędów
@@ -221,7 +231,7 @@ Review etapu `08-qa` (`sh-review`) sprawdza:
 |---|---|
 | 🔴 `krytyczne` | Bezpieczeństwo (dostęp do cudzych danych, obejście auth), utrata danych, główna ścieżka kamienia nie działa, wymaganie `W-n` niespełnione, sekret w repo |
 | 🟡 `istotne` | Wymaganie spełnione częściowo, błąd w jednej przeglądarce, błąd przepływu między funkcjami z obejściem, test niestabilny, scenariusz odbioru wymaga obejścia |
-| ⚪ `drobne` | Kosmetyka UI, teksty, drobna niewygoda bez wpływu na wymaganie |
+| ⚪ `drobne` | Kosmetyka UI, teksty, drobna niewygoda bez wpływu na wymaganie; bez issue, tylko „Drobne uwagi” |
 
 Format wyniku review: `sh-system/templates/review.md`.
 
@@ -271,8 +281,9 @@ Orkiestrator: „QA kamienia M2 skillem sh-qa.”
 4. Nowy test `e2e/qa/M2-koszyk-logowanie.spec.ts` (przepływ koszyk → logowanie) pokazuje błąd w webkit:
    `test.fixme(true, 'QA-M2-1')`.
 5. `W-2` częściowo, reszta spełniona. `zadania-M2.yaml`: `QA-M2-1`, `waga: istotne`. `--dry-run`: kod 0.
+   Literówka na przycisku „Do kasy” idzie do „Drobnych uwag”.
 6. Raport: werdykt FAIL. Commit `08-qa: raport M2`, PR #40 z `stage/08-qa`.
 7. Review etapu PASS, merge. Na `main`: `shctl task create --plik docs/08-qa/zadania-M2.yaml`: #41
    z `typ:qa` i `sev:istotne` w milestone „M2 Katalog i koszyk”.
 
-Wynik: orkiestrator commituje `index.md`, dispatchuje #41, a kamień M3 startuje według autoryzacji.
+Wynik: orkiestrator dopisuje literówkę do `backlog-drobne.md`, commituje `index.md`, dispatchuje #41, a kamień M3 startuje według autoryzacji.

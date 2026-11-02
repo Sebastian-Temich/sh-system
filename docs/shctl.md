@@ -406,7 +406,7 @@ zadania:
     tryb: M                    # S albo M; bez pola brak etykiety tryb:
     db_migracja: true          # etykieta db:migracja
     milestone: M1 Szkielet
-    waga: istotne              # krytyczne, istotne, drobne; etykieta sev:X (błędy z QA)
+    waga: istotne              # krytyczne, istotne, drobne; etykieta sev:X; typ qa: tylko krytyczne albo istotne
 ```
 
 Etykiety: `status:todo`, `runner:local`, `wykonawca:claude`, `typ:X`, opcjonalnie `tryb:X`,
@@ -418,7 +418,7 @@ Na końcu dopisuje mapę do sekcji „Mapa zadań z planu” w `docs/06-zadania/
 `shctl:mapa`, poza tabelą `sync-status`) i uruchamia `scripts/sync-status.sh`.
 
 Powtórka rozpoznaje issue po znaczniku i niczego nie dubluje; przerwane tworzenie dokańcza. Nieznane
-pole, nieznana zależność, cykl, zły typ, tryb lub waga dają kod 2 przed jakąkolwiek zmianą. ID użyte już
+pole, nieznana zależność, cykl, zły typ, tryb lub waga (także `typ: qa` bez wagi `krytyczne` albo `istotne`) dają kod 2 przed jakąkolwiek zmianą. ID użyte już
 przez issue o innym tytule daje kod 4.
 
 ```json

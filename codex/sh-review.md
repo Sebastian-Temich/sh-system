@@ -187,6 +187,8 @@ werdykcie orkiestrator wywołuje `shctl task iter NR` albo `shctl task close NR`
 5. Sekrety i dane osobowe: brak w dokumentach, opisie PR i przykładach.
 6. Zakres PR: tylko pliki etapu (`docs/ETAP/` i pola DoD powiązanych etapów, w `08-qa` także testy
    `e2e/qa/`); bez kodu aplikacji i plików wspólnych.
+7. W `08-qa`: błędy 🔴 i 🟡 są w `docs/08-qa/zadania-MN.yaml` i w „Zgłoszeniach” raportu, a ⚪
+   wyłącznie w „Drobnych uwagach” raportu, bez issue.
 
 ## Tryby
 
