@@ -32,7 +32,7 @@ WT() { echo "$SH_DIR/wt/demo/$1"; }
   run --separate-stderr "$SHCTL" task dispatch 12 --json
   [ "$status" -eq 0 ]
   [ "$(jq -r '.numStartups, .projects["/inny"].x, ([.projects[] | select(.hasTrustDialogAccepted)] | length)' "$SH_CLAUDE_JSON" | tr '\n' ' ')" = "5 1 1 " ]
-  [ "$(stat -f %Lp "$SH_CLAUDE_JSON" 2>/dev/null || stat -c %a "$SH_CLAUDE_JSON")" = 600 ]
+  [ "$(ls -l "$SH_CLAUDE_JSON" | cut -c1-10)" = "-rw-------" ]
   run --separate-stderr "$SHCTL" task dispatch 12 --json
   [ "$(jq -r .wynik.zaufanie_dopisane <<<"$output")" = false ]
 }
