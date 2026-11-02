@@ -80,6 +80,14 @@ tresc() { jq -r --argjson n "$1" '.[] | select(.number == $n) | .body' "$GH_ATRA
   [ "$(jq length "$GH_ATRAPA/issues.json")" -eq 3 ]
 }
 
+@test "create: blad z QA dostaje etykiety typ:qa i sev:WAGA" {
+  printf -- '- {id: QA-M1-1, tytul: Webkit nie przekierowuje, cel: Blad z QA M1., kryteria: [panel po zalogowaniu], typ: qa, waga: istotne}\n' >"$T/qa.yaml"
+  run --separate-stderr "$SHCTL" task create --plik "$T/qa.yaml" --json
+  echo "$output $stderr"
+  [ "$status" -eq 0 ]
+  [ "$(etykiety "$(numer_dla QA-M1-1)")" = "runner:local,sev:istotne,status:todo,typ:qa,wykonawca:claude" ]
+}
+
 @test "create: bledy w YAML to kod 2" {
   printf 'zadania:\n  - id: A\n    tytul: x\n    cel: y\n    kryteria: [k]\n    zaleznosci: [B]\n' >"$T/z1.yaml"
   run --separate-stderr "$SHCTL" task create --plik "$T/z1.yaml"
@@ -94,6 +102,10 @@ tresc() { jq -r --argjson n "$1" '.[] | select(.number == $n) | .body' "$GH_ATRA
   [ "$status" -eq 2 ]
   [[ "$stderr" == *"nieznane pole wykonawca"* ]] || false
   [[ "$stderr" == *"typ:"* ]] || false
+  printf -- '- {id: A, tytul: x, cel: y, kryteria: [k], typ: qa, waga: pilne}\n' >"$T/z4.yaml"
+  run --separate-stderr "$SHCTL" task create --plik "$T/z4.yaml"
+  [ "$status" -eq 2 ]
+  [[ "$stderr" == *"waga: krytyczne, istotne albo drobne"* ]] || false
   run --separate-stderr "$SHCTL" task create --plik "$T/brak.yaml"
   [ "$status" -eq 3 ]
   [ ! -s "$GH_ATRAPA/issues.json" ] || [ "$(jq length "$GH_ATRAPA/issues.json")" -eq 0 ]

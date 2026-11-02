@@ -97,10 +97,14 @@ komenda_main() {
       plik="$kat/T-$nr.md"
       ;;
     raport-qa)
-      [ -n "$tytul" ] || die "$E_UZYCIE" "raport-qa wymaga --tytul (kamień milowy)"
-      slug="$(odslugifikuj "$tytul")"
-      [ -n "$slug" ] || die "$E_UZYCIE" "--tytul nie daje nazwy pliku"
-      plik="$kat/raport-qa-$slug.md"
+      # Jeden raport na kamień milowy: pierwsze słowo tytułu to MN (np. „M1 Szkielet” daje raport-M1.md).
+      slug="${tytul%% *}"
+      case "$slug" in
+        M[0-9]*) case "${slug#M}" in *[!0-9]*) slug="" ;; esac ;;
+        *) slug="" ;;
+      esac
+      [ -n "$slug" ] || die "$E_UZYCIE" "raport-qa wymaga --tytul zaczynającego się od kamienia MN, np. \"M1 Szkielet\""
+      plik="$kat/raport-$slug.md"
       ;;
     wydanie-techniczna) plik="$kat/techniczna/techniczna.md" ;;
     wydanie-produktowa) plik="$kat/produktowa/produktowa.md" ;;
