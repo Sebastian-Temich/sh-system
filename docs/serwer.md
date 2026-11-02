@@ -9,6 +9,7 @@ Legacy Patcher. Narzędzia, przeglądarki i testy działają natywnie. Docker s�
 - Homebrew: `~/sh/Brewfile` (symlink do `scripts/server/Brewfile`)
 - Porty: `~/sh/porty.md`
 - Chrome for Testing: `~/sh/browsers`
+- Strażnik limitów: `~/sh/bin/sh-watchdog.sh` co 5 minut (sekcja „Strażnik limitów”)
 
 ## Skrypty serwera
 
@@ -452,6 +453,83 @@ Bez `matcher` hook reaguje na każdy typ powiadomienia, także `auth_success` cz
 Format hooków: <https://code.claude.com/docs/en/hooks>. Hook jest asynchroniczny (`async`),
 więc nie blokuje Claude'a, a błąd wysyłki nie pojawia się w sesji. Diagnoza:
 `claude --debug` albo ręczne uruchomienie `notify.sh`.
+
+## Strażnik limitów
+
+`~/sh/bin/sh-watchdog.sh` wykrywa wyczerpanie limitu subskrypcji Claude Code i Codexa
+(`proces-v1.md`, „Limity subskrypcji”). Działa bez AI (bash, herdr CLI, jq). LaunchAgent
+`pl.iskt.softwarehouse.sh-watchdog` uruchamia go co 5 minut i przy logowaniu.
+
+| Plik | Rola |
+|---|---|
+| `scripts/server/sh-watchdog.sh` | Skrypt, symlink w `~/sh/bin` |
+| `scripts/server/pl.iskt.softwarehouse.sh-watchdog.plist` | LaunchAgent, `StartInterval` 300 s, `/bin/bash` 3.2 |
+| `~/sh/watchdog-wzorce.txt` | Wzorce komunikatów, kopia robocza `scripts/server/watchdog-wzorce.txt` |
+| `~/sh/limity.md` | Aktywne wstrzymania, format w `docs/shctl.md` („Format ~/sh/limity.md”) |
+| `~/sh/stan/watchdog-widziane.txt` | Komunikaty już obsłużone |
+| `~/sh/logs/watchdog.log` | Log; po przekroczeniu 1 MB poprzedni trafia do `watchdog.log.1` |
+
+Jeden przebieg:
+
+1. Wiersze `limity.md`, których godzina „Do” minęła, usuwa i wysyła `notify.sh default`
+   „Limit X odnowiony, możesz wznowić”.
+2. W panelach workspace `sh` (orkiestrator, powłoka, karty workerów i review) czyta 40 ostatnich
+   linii (`herdr pane read --source recent-unwrapped`) i szuka wzorców.
+3. Przy nowym komunikacie dopisuje wiersz do `limity.md` i wysyła `notify.sh high`
+   „Limit X do HH:MM. Po odnowieniu napisz orkiestratorowi: wznów”.
+
+W etapie A strażnik pracy nie wznawia: robi to właściciel, pisząc orkiestratorowi „wznów”.
+Powiadomienie o odnowieniu przychodzi z opóźnieniem do 5 minut (najbliższy przebieg).
+
+**Wzorce.** Linia `WYKONAWCA REGEX` (ERE, bez rozróżniania wielkości liter). Wygrywa pierwszy
+pasujący wzorzec, dlatego Codex stoi przed Claude. Plik poprawiamy na serwerze, a zmiana działa od
+następnego przebiegu. `install.sh` kopiuje go tylko wtedy, gdy go brak, a przy różnicy z repo
+ostrzega; poprawki warto przenieść do repo. Domyślne wzorce pochodzą z tekstów w Claude Code
+2.1.316 i Codex 0.163.0:
+
+```text
+You've hit your 5-hour limit · resets 7pm (Europe/Warsaw)
+You've hit your usage limit. Upgrade to Pro (...) or try again at 7:05 PM.
+```
+
+**Godzina odnowienia** pochodzi z tekstu od miejsca dopasowania: `resets 7pm`,
+`resets Nov 3, 7:30pm`, `try again at Nov 3rd, 2026 7:05 PM`, `try again in 2 hours 5 minutes`
+albo epoch po `|` (starszy Claude). Strefę z nawiasu, np. `(Europe/Warsaw)`, strażnik uwzględnia.
+Sama godzina bez daty oznacza dziś, a jeśli minęła ponad godzinę temu, jutro. Godzina sprzed mniej
+niż godziny to limit już odnowiony i zostaje tylko wpis w logu. Komunikat bez godziny dostaje
+szacunek teraz + 5 h z dopiskiem „(szacunek)”.
+
+**Jedno powiadomienie na zdarzenie.** Aktywny wiersz wykonawcy wycisza ten sam limit w innych
+panelach. Kolejne powiadomienie wychodzi tylko wtedy, gdy godzina odnowienia przesunie się o ponad
+10 minut. Obsłużone komunikaty (tekst od dopasowania do końca linii) strażnik pamięta, dopóki są
+widoczne w panelach, i jeszcze 12 h po zniknięciu. Dzięki temu komunikat widoczny po odnowieniu nie
+wraca jako nowy. Gdy herdr nie odpowiada, odnowienia działają dalej, a pamięć się nie zmienia.
+Powiadomienie ma 3 próby; nieudane zostaje w logu jako `BLAD`.
+
+Ograniczenia:
+
+- wzorzec pasuje też do komunikatu wyświetlonego przez człowieka, np. w wyniku `grep`; do logu
+  strażnik nie wpisuje treści komunikatu, więc `tail watchdog.log` alarmu nie wywoła;
+- przy pierwszym uruchomieniu stary komunikat z godziną bez daty może dać jeden fałszywy alarm na
+  jutro.
+
+```sh
+launchctl kickstart gui/$(id -u)/pl.iskt.softwarehouse.sh-watchdog   # przebieg teraz
+launchctl print gui/$(id -u)/pl.iskt.softwarehouse.sh-watchdog | grep -E 'state|last exit'
+tail -f ~/sh/logs/watchdog.log
+launchctl bootout gui/$(id -u)/pl.iskt.softwarehouse.sh-watchdog     # wyłączenie do install.sh
+```
+
+Testy: `scripts/server/tests/sh-watchdog.bats` (atrapy herdr i notify, stały czas).
+
+Test na serwerze 2026-11-02: panel `test-watchdog` w workspace `sh` z komunikatem
+`You've hit your 5-hour limit · resets 9:20pm (Europe/Warsaw)`, wypisanym o 21:17.
+
+| Godzina | Przebieg | Wynik |
+|---|---|---|
+| 21:17:36 | `launchctl kickstart` | Wiersz `claude … 21:20` w `limity.md`, push „Limit claude do 21:20…” |
+| 21:22:37 | planowy z launchd | Wiersz usunięty, push „Limit claude odnowiony, możesz wznowić” |
+| 21:27:38 | planowy z launchd | Komunikat nadal widoczny w panelu, brak nowego powiadomienia |
 
 ## Izolacja agentów
 

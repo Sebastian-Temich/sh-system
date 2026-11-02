@@ -4,6 +4,7 @@
 # Symlinki: scripts/server/*.sh (bez install.sh) i pliki wykonywalne z scripts/shctl/ do
 # ~/sh/bin, Brewfile do ~/sh/Brewfile i codex/reviewer.config.toml do $CODEX_HOME (~/.codex). Zwykly plik zastepuje tylko, gdy jest identyczny
 # z repo. Roznica to blad: nowsze zmiany trzeba najpierw przeniesc do repo.
+# Wzorce straznika limitow: kopia scripts/server/watchdog-wzorce.txt do ~/sh, tylko gdy jej brak.
 # Plisty: scripts/server/*.plist kopiuje do ~/Library/LaunchAgents tylko przy roznicy
 # i przeladowuje agenta. Niezaladowanego agenta laduje zawsze, takze bez zmiany plisty.
 # Agent z RunAtLoad wystartuje wtedy ponownie. Nieudany bootstrap to kod bledu, komenda
@@ -128,6 +129,18 @@ for src in "$REPO"/scripts/shctl/*; do
 done
 
 link "$REPO/scripts/server/Brewfile" "$SH_DIR/Brewfile"
+
+# Wzorce strażnika limitów: kopia robocza do poprawiania na serwerze, nie symlink. Istniejącej
+# nie nadpisujemy; różnicę z repo tylko zgłaszamy.
+wzorce="$SH_DIR/watchdog-wzorce.txt"
+if [ ! -e "$wzorce" ]; then
+  cp "$REPO/scripts/server/watchdog-wzorce.txt" "$wzorce"
+  echo "kopia:   $wzorce"
+elif cmp -s "$wzorce" "$REPO/scripts/server/watchdog-wzorce.txt"; then
+  echo "ok:      $wzorce"
+else
+  echo "UWAGA:   $wzorce rozni sie od scripts/server/watchdog-wzorce.txt (poprawki warto przeniesc do repo)" >&2
+fi
 
 # Profil Codex dla shctl review run (codex exec -p reviewer): tylko odczyt, model reviewera.
 mkdir -p "$CODEX_DIR"

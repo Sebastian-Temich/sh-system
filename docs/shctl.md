@@ -507,7 +507,7 @@ repo (hooki, `env`, pomocnicze komendy), a repo projektów powstają z naszego s
 
 ### Format ~/sh/limity.md
 
-Plik prowadzi strażnik limitów (A3.7), a `task ready`, `task dispatch` i `review run` go czytają. Jedna
+Plik prowadzi strażnik limitów `~/sh/bin/sh-watchdog.sh` (A3.7, `docs/serwer.md`, „Strażnik limitów”), a `task ready`, `task dispatch` i `review run` go czytają. Jedna
 aktywna blokada to jedna pozycja listy albo jeden wiersz tabeli; nagłówek tabeli i jej separator się
 nie liczą. Inne linie (tytuł, akapity, komentarze) są ignorowane.
 
@@ -527,6 +527,10 @@ nie liczą. Inne linie (tytuł, akapity, komentarze) są ignorowane.
 - Brak wstrzymań to plik bez pozycji i wierszy albo jedna pozycja `brak` (także `- (brak)`, `*brak*`,
   `| brak |`). Brak pliku też oznacza brak wstrzymań.
 - Po odnowieniu limitu strażnik usuwa wpis. Godzina „Do” jest dla ludzi; shctl jej nie interpretuje.
+- Strażnik zapisuje „Od” i „Do” jako `RRRR-MM-DD GG:MM` w czasie lokalnym, a „Źródło” jako
+  `panel ETYKIETA (ID)`. Godzinę szacowaną (komunikat bez godziny) oznacza dopiskiem „(szacunek)”.
+  Ręcznie dopisane pozycje listy i wiersze tabeli zostawia bez zmian; wiersz w formacie strażnika
+  usuwa, gdy jego „Do” minie.
 
 `status show` pokazuje te same wpisy jako „Wstrzymania”.
 
