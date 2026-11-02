@@ -25,7 +25,8 @@ sprawdz() { run --separate-stderr bash "$REPO/scripts/plugin/sprawdz-skille.sh" 
   sprawdz
   echo "$stderr"
   [ "$status" -eq 0 ]
-  [[ "$output" == *"2 skill(i) zgodne"* ]] || false
+  ile="$(find "$K/plugin/skills" -mindepth 2 -maxdepth 2 -name SKILL.md | wc -l | tr -d ' ')"
+  [[ "$output" == *"$ile skill(i) zgodne"* ]] || false
 }
 
 @test "brak sekcji i zla kolejnosc" {
