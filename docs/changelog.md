@@ -2,6 +2,8 @@
 
 ## 2026-11-02
 
+- Plugin `software-house` zainstalowany na serwerze w zakresie użytkownika. `docs/serwer.md`, sekcja „Plugin software-house”: instalacja, aktualizacja (katalog czytany wprost z checkoutu, nowa sesja albo `/reload-plugins`), kontrola listy skilli w świeżej sesji, archiwizacja starych skilli do `~/sh/archiwum/skille-20261102/` z wyjątkiem kopii używanych przez Paperclip.
+- Reviewer Codex: `gpt-6-astra` z rozumowaniem `high` (decyzja właściciela; szablon `konfiguracja.md` w `sh-template-projekt#7`). Profil `codex/reviewer.config.toml`: opis formatu z Codex 0.134+ i wskazanie promptu `codex/sh-review.md`. Test `shctl review run` na `sh-test-20261102-2232`: FAIL z 🔴.
 - Strażnik limitów `scripts/server/sh-watchdog.sh` (bez AI) i LaunchAgent `pl.iskt.softwarehouse.sh-watchdog` co 5 minut: komunikaty o limicie Claude Code i Codexa w panelach workspace `sh` według `~/sh/watchdog-wzorce.txt`, wiersze w `~/sh/limity.md` w formacie z `docs/shctl.md`, powiadomienie przy wykryciu i przy odnowieniu, bez wznawiania pracy (etap A). `install.sh` kopiuje domyślne wzorce, gdy ich brak. Testy `sh-watchdog.bats`; `install.bats` liczy wywołania `launchctl` tylko dla `sh-start`.
 
 - Skille `sh-orkiestrator` (panel herdr w `~/sh`, Remote Control; stan zawsze z plików i GitHuba; etapy S i M, pętla realizacji `task ready` → `dispatch` → monitoring → `review run` → `close` albo `iter`, szkielet sam przed resztą, `shctl doctor` przed pierwszym dispatchem, QA po kamieniu, punkt przekazania, odbiór, rejestr autoryzacji, limity i „wznów”, „STOP”, podniesienie trybu; commit plików wspólnych na `main` po każdej operacji shctl) i `sh-status` (tylko odczyt: `shctl status show` i liczby z GitHuba). `docs/propozycje.md`: brakujące komendy orkiestratora.

@@ -10,6 +10,7 @@ Legacy Patcher. Narzędzia, przeglądarki i testy działają natywnie. Docker s�
 - Porty: `~/sh/porty.md`
 - Chrome for Testing: `~/sh/browsers`
 - Strażnik limitów: `~/sh/bin/sh-watchdog.sh` co 5 minut (sekcja „Strażnik limitów”)
+- Plugin Claude Code `software-house`: lokalny marketplace `sh-system` (sekcja „Plugin software-house”)
 
 ## Skrypty serwera
 
@@ -34,6 +35,62 @@ różnicy, a potem przeładowuje agenta (`launchctl bootout` i `bootstrap`). Age
 kończy się kodem błędu, komendą do ręcznego załadowania i powiadomieniem `notify.sh high`. Agent z `RunAtLoad` startuje wtedy od razu: dla
 `sh-start` jest to bezpieczne, bo skrypt uruchamia tylko to, co nie działa. Ręczna zmiana w
 `~/Library/LaunchAgents` zostanie nadpisana przy następnym `install.sh`.
+
+## Plugin software-house
+
+Skille `sh-*` dostarcza plugin `software-house` z lokalnego marketplace `sh-system`, czyli z tego
+repo (`.claude-plugin/marketplace.json`, plugin w `plugin/`). Instalacja w zakresie użytkownika,
+jednorazowo:
+
+```sh
+claude plugin marketplace add ~/sh/sh-system
+claude plugin install software-house@sh-system --scope user
+claude plugin list          # software-house@sh-system, Scope: user, Status: enabled
+```
+
+Marketplace jest typu katalog. Claude Code czyta plugin wprost z `~/sh/sh-system/plugin`, tak jak
+`~/sh/bin` czyta skrypty z checkoutu. Działa więc wersja z gałęzi, na której stoi checkout. Po
+merge'u przełączamy go na `main` i robimy pull.
+
+Aktualizacja po zmianie skilli:
+
+1. PR w `sh-system`, zielone CI (`scripts/plugin/sprawdz-skille.sh`), merge.
+2. `git -C ~/sh/sh-system switch main && git -C ~/sh/sh-system pull`.
+3. Nowa sesja Claude Code albo `/reload-plugins` w trwającej. Uruchomione workery i orkiestrator
+   widzą stare skille do restartu sesji.
+
+Zmiana `marketplace.json` (nowy plugin, zmiana nazwy lub źródła) wymaga jeszcze
+`claude plugin marketplace update sh-system`. `claude plugin update software-house@sh-system`
+odpowiada przy katalogu „nothing to update” i nie jest potrzebne. Wersję w `plugin.json` podnosimy
+przy zmianie kontraktu skilli, żeby było widać, która wersja jest w użyciu.
+
+Kontrola w świeżej sesji (bez kontekstu projektu):
+
+```sh
+cd "$(mktemp -d)" && claude -p --model haiku "Wypisz nazwy wszystkich skilli dostępnych dla narzędzia Skill, po jednej w linii."
+```
+
+Test z 2026-11-02 (Claude Code 2.1.316, plugin 0.1.0): lista zawiera `software-house:sh-architekt`,
+`sh-intake`, `sh-orkiestrator`, `sh-qa`, `sh-review`, `sh-status`, `sh-worker` i `sh-zadania`.
+`_szablon` jest ukryty (`user-invocable: false`, `disable-model-invocation: true`).
+
+### Stare skille
+
+Stare skille briefu, wymagań i planowania konkurowały z `sh-*`. Źródło zostaje w repo w
+`zrodla/skille-istniejace/`. 2026-11-02 przenieśliśmy je (bez usuwania) do
+`~/sh/archiwum/skille-20261102/` (`claude/`, `codex/`, opis i przywracanie w `README.md`):
+
+| Katalog | Przeniesione |
+|---|---|
+| `~/.claude/skills` | `tworca-briefu-produktowego`, `iskt-tworca-briefu-produktowego`, `planista-realizacji` |
+| `~/.codex/skills` | `tworca-briefu-produktowego`, `iskt-tworca-briefu-produktowego`, `planista-realizacji`, `iskt-planista-realizacji` |
+
+Zostały kopie, które czytają agenci Paperclip (usługa `ing.paperclip.paperclipai` działa, run-logi
+z 26–30.10.2026): `~/.claude/skills/iskt-softwarehouse-tworca-wymagan`, `tworca-wymagan` i
+`iskt-planista-realizacji` oraz `~/.codex/skills/iskt-softwarehouse-tworca-wymagan` i
+`tworca-wymagan`. Kto ich używa: `~/sh/archiwum/skille-20261102/README.md`. Przeniesiemy je po
+wyłączeniu Paperclipa. Do tego czasu widać je w Claude Code obok `sh-*`. Skrypty
+`~/.softwarehouse/bin` i LaunchAgenty nie odwołują się do żadnego z sześciu skilli.
 
 ## Praca nad systemem
 
@@ -623,20 +680,35 @@ Test przez `codex exec`, uruchomiony w `~/sh`: zapis w katalogu roboczym działa
 
 `shctl review run` uruchamia `codex exec -p reviewer`. Profil to `~/.codex/reviewer.config.toml`,
 symlink zakładany przez `install.sh` do `sh-system/codex/reviewer.config.toml`. Nakłada się na
-`config.toml`:
+`config.toml`. Od Codex 0.134 profil to osobny plik `$CODEX_HOME/NAZWA.config.toml` z kluczami
+najwyższego poziomu: `-p` nie czyta już tabel `[profiles.NAZWA]` z `config.toml` (dokumentacja
+Codex, „Advanced configuration”, sekcja o profilach). Dlatego profilu nie ma w samym `config.toml`.
+
+Prompt reviewera to `sh-system/codex/sh-review.md`, generowany ze skilla `sh-review`, a schemat
+wyniku to `codex/sh-review.schema.json`. Oba są wskazane w nagłówku profilu. shctl podaje prompt na
+stdin i schemat przez `--output-schema`. Profil nie ustawia `model_instructions_file`, bo ten klucz
+zastępuje instrukcje bazowe Codexa.
 
 | Klucz | Wartość | Po co |
 |---|---|---|
-| `model` | `gpt-6.1-terra` | Model reviewera z `konfiguracja.md` szablonu („GPT-6.1 Terra”) |
+| `model` | `gpt-6-astra` | Model reviewera z `konfiguracja.md` szablonu („GPT-6-Astra”) |
 | `model_reasoning_effort` | `high` | Jak `modele.reviewer.rozumowanie` w szablonie |
 | `sandbox_mode` | `read-only` | Reviewer niczego nie zapisuje, testy uruchamia CI |
 | `approval_policy` | `never` | `codex exec` działa bez człowieka |
 
 shctl podaje też `-m` i `model_reasoning_effort` z `konfiguracja.md` projektu (wygrywają z profilem) i
-zawsze `-s read-only`. Test z 2026-11-02: nagłówek `codex exec -p reviewer` pokazał
-`model: gpt-6.1-terra`, `sandbox: read-only`, `approval: never`, `reasoning effort: high`, a `touch`
-w katalogu roboczym został zablokowany. Profil nie blokuje odczytu poza katalogiem roboczym (znane
+zawsze `-s read-only`. Test z 2026-11-02 po zmianie na `gpt-6-astra`: nagłówek
+`codex exec -p reviewer` pokazał `model: gpt-6-astra`, `sandbox: read-only`, `approval: never`,
+`reasoning effort: high`, a `touch` w katalogu roboczym dał „Operation not permitted”. Profil nie blokuje odczytu poza katalogiem roboczym (znane
 ograniczenie wyżej). Zmiana modelu: plik w repo i PR, tak jak `konfiguracja.md` szablonu.
+
+Test całości z 2026-11-02: repo `sh-test-20261102-2232`, issue #1 z kryteriami (suma rat równa
+kwocie, 0 rat to błąd) i PR #2 z `lib/raty.sh`, który gubi resztę i dzieli przez zero.
+`shctl review run 2` (GPT-6-Astra, `high`) zwrócił FAIL z dwoma 🔴 `krytyczne` (`lib/raty.sh:8`
+reszta, `lib/raty.sh:6` dzielenie przez zero) i jednym 🟡 (brak `docs/07-realizacja/T-1.md`).
+Komentarz trafił do PR, issue dostało `status:review`, a worktree i panel zostały usunięte.
+PR powstał ręcznie, bez `shctl task dispatch`, więc issue nie miało etykiety `iter:N`, a komentarz
+pokazał „iteracja 0”.
 
 ### Poświadczenia w zasięgu agentów
 

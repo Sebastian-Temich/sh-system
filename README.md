@@ -22,5 +22,7 @@ Plugin `software-house` instaluje się z lokalnego marketplace tego repo:
 
 ```sh
 claude plugin marketplace add ~/sh/sh-system
-claude plugin install software-house@sh-system
+claude plugin install software-house@sh-system --scope user
 ```
+
+Aktualizacja i kontrola listy skilli: `docs/serwer.md`, sekcja „Plugin software-house”.
