@@ -90,7 +90,8 @@ tail -f ~/sh/logs/watchdog.log
 ### Synchronizacja Obsidiana
 
 Usługa `obsidian-sync` uruchamia co 5 minut `shctl obsidian sync --agent`. W każdej kopii w
-`SH/` robi tylko `git pull --ff-only`. Kopię z lokalnymi zmianami albo rozjechaną pomija; gdy problem
+`SH/` robi tylko `git pull --ff-only`. Skrzynek (`SH/Skrzynka/`) nie dotyka, bo nie są kopiami repo. Kopię z lokalnymi zmianami albo
+rozjechaną pomija; gdy problem
 powtórzy się w dwóch przebiegach, wysyła jeden push „Obsidian: klon bez synchronizacji”. Nigdy nie
 nadpisuje Twoich zmian.
 
@@ -196,3 +197,5 @@ Zmiana w shctl, skillach lub skryptach serwera wymaga aktualizacji tego podręcz
 | `~/sh/stan/NAZWA.json` | Mapa zadań projektu na panele, stan po STOP |
 | `~/sh/stan/do-usuniecia.md` | Repo testowe do usunięcia przez Ciebie |
 | `~/sh/stan/obsidian-sync.json` | Ostatnia synchronizacja Obsidiana i problemy |
+| `~/sh/stan/checkpointy/NAZWA` | Wysłane powiadomienia „Czeka na Twoją akceptację” (cel i commit) |
+| `~/sh/stan/skrzynka/NAZWA.json` | Partia materiałów ze skrzynki czekająca na merge PR |

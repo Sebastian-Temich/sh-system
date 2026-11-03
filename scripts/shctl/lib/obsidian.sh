@@ -113,3 +113,33 @@ obsidian_sync_klon() {
   po="$(git -C "$kat" rev-parse --short HEAD)"
   echo "ok:$przed..$po (commitów: $behind)"
 }
+
+# --- Skrzynka na materiały (shctl skrzynka) ----------------------------------------------------
+
+# Zwykły folder w vaulcie, nie repo: właściciel wrzuca tu materiały, a obsidian sync go nie dotyka
+# (synchronizuje tylko klony w SH_OBSIDIAN_DIR i klon sh-system). Domyślnie SH/Skrzynka obok Projekty.
+skrzynka_kat_glowny() {
+  if [ -n "${SH_SKRZYNKA_DIR:-}" ]; then
+    printf '%s' "$SH_SKRZYNKA_DIR"
+  elif [ -n "${SH_OBSIDIAN_DIR:-}" ]; then
+    printf '%s/Skrzynka' "$(dirname "$SH_OBSIDIAN_DIR")"
+  fi
+}
+
+skrzynka_kat() {
+  local g
+  g="$(skrzynka_kat_glowny)"
+  [ -n "$g" ] || return 0
+  printf '%s/%s' "$g" "$1"
+}
+
+# Wypisuje 1, gdy założono folder, 0, gdy już był albo skrzynka nie jest skonfigurowana.
+skrzynka_utworz() {
+  local kat
+  kat="$(skrzynka_kat "$1")"
+  [ -n "$kat" ] || { echo 0; return 0; }
+  [ ! -d "$kat" ] || { echo 0; return 0; }
+  [ ! -e "$kat" ] || die "$E_ODMOWA" "$kat istnieje i nie jest folderem"
+  [ "$DRY" -eq 1 ] || mkdir -p "$kat" || die "$E_WYKONANIE" "nie można utworzyć $kat"
+  echo 1
+}

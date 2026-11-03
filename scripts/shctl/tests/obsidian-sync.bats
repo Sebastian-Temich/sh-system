@@ -134,3 +134,14 @@ zdalny_commit() {
   [ -z "$stderr" ]
   grep -q POMINIĘTY "$SLOG"
 }
+
+@test "skrzynka na materialy nie jest klonem: sync jej nie dotyka" {
+  S="$T/Obsidian Vault/SH/Skrzynka/demo"
+  [ -d "$S" ]
+  printf 'x' >"$S/logo.png"
+  run --separate-stderr "$SHCTL" obsidian sync --json
+  [ "$status" -eq 0 ]
+  [ "$(jq -r '[.wynik.klony[].katalog] | map(select(contains("Skrzynka"))) | length' <<<"$output")" -eq 0 ]
+  [ "$(jq -r .wynik.pominiete <<<"$output")" -eq 0 ]
+  [ -f "$S/logo.png" ]
+}

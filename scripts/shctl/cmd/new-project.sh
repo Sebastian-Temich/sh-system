@@ -36,7 +36,7 @@ czekaj_na_szablon() {
 
 komenda_main() {
   local nazwa="" tryb_arg="" public=0 opis="" slug stan katalog tryb_proj poprz e s origin
-  local widocznosc=--private porty baza pliki rzeczy zrodlo tresc obs='null' zal=0
+  local widocznosc=--private porty baza pliki rzeczy zrodlo tresc obs='null' zal=0 skr=0
   while [ $# -gt 0 ]; do
     case "$1" in
       --tryb) tryb_arg="$(wartosc "$@")"; shift 2 ;;
@@ -107,6 +107,7 @@ komenda_main() {
   krok "commit i push na main"
   if [ -n "${SH_OBSIDIAN_DIR:-}" ]; then
     krok "lekki klon docs/ w $(obsidian_kat "$nazwa")"
+    krok "skrzynka na materiały $(skrzynka_kat "$nazwa")"
   else
     uwaga "brak SH_OBSIDIAN_DIR w $SH_CONFIG, pomijam klon w Obsidianie"
   fi
@@ -115,7 +116,8 @@ komenda_main() {
     baza="$(porty_rezerwuj "$nazwa" 55 | jq -r .zakres)"
     info "blok portów: $baza"
     if [ -n "${SH_OBSIDIAN_DIR:-}" ]; then
-      obs="$(jq -nc --arg k "$(obsidian_kat "$nazwa")" '{katalog:$k, utworzono:false}')"
+      obs="$(jq -nc --arg k "$(obsidian_kat "$nazwa")" --arg s "$(skrzynka_kat "$nazwa")" \
+        '{katalog:$k, utworzono:false, skrzynka:{katalog:$s, utworzono:false}}')"
     fi
     wynik_json "$(jq -nc --arg r "$slug" --arg k "$katalog" --argjson s "$KROKI" --arg b "$baza" --argjson o "$obs" \
       '{repo:$r, katalog:$k, kroki:$s, porty:$b, obsidian:$o}')"
@@ -180,8 +182,11 @@ komenda_main() {
   # Po pushu: klon ma dostać gotową konfigurację.
   if [ -n "${SH_OBSIDIAN_DIR:-}" ]; then
     zal="$(obsidian_polacz "$nazwa")"
-    obs="$(jq -nc --arg k "$(obsidian_kat "$nazwa")" --argjson z "$zal" '{katalog:$k, utworzono:($z == 1)}')"
+    skr="$(skrzynka_utworz "$nazwa")"
+    obs="$(jq -nc --arg k "$(obsidian_kat "$nazwa")" --argjson z "$zal" --arg s "$(skrzynka_kat "$nazwa")" \
+      --argjson sz "$skr" '{katalog:$k, utworzono:($z == 1), skrzynka:{katalog:$s, utworzono:($sz == 1)}}')"
     info "Klon docs/: $(obsidian_kat "$nazwa")"
+    info "Skrzynka na materiały: $(skrzynka_kat "$nazwa")"
     info "Synchronizację robi serwer co 5 minut (shctl obsidian sync); w Obsidianie nic nie włączasz."
   fi
   wynik_json "$(jq -nc --arg r "$slug" --arg k "$katalog" --argjson s "$KROKI" --argjson p "$porty" --argjson o "$obs" \

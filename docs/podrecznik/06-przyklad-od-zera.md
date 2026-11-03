@@ -9,33 +9,48 @@ Projekt nazywa się `strona-firmowa`. Numery PR i issue są umowne.
 ## 0. Przygotowanie materiałów
 
 Projekt graficzny robisz w Claude Design i eksportujesz go (np. ZIP z makietami i zrzutami ekranów).
-Teksty, logo i dane firmy przygotuj w jednym folderze.
+Teksty, logo i dane firmy przygotuj obok.
 
-Integracja Claude Design z repo (automatyczne dostawy do `docs/02-design/zrodla/`, tryb Storybook
-albo Lovable) to etap B (jeszcze niedostępne). Dziś materiały zostawiasz na serwerze, np. w
-`~/Downloads/strona-design/`, i podajesz orkiestratorowi ścieżkę. Intake czyta materiały z
-`docs/02-design/zrodla/` jako dane.
+Dostarczanie projektu z Claude Design wprost do repo (tryb Storybook albo Lovable) to etap B (jeszcze
+niedostępne). Dziś materiały idą przez skrzynkę w Obsidianie.
 
-## 1. Zlecenie
+## 1. Zlecenie i materiały
 
 **Ty (w czacie `sh-orkiestrator`):**
 
 ```text
 Nowy projekt strona-firmowa: strona firmowa ISKT, 5 podstron (start, oferta, realizacje,
 o nas, kontakt) i formularz kontaktowy, który wysyła zgłoszenie na nasz e-mail.
-Makiety z Claude Design są w ~/Downloads/strona-design/. Dołącz je do docs/02-design/zrodla/.
 ```
 
-**Orkiestrator:**
+**Orkiestrator:** `shctl new-project strona-firmowa --opis "…"`: repo prywatne z szablonu, klon w
+`~/sh/projekty/strona-firmowa`, blok portów bazy, kopia `docs/` w Obsidianie i pusta skrzynka
+`SH/Skrzynka/strona-firmowa/`. Odpowiada, że skrzynka czeka na materiały.
 
-1. `shctl new-project strona-firmowa --opis "…"`: repo prywatne z szablonu, klon w
-   `~/sh/projekty/strona-firmowa`, blok portów bazy, kopia `docs/` w Obsidianie.
-2. Uruchamia `sh-intake`.
+**Ty:** przeciągasz do `SH/Skrzynka/strona-firmowa/` eksport `makiety.zip`, `logo.svg` i folder
+`teksty/` z opisami podstron, potem piszesz:
+
+```text
+Materiały w skrzynce.
+```
+
+**Orkiestrator:** `shctl skrzynka przyjmij strona-firmowa`. Pliki przechodzą kontrolę, a ZIP jest
+rozpakowany do `docs/02-design/zrodla/makiety/`. Powstaje PR #1 z gałęzi `stage/02-design`. Po
+zielonym CI orkiestrator go merguje i wywołuje komendę jeszcze raz, co odkłada pliki w skrzynce.
+
+```text
+Materiały przyjęte (PR #1): makiety.zip (12 plików), logo.svg, teksty/ (5 plików).
+Odrzucone: makiety.zip:export/podglad.command (plik wykonywalny), zostaje w skrzynce.
+```
+
+W skrzynce przyjęte pliki leżą teraz w `_przeniesione/20261103/`, a w Obsidianie, po synchronizacji,
+w `SH/Projekty/strona-firmowa/docs/02-design/zrodla/`. Następnie orkiestrator uruchamia `sh-intake`,
+który czyta materiały jako dane.
 
 **Orkiestrator odpowiada (przykład):**
 
 ```text
-Projekt strona-firmowa założony. Intake pisze specyfikację.
+Intake pisze specyfikację na podstawie zlecenia i materiałów.
 Tryb M: nowy projekt, a formularz zbiera dane osobowe (imię, e-mail, treść).
 Pytania (piszę dalej z propozycjami jako założeniami):
 1. Gdzie trafiają zgłoszenia? Propozycja: e-mail przez Resend i kopia w bazie Supabase.
@@ -55,24 +70,32 @@ intake poprawia i review się powtarza (maks. 3 razy, potem eskalacja).
 **Orkiestrator (po PASS):**
 
 ```text
-strona-firmowa: specyfikacja czeka na Twoją akceptację, PR #1.
+strona-firmowa: specyfikacja czeka na Twoją akceptację, PR #2.
 Tryb M. Ryzyka na „tak”: dane osobowe (formularz).
 Hosting: Vercel + Supabase Cloud UE na kontach firmy.
 Otwarte pytania: 3, z propozycjami jak wyżej.
 Szacunek poglądowy: 9 zadań, ok. tydzień, ok. 2 godziny Twojego czasu.
 ```
 
-Push **nie przychodzi**: checkpoint widzisz w czacie i w dashboardzie („Etapy w review, które po
-PASS czekają na Twoją akceptację”).
+Jednocześnie przychodzi push (`shctl checkpoint 00-intake`):
 
-**Ty:** czytasz PR #1 na GitHubie (wymagania `W-1`…`W-6` z kryteriami Given/When/Then).
+```text
+Czeka na Twoją akceptację: strona-firmowa / 00-intake
+Specyfikacja, PR #2
+```
+
+Kliknięcie otwiera PR. W dashboardzie etap widać też w „Etapach w review, które po PASS czekają na
+Twoją akceptację”.
+
+**Ty:** czytasz PR #2 na GitHubie (wymagania `W-1`…`W-6` z kryteriami Given/When/Then).
 
 ```text
 Akceptuję specyfikację. Odpowiedzi na pytania: zgodnie z propozycjami.
 ```
 
 **Orkiestrator:** zapisuje akceptację w `decyzje.md` (rola `wlasciciel`), intake wpisuje stack do
-`AGENTS.md` (nowy commit wraca do review), potem merge. Etap `00-intake` ma `done`.
+`AGENTS.md` (nowy commit wraca do review; po nowym PASS przychodzi drugi push dla tego samego
+etapu), potem merge. Etap `00-intake` ma `done`.
 
 **W Obsidianie:** `docs/00-intake/specyfikacja.md`, a w `decyzje.md` Twoja akceptacja.
 
@@ -87,7 +110,7 @@ Akceptuję specyfikację. Odpowiedzi na pytania: zgodnie z propozycjami.
 **Orkiestrator (po PASS):**
 
 ```text
-strona-firmowa: architektura i plan czekają na akceptację, PR #2.
+strona-firmowa: architektura i plan czekają na akceptację, PR #3.
 Kamienie: M1 Szkielet, M2 Podstrony i treści, M3 Formularz kontaktowy, M4 Dokumentacja wydania.
 Twoje zadania ręczne:
 - podłączenie repo do Vercel, przed pierwszym PR z podglądem,
@@ -97,6 +120,8 @@ Twoje zadania ręczne:
 Zakres autoryzacji: M1–M4, Resend plan darmowy, do odbioru zlecenia.
 shctl doctor 2026-11-03T09:12Z: wszystko ok.
 ```
+
+Push: „Czeka na Twoją akceptację: strona-firmowa / 04-architektura” z linkiem do PR #3.
 
 **Ty:**
 
@@ -116,11 +141,11 @@ Potem `shctl task create` zakłada issue na GitHubie.
 
 ```text
 | ID | Issue | Tytuł                       | Kamień | Zależności |
-| T1 | #4    | Szkielet projektu           | M1     | -          |
-| T2 | #5    | Układ strony i nawigacja    | M2     | T1         |
+| T1 | #5    | Szkielet projektu           | M1     | -          |
+| T2 | #6    | Układ strony i nawigacja    | M2     | T1         |
 | …  |       |                             |        |            |
-| T6 | #9    | Formularz: wysyłka Resend   | M3     | T5         |
-| T9 | #12   | Dokumentacja wydania        | M4     | wszystkie  |
+| T6 | #10   | Formularz: wysyłka Resend   | M3     | T5         |
+| T9 | #13   | Dokumentacja wydania        | M4     | wszystkie  |
 Blokuje pracę: klucz testowy Resend przed T6.
 ```
 
@@ -128,13 +153,13 @@ Blokuje pracę: klucz testowy Resend przed T6.
 
 ## 5. Realizacja
 
-Orkiestrator uruchamia `shctl doctor`, potem `shctl task dispatch 4` (szkielet idzie sam, przed
-wszystkim innym). Worker w panelu `worker:strona-firmowa:4` pisze kod i testy, otwiera PR z
-`Closes #4` i raportem `T-4.md`. Po zielonym CI orkiestrator wywołuje `shctl review run`:
+Orkiestrator uruchamia `shctl doctor`, potem `shctl task dispatch 5` (szkielet idzie sam, przed
+wszystkim innym). Worker w panelu `worker:strona-firmowa:5` pisze kod i testy, otwiera PR z
+`Closes #5` i raportem `T-5.md`. Po zielonym CI orkiestrator wywołuje `shctl review run`:
 
-- **PASS:** `shctl task close 4`: merge, wpis w `CHANGELOG.md`, decyzje z raportu do `decyzje.md`,
+- **PASS:** `shctl task close 5`: merge, wpis w `CHANGELOG.md`, decyzje z raportu do `decyzje.md`,
   czas do `metryki.md`;
-- **FAIL:** `shctl task iter 4`: worker poprawia wyłącznie zgłoszenia 🔴 i 🟡.
+- **FAIL:** `shctl task iter 5`: worker poprawia wyłącznie zgłoszenia 🔴 i 🟡.
 
 W pilocie naraz pracuje jeden worker (`max_local: 1`). Nic tu od Ciebie nie zależy.
 
@@ -155,7 +180,7 @@ rebase albo iteracja od nowa. Przerwanie przez limit nie liczy się jako iteracj
 
 ```text
 Eskalacja E-001: strona-firmowa
-#9: brak klucza testowego Resend
+#10: brak klucza testowego Resend
 ```
 
 W Obsidianie: `docs/07-realizacja/escalations/E-001.md`, w dashboardzie w „Czeka na Ciebie”.
@@ -179,7 +204,7 @@ Błędy 🔴 i 🟡 stają się nowymi zadaniami `typ:qa`, drobne trafiają do `
 
 ```text
 strona-firmowa: M2 zakończony. QA: PASS w chromium, 1 błąd istotny w webkit (menu mobilne),
-zadanie #14. Startuję M3 (mieści się w autoryzacji).
+zadanie #15. Startuję M3 (mieści się w autoryzacji).
 Punkt przekazania zapisany. Proponuję /clear i „wznów”.
 ```
 
@@ -204,6 +229,8 @@ Scenariusze do sprawdzenia (z planu):
 …
 Decyzje do przejrzenia: 7 w decyzje.md. Drobne uwagi w backlogu: 4.
 ```
+
+Push: „Czeka na Twoją akceptację: strona-firmowa / wydanie” z linkiem do PR etapu `wydanie`.
 
 **Ty:** przechodzisz scenariusze na stagingu.
 
@@ -245,6 +272,9 @@ strona-firmowa: #20 gotowe do odbioru, PR #21, review PASS, CI zielone.
 Podgląd: link do wdrożenia preview z PR.
 ```
 
+Na telefon przychodzi „Czeka na Twoją akceptację: strona-firmowa / #20” z treścią „Odbiór zadania #20
+(tryb S), PR #21”.
+
 **Ty:**
 
 ```text
@@ -254,4 +284,5 @@ Odbieram #20.
 Orkiestrator wywołuje `shctl task close 20`: merge, wpis w `CHANGELOG.md`, zamknięcie issue.
 
 Gdyby zmiana okazała się większa (np. nowe pole w bazie), orkiestrator zaproponuje podniesienie
-trybu do M. Decyzja należy do Ciebie.
+trybu do M. Przyjdzie wtedy push „Czeka na Twoją akceptację: strona-firmowa / podniesienie trybu”
+z numerem eskalacji. Decyzja należy do Ciebie.

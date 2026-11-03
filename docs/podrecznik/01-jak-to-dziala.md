@@ -99,8 +99,8 @@ zlecenia S albo zrobić jako osobny projekt. Nowy cykl etapów w tym samym proje
 
 | Robisz | Nie musisz |
 |---|---|
-| Zlecasz pracę i dostarczasz materiały (np. projekt graficzny) | Pisać issue, zakładać repo, gałęzie czy panele |
-| Akceptujesz specyfikację, plan i odbiór | Robić review kodu |
+| Zlecasz pracę i wrzucasz materiały do skrzynki (np. projekt graficzny) | Pisać issue, zakładać repo, gałęzie czy panele |
+| Akceptujesz specyfikację, plan i odbiór (przychodzi push z linkiem) | Robić review kodu |
 | Odpowiadasz na eskalacje | Pilnować pętli poprawek |
 | Wykonujesz kroki ręczne: konta, domeny, klucze, płatne usługi | Pamiętać stanu: jest w plikach |
 | Piszesz „wznów” po limicie, restarcie lub STOP | |
@@ -143,6 +143,6 @@ Szczegóły: [[proces-v1]] („Dostępy i środowiska”, „Droga na produkcję
 ## Co dojdzie w etapie B
 
 Wszystko z tej listy to etap B (jeszcze niedostępne): tryb L, Codex jako drugi wykonawca, workery w
-chmurze, automatyczne wznowienie po limitach, design przez Claude Design z dostawą do repo (Storybook
-albo Lovable), change requesty, raport dla klienta, retro jako skill, GitHub Projects i dashboard
+chmurze, automatyczne wznowienie po limitach, design przez Claude Design dostarczany wprost do repo
+w trybie Storybook albo Lovable (dziś materiały z Claude Design przechodzą przez skrzynkę), change requesty, raport dla klienta, retro jako skill, GitHub Projects i dashboard
 firmowy, aktualizacja istniejących projektów do nowego szablonu, osobne konto bota GitHub.

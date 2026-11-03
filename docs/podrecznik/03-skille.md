@@ -48,11 +48,16 @@ Twojej akceptacji.
 
 - akceptacja specyfikacji, architektury z planem i odbiór (tryb M);
 - odbiór zadania S przy `auto_merge_S: false`;
+- przy każdym z tych miejsc wysyła push „Czeka na Twoją akceptację” (`shctl checkpoint`), a przy
+  propozycji podniesienia trybu eskalację z tym samym tytułem (`shctl escalate --akceptacja`);
 - eskalacje: 3 iteracje bez PASS, sekret, dostęp, płatna usługa, nowy zakres, decyzja
   nieodwracalna, ryzyko, podniesienie trybu;
 - `shctl doctor` ze stanem `blad` przed pierwszym zadaniem projektu: brak staje się Twoim zadaniem.
 
 Po każdym kamieniu proponuje restart sesji (`/clear` i „wznów”).
+
+Na „materiały w skrzynce” przenosi Twoje pliki ze skrzynki do repo (`shctl skrzynka przyjmij`): PR,
+merge po zielonym CI, potem odłożenie plików w skrzynce do `_przeniesione/`.
 
 ## sh-intake
 
@@ -62,7 +67,7 @@ Po każdym kamieniu proponuje restart sesji (`/clear` i „wznów”).
 specyfikacji po review lub Twoich uwagach.
 
 **Czyta:** pierwotne zlecenie `docs/00-intake/zrodlo.md`, `konfiguracja.md`, stack w `AGENTS.md`,
-szablon specyfikacji, materiały designu z `docs/02-design/zrodla/` (jeśli są), w trwającym projekcie
+szablon specyfikacji, materiały z `docs/02-design/zrodla/` (trafiają tam ze skrzynki), w trwającym projekcie
 dotychczasową specyfikację i decyzje.
 
 **Tworzy:**

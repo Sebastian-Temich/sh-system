@@ -8,7 +8,7 @@ Wróć do: [[00-start-tutaj]]
 | **Autoryzacja (rejestr autoryzacji)** | Twoja zgoda na realizację planu zapisana w `decyzje.md`: na co, w jakim zakresie, do kiedy, jak cofnąć. Powstaje przy akceptacji planu |
 | **Backlog drobnych** | `docs/backlog-drobne.md`: drobne uwagi z review i QA, odłożone na później |
 | **CI** | Automatyczne kontrole na GitHubie przy każdym PR: lint, testy, build, szukanie sekretów. Zielone CI to warunek review i merge'a |
-| **Checkpoint** | Punkt, w którym praca czeka na Twoją akceptację. Tryb M: specyfikacja, architektura z planem, odbiór. Tryb S: odbiór |
+| **Checkpoint** | Punkt, w którym praca czeka na Twoją akceptację. Tryb M: specyfikacja, architektura z planem, odbiór. Tryb S: odbiór. Przychodzi jako push „Czeka na Twoją akceptację” |
 | **Codex** | Model OpenAI w Codex CLI. W etapie A wyłącznie reviewer |
 | **DoD** | Definition of Done: lista warunków „gotowe”. Każdy etap ma `DoD.md`, zadanie ma DoD w issue i checkliście PR |
 | **Dispatch** | Start zadania: kopia robocza, panel i worker (`shctl task dispatch`) |
@@ -35,6 +35,7 @@ Wróć do: [[00-start-tutaj]]
 | **QA zbiorcze** | Testy całego kamienia po jego zakończeniu (`sh-qa`): E2E, przepływy, zgodność ze specyfikacją |
 | **Remote Control** | Połączenie sesji Claude Code na serwerze z aplikacją Claude na telefonie i w przeglądarce |
 | **Review** | Niezależna ocena pracy przez inny model (Codex). Review PR dla zadań, review etapu dla dokumentów |
+| **Skrzynka** | Folder `SH/Skrzynka/NAZWA` w vaulcie na Twoje materiały. Orkiestrator przenosi je do repo przez PR (`shctl skrzynka przyjmij`) |
 | **Skill** | Instrukcja roli agenta, np. `sh-worker`. Dostarcza je plugin `software-house` |
 | **Specyfikacja** | `docs/00-intake/specyfikacja.md`: cel, zakres, wymagania `W-n`, stack, hosting, ryzyka |
 | **Staging** | Wdrożenie gałęzi `main` pod stałym adresem i osobna baza testowa. Tu robisz odbiór |
