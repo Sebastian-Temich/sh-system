@@ -226,7 +226,7 @@ shctl stop-all
 - **„materiały w skrzynce”** (opcjonalnie z projektem i miejscem, np. „do 00-intake/zrodla”):
   `shctl skrzynka przyjmij NAZWA` (z `--etap`, gdy właściciel wskazał miejsce). Kod 0 i stan
   `pr_otwarty`: zielone CI, potem merge `gh pr merge PR --squash --match-head-commit SHA` bez review
-  Codexa, bo to materiały źródłowe, a nie praca agenta; po merge'u ponownie `shctl skrzynka przyjmij
+  Codexa i bez akceptacji właściciela (decyzja właściciela, `decyzje-systemu.md`, 2026-11-03); po merge'u ponownie `shctl skrzynka przyjmij
   NAZWA`, które przenosi pliki do `_przeniesione/`. Właścicielowi podajesz przyjęte i odrzucone pliki.
   Gdy materiały są potrzebne trwającemu etapowi, skill etapu czyta je z `main` po merge'u.
 
