@@ -1,4 +1,6 @@
-# shctl escalate --dotyczy "#NR|ETAP" --powod --potrzebne [--opcje "A;B"] [--priorytet high]
+# shctl escalate --dotyczy "#NR|ETAP" --powod --potrzebne [--opcje "A;B"] [--priorytet high] [--akceptacja]
+# --akceptacja: decyzja do akceptacji właściciela (podniesienie trybu); powiadomienie ma tytuł
+# „Czeka na Twoją akceptację: PROJEKT / podniesienie trybu” zamiast „Eskalacja E-NNN: PROJEKT”.
 # shctl escalate close E-NNN --odpowiedz "..."
 # Stan eskalacji jest w jej frontmatterze: status, poprzedni_status, powiadomiono.
 # shellcheck shell=bash
@@ -92,6 +94,7 @@ utworz_plik() {
 
 otworz() {
   local dotyczy="" powod="" potrzebne="" opcje="" priorytet=high id plik poprz="" nr="" etap="" slug="" nowa=0 url=""
+  local akceptacja=0 tytul tresc
   while [ $# -gt 0 ]; do
     case "$1" in
       --dotyczy) dotyczy="$(wartosc "$@")"; shift 2 ;;
@@ -99,6 +102,7 @@ otworz() {
       --potrzebne) potrzebne="$(wartosc "$@")"; shift 2 ;;
       --opcje) opcje="$(wartosc "$@")"; shift 2 ;;
       --priorytet) priorytet="$(wartosc "$@")"; shift 2 ;;
+      --akceptacja) akceptacja=1; shift ;;
       *) opcja_wspolna "$@"; shift "$ZJEDZONE" ;;
     esac
   done
@@ -158,7 +162,13 @@ otworz() {
     fi
     odswiez_liste
     if [ "$(fm_get "$plik" powiadomiono)" != tak ]; then
-      powiadom "$priorytet" "Eskalacja $id: $PROJEKT" "$dotyczy: $powod" "$url" warning ||
+      tytul="Eskalacja $id: $PROJEKT"
+      tresc="$dotyczy: $powod"
+      if [ "$akceptacja" -eq 1 ]; then
+        tytul="Czeka na Twoją akceptację: $PROJEKT / podniesienie trybu"
+        tresc="$id, $tresc"
+      fi
+      powiadom "$priorytet" "$tytul" "$tresc" "$url" warning ||
         die "$E_WYKONANIE" "$id zapisana, ale powiadomienie nie wyszło; ponów tę samą komendę"
       fm_set "$plik" powiadomiono tak
     fi

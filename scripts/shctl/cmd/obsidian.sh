@@ -1,4 +1,4 @@
-# shctl obsidian link|unlink NAZWA: lekki klon docs/ w vaulcie Obsidiana.
+# shctl obsidian link|unlink NAZWA: lekki klon docs/ w vaulcie Obsidiana (link zakłada też skrzynkę).
 # shctl obsidian sync [--agent]: git pull --ff-only we wszystkich klonach vaulta (LaunchAgent co 5 minut).
 # shellcheck shell=bash
 
@@ -91,7 +91,7 @@ obsidian_sync() {
 }
 
 komenda_main() {
-  local akcja="${1:-}" nazwa="" kat slug zal powod
+  local akcja="${1:-}" nazwa="" kat slug zal powod skr
   case "$akcja" in
     link | unlink) shift ;;
     sync) shift; obsidian_sync "$@"; return ;;
@@ -124,7 +124,11 @@ komenda_main() {
     else
       info "klon już istnieje: $kat"
     fi
-    wynik_json "$(jq -nc --arg k "$kat" --argjson z "$zal" '{katalog:$k, utworzono:($z == 1)}')"
+    # Projekt założony przed skrzynką dostaje ją przy link.
+    skr="$(skrzynka_utworz "$nazwa")"
+    [ "$skr" = 0 ] || info "skrzynka na materiały: $(skrzynka_kat "$nazwa")"
+    wynik_json "$(jq -nc --arg k "$kat" --argjson z "$zal" --arg s "$(skrzynka_kat "$nazwa")" --argjson sz "$skr" \
+      '{katalog:$k, utworzono:($z == 1), skrzynka:{katalog:$s, utworzono:($sz == 1)}}')"
     return 0
   fi
 

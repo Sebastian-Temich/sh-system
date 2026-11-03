@@ -37,10 +37,12 @@ Szczegóły techniczne są w dokumentach systemu: [[proces-v1]] (proces), [[shct
 
 1. **Rozmawiasz tylko z orkiestratorem.** Sesja `sh-orkiestrator` w aplikacji Claude. Piszesz
    zwykłym językiem: „status?”, „wznów”, „STOP”, „akceptuję”.
-2. **W Obsidianie tylko czytasz.** Folder `SH/` w vaulcie to kopie repozytoriów. Zmiana zapisana
-   tam zatrzymuje synchronizację. Poprawki zlecasz orkiestratorowi.
+2. **W Obsidianie tylko czytasz, z jednym wyjątkiem.** `SH/Projekty` i `SH/sh-system` to kopie
+   repozytoriów: zmiana zapisana tam zatrzymuje synchronizację, a poprawki zlecasz orkiestratorowi.
+   Materiały do projektu wrzucasz do `SH/Skrzynka/NAZWA` i piszesz „materiały w skrzynce”.
 3. **Czekamy na Ciebie w trzech miejscach.** W trybie M: akceptacja specyfikacji, akceptacja
-   architektury z planem i odbiór. W trybie S: tylko odbiór. Plus eskalacje, gdy przyjdą.
+   architektury z planem i odbiór. W trybie S: tylko odbiór. Każde takie miejsce przychodzi jako
+   push „Czeka na Twoją akceptację” z linkiem do PR. Plus eskalacje, gdy przyjdą.
 4. **Po limicie albo restarcie piszesz „wznów”.** W etapie A nikt nie wznawia pracy za Ciebie.
    Powiadomienie „Limit … odnowiony” znaczy: możesz napisać „wznów”.
 5. **Produkcja należy tylko do Ciebie.** Na serwerze nie ma żadnych kluczy produkcyjnych, a w

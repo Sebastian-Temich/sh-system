@@ -62,6 +62,9 @@ K() { echo "$SH_DIR/projekty/demo/$1"; }
   v="$SH_OBSIDIAN_DIR/demo"
   [ "$(jq -r .wynik.obsidian.katalog <<<"$output")" = "$v" ]
   [ -f "$v/docs/konfiguracja.md" ]
+  [ -d "$T/Obsidian Vault/SH/Skrzynka/demo" ]
+  [ "$(jq -r .wynik.obsidian.skrzynka.katalog <<<"$output")" = "$T/Obsidian Vault/SH/Skrzynka/demo" ]
+  [ "$(jq -r .wynik.obsidian.skrzynka.utworzono <<<"$output")" = true ]
   [ ! -e "$v/src" ]
   [ ! -e "$v/scripts" ]
   [ ! -e "$v/README.md" ]

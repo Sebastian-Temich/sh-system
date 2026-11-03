@@ -71,8 +71,8 @@ orkiestrator zgłosi je w „Czeka na Ciebie” albo eskalacją.
 
 **Objaw:** push „Obsidian: klon bez synchronizacji” albo stare dokumenty w vaulcie.
 
-**Przyczyna zwykle:** zmiana zapisana w pliku w `SH/`. Synchronizacja nie nadpisuje lokalnych zmian,
-więc pomija tę kopię.
+**Przyczyna zwykle:** zmiana zapisana w pliku w `SH/Projekty` albo `SH/sh-system`. Synchronizacja
+nie nadpisuje lokalnych zmian, więc pomija tę kopię. Skrzynki (`SH/Skrzynka`) to nie dotyczy.
 
 **Co robisz:**
 
@@ -82,6 +82,20 @@ więc pomija tę kopię.
    minut). Szczegóły: `~/sh/logs/obsidian-sync.log`.
 3. Synchronizacja teraz, bez czekania: `shctl obsidian sync`.
 4. Czy nie jest wyłączona: plik `~/sh/stan/obsidian-sync.off`.
+
+## Skrzynka: plik nie trafił do repo
+
+**Objaw:** orkiestrator podaje „odrzucone” albo plik dalej leży w skrzynce.
+
+| Powód | Co robisz |
+|---|---|
+| `plik wykonywalny`, `skrypt`, `pakiet aplikacji` | To program albo skrypt; nie trafia do repo. Usuń go ze skrzynki. Jeśli to dokument z nietypowym rozszerzeniem, zmień format (np. PDF) |
+| `za duży` | Pliki powyżej 50 MB nie wchodzą do repo. Zmniejsz albo podziel |
+| `niebezpieczna ścieżka w archiwum`, `dowiązanie symboliczne w archiwum` | ZIP jest podejrzany. Rozpakuj go u siebie i wrzuć same pliki |
+| `zmieniony po przyjęciu` | Plik zmieniłeś po założeniu PR; wejdzie do następnego PR |
+| PR czeka na merge | Nowe pliki poczekają, aż poprzedni PR zostanie scalony |
+
+Stan skrzynki sprawdzisz sam: `shctl skrzynka przyjmij NAZWA --dry-run` (niczego nie zmienia).
 
 ## Restart Maca
 

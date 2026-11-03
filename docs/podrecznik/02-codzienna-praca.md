@@ -31,6 +31,7 @@ Piszesz zwykłym językiem. Te sformułowania orkiestrator rozpoznaje wprost:
 | „nowe zlecenie dla NAZWA: opis” | Intake: specyfikacja (M) albo jedno zadanie (S) |
 | „akceptuję specyfikację” / „akceptuję plan” | Zapis Twojej decyzji, merge, przejście do następnego etapu |
 | „odbieram” (przy odbiorze) | Zapis odbioru, merge, zamknięcie etapu wydania albo zadania S |
+| „materiały w skrzynce” (opcjonalnie „dla NAZWA”, „do 00-intake/zrodla”) | Pliki ze skrzynki trafiają przez PR do repo projektu |
 | Odpowiedź na eskalację, np. „E-002: opcja mock” | Zapis odpowiedzi, powrót do zadania |
 | „wznów” | Odtworzenie stanu z plików i GitHuba, dalsza praca; po limicie sprawdzenie przerwanych zadań |
 | „STOP” | Odpowiedź „Zatrzymuję wszystko” i natychmiastowe zatrzymanie wszystkich agentów |
@@ -49,9 +50,20 @@ Najważniejsza linia to **„Czeka na Ciebie”**. Gdy jest pusta, nic nie musis
 
 ### Akceptacje
 
-Orkiestrator zgłasza w czacie, że etap czeka na Ciebie: podaje numer PR, tryb, ryzyka, otwarte
-pytania i zakres zgody. Checkpoint **nie wysyła powiadomienia push**, więc zaglądaj do czatu albo
-pytaj „status?”.
+Gdy praca czeka na Twoją akceptację, dostajesz push **„Czeka na Twoją akceptację: PROJEKT / ETAP”**.
+Kliknięcie otwiera PR na GitHubie. W czacie orkiestrator podaje szczegóły: tryb, ryzyka, otwarte
+pytania i zakres zgody.
+
+| ETAP w tytule | Co akceptujesz |
+|---|---|
+| `00-intake` | Specyfikację |
+| `04-architektura` | Architekturę i plan, czyli zgodę na realizację |
+| `wydanie` | Odbiór na stagingu |
+| `#NR` | Odbiór zadania trybu S |
+| `podniesienie trybu` | Propozycję zmiany trybu, np. S na M (to eskalacja z numerem `E-NNN`) |
+
+Push przychodzi dopiero po review Codexa z wynikiem PASS. Po poprawkach (nowy commit i nowe PASS)
+przychodzi ponownie.
 
 Dokument do akceptacji jest w PR na GitHubie (gałąź `stage/…`). W Obsidianie pojawi się dopiero po
 merge'u, bo synchronizacja pobiera gałąź `main`.
@@ -78,12 +90,33 @@ dalej. Zgodę na dostęp, koszt albo zakres zapisuje też w `docs/decyzje.md`.
 **Sekretów nie wpisuj do czatu.** Klucz testowy wpisujesz sam do `.env.local` w repo projektu na
 serwerze (`~/sh/projekty/NAZWA/.env.local`), a w czacie piszesz tylko „klucz jest w .env.local”.
 
+## Skrzynka na materiały
+
+Każdy projekt ma w vaulcie folder **`SH/Skrzynka/NAZWA-PROJEKTU/`**. To zwykły folder, nie kopia
+repozytorium, więc możesz do niego zapisywać: przeciągnij pliki w Finderze albo w Obsidianie.
+
+Co tam wrzucać: eksport z Claude Design (ZIP, PNG, PDF, HTML), logo, zdjęcia, teksty, dokumenty od
+klienta.
+
+1. Wrzuć pliki (także w podfolderach albo jako ZIP).
+2. Napisz w czacie: „materiały w skrzynce dla NAZWA”. Domyślnie trafią do
+   `docs/02-design/zrodla/`; inne miejsce podaj wprost, np. „do 00-intake/zrodla”.
+3. Orkiestrator otwiera PR z plikami i podaje, co przyjęto, a co odrzucono.
+4. Po merge'u przyjęte pliki znikają ze skrzynki i trafiają do jej podfolderu
+   `_przeniesione/RRRRMMDD/`. Kopia jest w repo, a w Obsidianie w `docs/` projektu.
+
+**Pliki są sprawdzane, nic nie jest uruchamiane.** Zostają w skrzynce i nie trafiają do repo: programy
+i skrypty (np. `.sh`, `.command`, `.exe`, `.dmg`, `.app`), skróty (dowiązania), pliki powyżej 50 MB.
+ZIP jest rozpakowywany tylko wtedy, gdy nie ma w nim podejrzanych ścieżek ani skrótów; programy z
+archiwum są pomijane. Odrzucone pliki usuń sam albo zostaw, jeśli były tam przez pomyłkę.
+
 ## Powiadomienia ntfy
 
 Wszystkie wysyła `notify.sh` przez ntfy.sh na Twój telefon.
 
 | Tytuł | Priorytet | Co znaczy | Co robisz |
 |---|---|---|---|
+| Czeka na Twoją akceptację: PROJEKT / ETAP | wysoki | Checkpoint po PASS review: specyfikacja, plan, odbiór, odbiór zadania S, podniesienie trybu | Otwórz PR (kliknięcie) i odpowiedz w czacie |
 | Eskalacja E-NNN: PROJEKT | wysoki | Agent potrzebuje Twojej decyzji | Odpowiedz w czacie |
 | Limit claude / Limit codex | wysoki | Wyczerpany limit subskrypcji, praca tego wykonawcy stoi do podanej godziny | Nic, czekasz |
 | Limit X odnowiony | zwykły | Limit wrócił | Napisz „wznów” |
@@ -93,7 +126,8 @@ Wszystkie wysyła `notify.sh` przez ntfy.sh na Twój telefon.
 | Obsidian: klon bez synchronizacji | zwykły | Kopia w vaulcie ma lokalne zmiany albo rozjechała się z GitHubem | [[07-gdy-cos-nie-dziala#Obsidian się nie aktualizuje]] |
 | install.sh: agent niezaladowany | wysoki | Usługa serwera nie wystartowała po instalacji | [[05-serwer-i-skrypty#install.sh]] |
 
-Ta sama eskalacja albo ten sam limit nie przyjdzie drugi raz. Powiadomienie o odnowieniu limitu
+Ta sama eskalacja, ten sam limit ani ta sama akceptacja dla tego samego commita nie przyjdzie drugi
+raz. Powiadomienie o odnowieniu limitu
 przychodzi z opóźnieniem do 5 minut.
 
 ## Obsidian
@@ -104,6 +138,7 @@ Obsidian na serwerze pokazuje dokumenty, nie kod. Vault `~/Documents/Obsidian Va
 |---|---|
 | `SH/Projekty/NAZWA/docs/` | Dokumenty projektu NAZWA |
 | `SH/sh-system/docs/` | Dokumenty systemu, w tym ten podręcznik |
+| `SH/Skrzynka/NAZWA/` | Twoja skrzynka na materiały projektu; jedyne miejsce w `SH/`, w którym zapisujesz |
 
 Kopie aktualizuje serwer co 5 minut. Nowy dokument pojawia się najpóźniej 5 minut po merge'u.
 Jedyna potrzebna wtyczka to **Dataview**.
@@ -140,8 +175,9 @@ Liczniki pochodzą z chwili ostatniej synchronizacji statusu przez orkiestratora
 
 ### Zasady
 
-- W `SH/` **tylko czytasz**. Zapis w Obsidianie zatrzymuje synchronizację tej kopii i nie trafia
-  do repo.
+- W `SH/Projekty` i `SH/sh-system` **tylko czytasz**. Zapis tam zatrzymuje synchronizację tej kopii
+  i nie trafia do repo.
+- Do `SH/Skrzynka/NAZWA` wrzucasz materiały. Synchronizacja jej nie dotyka.
 - Własne notatki trzymaj poza `SH/`, np. w nowym folderze w katalogu głównym vaulta.
 
 ## Codzienna rutyna
@@ -155,7 +191,8 @@ Liczniki pochodzą z chwili ostatniej synchronizacji statusu przez orkiestratora
 **W ciągu dnia:**
 
 - Reaguj na push o eskalacji. Praca niezależna i tak trwa, ale zablokowane zadanie czeka.
-- Gdy orkiestrator zgłosi checkpoint, przeczytaj PR i zaakceptuj albo poproś o zmiany.
+- Push „Czeka na Twoją akceptację”: przeczytaj PR i zaakceptuj albo poproś o zmiany.
+- Nowe materiały od klienta: do skrzynki i „materiały w skrzynce”.
 - Po kamieniu orkiestrator proponuje restart sesji (`/clear` i „wznów”). Zgódź się: stan jest w
   plikach, a świeża sesja pracuje lepiej.
 

@@ -85,3 +85,24 @@ setup() { wspolny_setup; szablon_remote; V="$SH_OBSIDIAN_DIR/demo"; }
   run --separate-stderr "$SHCTL" obsidian unlink ../x
   [ "$status" -eq 2 ]
 }
+
+@test "link zaklada skrzynke na materialy obok Projekty, powtorka jej nie rusza" {
+  S="$T/Obsidian Vault/SH/Skrzynka/demo"
+  run --separate-stderr "$SHCTL" obsidian link demo --json
+  [ "$status" -eq 0 ]
+  [ -d "$S" ]
+  [ ! -e "$S/.git" ]
+  [ "$(jq -r .wynik.skrzynka.utworzono <<<"$output")" = true ]
+  printf 'x' >"$S/plik.png"
+  "$SHCTL" obsidian unlink demo >/dev/null
+  run --separate-stderr "$SHCTL" obsidian link demo --json
+  [ "$(jq -r .wynik.skrzynka.utworzono <<<"$output")" = false ]
+  [ -f "$S/plik.png" ]
+}
+
+@test "SH_SKRZYNKA_DIR zmienia miejsce skrzynki" {
+  export SH_SKRZYNKA_DIR="$T/Inna Skrzynka"
+  run "$SHCTL" obsidian link demo
+  [ "$status" -eq 0 ]
+  [ -d "$T/Inna Skrzynka/demo" ]
+}

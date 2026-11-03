@@ -155,6 +155,8 @@ trwającym projekcie.
 - **Poza autoryzacją.** Nowy zakres, płatna usługa, dostęp, podniesienie trybu albo wygaśnięcie zgody
   wymaga nowej decyzji właściciela przez `shctl escalate`. Zadania niezależne trwają.
 - **Checkpointy właściciela** są tylko te z tabeli trybów: specyfikacja, architektura i plan, odbiór.
+  Każde zatrzymanie na akceptację (także odbiór zadania S i podniesienie trybu) wysyła powiadomienie
+  „Czeka na Twoją akceptację” (`shctl checkpoint`, `shctl escalate --akceptacja`).
 - **Gotowość środowiska.** Przed pierwszym `shctl task dispatch` projektu orkiestrator uruchamia
   `shctl doctor`. Stan `blad` wstrzymuje dispatch: brakujące narzędzie, logowanie albo dostęp staje się
   zadaniem właściciela albo eskalacją i blokuje zadania od niego zależne. Wynik z czasem UTC trafia do

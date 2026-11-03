@@ -538,7 +538,8 @@ więc nie blokuje Claude'a, a błąd wysyłki nie pojawia się w sesji. Diagnoza
 
 Obsidian na tym Macu służy właścicielowi do czytania `docs/`. Vault `~/Documents/Obsidian Vault`
 ma w `SH/` niezależne klony: `SH/sh-system` (docs `sh-system`) i `SH/Projekty/NAZWA` (docs
-projektów, zakłada je `shctl new-project` albo `shctl obsidian link`). Wtyczka Obsidian Git obsługuje
+projektów, zakłada je `shctl new-project` albo `shctl obsidian link`), a obok zwykłe foldery
+`SH/Skrzynka/NAZWA` na materiały właściciela. Wtyczka Obsidian Git obsługuje
 jedno repo na vault, więc aktualizuje je serwer.
 
 LaunchAgent `pl.iskt.softwarehouse.obsidian-sync` (źródło `scripts/server/`, instaluje `install.sh`)
@@ -562,12 +563,16 @@ pokazał „ostatnia udana 2026-11-02T23:50:06+0100”.
 
 - W vaulcie włączona jest tylko wtyczka społeczności **Dataview**. Obsidian Git nie jest potrzebny i
   nie instalujemy go: w vaulcie z wieloma klonami commitowałby albo pomijał niewłaściwe repo.
-- Pliki w `SH/` tylko czytasz. Zmiana zapisana w Obsidianie zatrzymuje synchronizację klonu
+- Pliki w `SH/Projekty` i `SH/sh-system` tylko czytasz. Zmiana zapisana w Obsidianie zatrzymuje synchronizację klonu
   (powiadomienie „Obsidian: klon bez synchronizacji”) i nie trafia do repo. Zmiany w dokumentach
   zlecasz orkiestratorowi, a odpowiedzi na eskalacje dajesz w czacie.
 - Po powiadomieniu wystarczy cofnąć zmianę w Obsidianie albo poprosić orkiestratora o porządek z
   klonem. Nowe dokumenty pojawiają się w ciągu 5 minut od pusha na GitHub.
 - Notatki własne trzymaj poza `SH/`, np. w `Witaj.md` albo nowym folderze w katalogu głównym vaulta.
+- Wyjątek to `SH/Skrzynka/NAZWA`: zwykły folder (nie klon), do którego wrzucasz materiały projektu.
+  Po poleceniu „materiały w skrzynce” orkiestrator wywołuje `shctl skrzynka przyjmij NAZWA`, które
+  przenosi je przez PR do `docs/02-design/zrodla/`, a po merge'u odkłada w `_przeniesione/RRRRMMDD/`.
+  `obsidian sync` skrzynki nie dotyka.
 
 ## Strażnik limitów
 

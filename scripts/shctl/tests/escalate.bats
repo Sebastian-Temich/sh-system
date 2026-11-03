@@ -115,3 +115,10 @@ esk() { "$SHCTL" escalate --dotyczy "#7" --powod "brak klucza" --potrzebne "kluc
   run --separate-stderr "$SHCTL" escalate close E-009 --odpowiedz x
   [ "$status" -eq 3 ]
 }
+
+@test "--akceptacja: powiadomienie o akceptacji zamiast eskalacji" {
+  run "$SHCTL" escalate --dotyczy "#7" --powod "propozycja S do M: zmiana modelu danych" --potrzebne "decyzja" --akceptacja
+  [ "$status" -eq 0 ]
+  grep -q '^high Czeka na Twoją akceptację: demo / podniesienie trybu E-001, #7: propozycja S do M: zmiana modelu danych ' "$T/notified"
+  ! grep -q 'Eskalacja E-001' "$T/notified" || false
+}

@@ -53,6 +53,7 @@ Zmienne środowiska (dla testów i innego układu):
 | `SH_NOTIFY_CMD` | `$SH_DIR/bin/notify.sh` |
 | `SH_CONFIG` | `~/.config/sh/config` |
 | `SH_OBSIDIAN_DIR` | Z `SH_CONFIG`; bez wartości `new-project` pomija klon w vaulcie |
+| `SH_SKRZYNKA_DIR` | `Skrzynka` obok `SH_OBSIDIAN_DIR` (`Obsidian Vault/SH/Skrzynka`); skrzynki na materiały |
 | `SH_SYSTEM_DIR` | `$SH_DIR/sh-system`; repo, do którego `task close` wysyła propozycje |
 | `SHCTL_REVIEW_TIMEOUT` | `3600`; limit czekania `review run` na Codexa, w sekundach |
 | `SHCTL_TEST_TIMEOUT` | `1800`; limit testów w `task resume-check`, w sekundach |
@@ -74,8 +75,9 @@ usuwanie gałęzi po merge'u (`gh repo edit --delete-branch-on-merge`), `setup-l
 frontmatter `konfiguracja.md` (`tryb_procesu`, `etap_wdrozenia: A`, `data`,
 `blok_portow`), blok portów, `supabase/config.toml`, jeśli istnieje, `pominiety` dla etapów spoza
 trybu, `status.md`, opis w `docs/00-intake/zrodlo.md`, `check-dod.sh`, commit i push na main. Na
-końcu zakłada lekki klon `docs/` w `SH_OBSIDIAN_DIR/NAZWA` (sekcja „obsidian”) i informuje, że w
-Obsidianie wystarczy włączyć Obsidian Git dla tego folderu.
+końcu zakłada lekki klon `docs/` w `SH_OBSIDIAN_DIR/NAZWA` (sekcja „obsidian”) i skrzynkę na
+materiały `SH_SKRZYNKA_DIR/NAZWA` (sekcja „skrzynka”). Klon aktualizuje `obsidian sync`; w Obsidianie
+nic nie trzeba włączać.
 
 | Argument | Znaczenie |
 |---|---|
@@ -97,7 +99,8 @@ shctl new-project sklep --opis "Sklep z kawą" --json
   "porty":{"projekt":"sklep","baza":"551","zakres":"55121-55129","api":"55121","db":"55122",
     "studio":"55123","mail":"55124","inspector":"55125","dev":"55126","analytics":"55127",
     "shadow":"55128","pooler":"55129"},
-  "obsidian":{"katalog":"/Users/.../Obsidian Vault/SH/Projekty/sklep","utworzono":true}}}
+  "obsidian":{"katalog":"/Users/.../Obsidian Vault/SH/Projekty/sklep","utworzono":true,
+    "skrzynka":{"katalog":"/Users/.../Obsidian Vault/SH/Skrzynka/sklep","utworzono":true}}}}
 ```
 
 Przy `--dry-run` pole `porty` to sam zakres, np. `"55121-55129"`.
@@ -190,7 +193,7 @@ shctl decision add --co "Postgres zamiast SQLite" --dlaczego "potrzebne RLS" --c
 ## escalate
 
 ```sh
-shctl escalate --dotyczy "#NR|ETAP" --powod "..." --potrzebne "..." [--opcje "A;B"] [--priorytet high]
+shctl escalate --dotyczy "#NR|ETAP" --powod "..." --potrzebne "..." [--opcje "A;B"] [--priorytet high] [--akceptacja]
 shctl escalate close E-NNN --odpowiedz "..."
 ```
 
@@ -198,6 +201,10 @@ Otwarcie: tworzy `docs/07-realizacja/escalations/E-NNN.md`, ustawia etykietę `s
 issue albo status `escalated` etapu, aktualizuje sekcję „Otwarte eskalacje” w `status.md` i woła
 `notify.sh` (domyślnie `high`). Plik ma frontmatter ze stanem: `status`, `dotyczy`, `powod`,
 `priorytet`, `poprzedni_status`, `powiadomiono`.
+
+`--akceptacja` oznacza decyzję do akceptacji właściciela, dziś propozycję podniesienia trybu
+(`proces-v1.md`, „Zasady” trybów). Plik, etykieta i status są takie same, a powiadomienie ma tytuł
+„Czeka na Twoją akceptację: NAZWA / podniesienie trybu” i treść `E-NNN, DOTYCZY: POWÓD`.
 
 Powtórka z tym samym `--dotyczy` i `--powod` dotyczy tej samej otwartej eskalacji. Nieudane
 powiadomienie daje kod 1, a ponowienie komendy wysyła je jeszcze raz.
@@ -214,6 +221,41 @@ shctl escalate --dotyczy "#12" --powod "brak klucza Stripe" --potrzebne "klucz t
 ```json
 {"ok":true,"komenda":"escalate","dry_run":false,"wynik":{
   "id":"E-001","dotyczy":"#12","plik":"docs/07-realizacja/escalations/E-001.md","nowa":true}}
+```
+
+## checkpoint
+
+```sh
+shctl checkpoint 00-intake|04-architektura|wydanie|#NR [--opis "..."]
+```
+
+Powiadamia właściciela, że praca czeka na jego akceptację (checkpointy z `proces-v1.md`, „Skala
+procesu”): specyfikacja (`00-intake`), architektura i plan (`04-architektura`), odbiór (`wydanie`) i
+odbiór zadania trybu S (`#NR`). Podniesienie trybu nie ma PR: idzie przez `escalate --akceptacja`.
+
+PR wynika z celu: dla etapu najnowszy otwarty PR z gałęzi `stage/ETAP`, dla `#NR` PR zadania
+(`Closes #NR` albo gałąź `task/NR-`), jak w `task close`. Kolejno:
+
+1. PR musi być otwarty, inaczej kod 4;
+2. komentarz review dla bieżącego commita PR musi mieć PASS (ten sam odczyt co `task close`), inaczej
+   kod 4: właściciel akceptuje pracę po review;
+3. `notify.sh high "Czeka na Twoją akceptację: NAZWA / CEL" "OPIS, PR #N[. --opis]" URL_PR`; adres PR
+   trafia do nagłówka `Click`;
+4. wpis `CEL HEAD` w `~/sh/stan/checkpointy/NAZWA`.
+
+Powtórka dla tego samego commita nic nie wysyła (`"ponownie":true`). Nowy commit w PR, np. po
+poprawkach z akceptacji, i nowy PASS dają nowe powiadomienie. Nieudane powiadomienie to kod 1 bez wpisu
+w stanie, więc ponowienie wysyła je jeszcze raz. Komenda nie zmienia plików projektu ani GitHuba.
+
+```sh
+shctl checkpoint 04-architektura --opis "4 kamienie, Resend darmowy" --json
+```
+
+```json
+{"ok":true,"komenda":"checkpoint","dry_run":false,"wynik":{
+  "projekt":"sklep","cel":"04-architektura","pr":2,"head":"68373f5...",
+  "url":"https://github.com/Sebastian-Temich/sklep/pull/2",
+  "tytul":"Czeka na Twoją akceptację: sklep / 04-architektura","powiadomiono":true,"ponownie":false}}
 ```
 
 ## ports
@@ -323,7 +365,8 @@ shctl obsidian link sklep --json
   "katalog":"/Users/.../Obsidian Vault/SH/Projekty/sklep","utworzono":true}}
 ```
 
-`unlink` zwraca `{"katalog":"...","usunieto":true}`.
+`link` zakłada też skrzynkę na materiały, jeśli jej brak (sekcja „skrzynka”); wynik ma pole
+`skrzynka` jak w `new-project`. `unlink` skrzynki nie usuwa i zwraca `{"katalog":"...","usunieto":true}`.
 
 ### obsidian sync
 
@@ -369,6 +412,77 @@ klony.
 ```json
 {"ok":true,"komenda":"obsidian","dry_run":false,"wynik":{"wylaczona":false,"pominiete":0,"klony":[
   {"katalog":"/Users/.../Obsidian Vault/SH/sh-system","stan":"ok","opis":"9c9dca4..30b26ec (commitów: 1)"}]}}
+```
+
+## skrzynka
+
+```sh
+shctl skrzynka przyjmij NAZWA [--etap ETAP/KATALOG]
+```
+
+Skrzynka to zwykły folder w vaulcie, `SH_SKRZYNKA_DIR/NAZWA` (domyślnie
+`Obsidian Vault/SH/Skrzynka/NAZWA`), do którego właściciel wrzuca materiały: makiety i eksport z Claude
+Design, logo, teksty. Nie jest repo git i `obsidian sync` go nie dotyka. Zakłada go `new-project` albo
+`obsidian link`.
+
+`przyjmij` przenosi materiały do repo w dwóch wywołaniach:
+
+1. **Partia.** Pliki ze skrzynki (bez `_przeniesione/`, plików i katalogów ukrytych oraz `__MACOSX`)
+   przechodzą kontrolę i trafiają do `docs/ETAP/KATALOG` (domyślnie `docs/02-design/zrodla`) z
+   zachowaniem podkatalogów i prawami 644. Commit `ETAP: materiały ze skrzynki (N)` powstaje w
+   odłączonym worktree `~/sh/wt/NAZWA/skrzynka-ETAP` na bazie `origin/stage/ETAP`, a bez takiej gałęzi
+   na `origin/main`, i idzie pushem na `stage/ETAP`. Lokalne gałęzie repo głównego zostają nietknięte.
+   Potem PR do `main` (istniejący otwarty PR z tej gałęzi jest używany ponownie) z listą przyjętych i
+   odrzuconych plików. Stan partii (PR i skrót `git hash-object` każdego pliku) trafia do
+   `~/sh/stan/skrzynka/NAZWA.json`. Pliki zostają w skrzynce.
+2. **Po merge'u.** Kolejne wywołanie widzi scalony PR i przenosi przyjęte pliki do
+   `_przeniesione/RRRRMMDD/` w skrzynce, z zachowaniem ścieżek; puste katalogi usuwa. Plik zmieniony
+   po przyjęciu zostaje (`pozostawione`) i wchodzi do następnej partii w tym samym wywołaniu.
+
+| Stan partii | Wynik |
+|---|---|
+| PR otwarty | `stan: czeka_na_merge`, nowe pliki czekają na kolejną partię |
+| PR scalony | przeniesienie, potem nowa partia, jeśli są nowe pliki |
+| PR zamknięty bez merge'a | kod 4, stan partii usunięty, pliki zostają; kolejne wywołanie zakłada nowy PR |
+
+Pliki to dane nieufne: komenda niczego nie uruchamia i nie otwiera ich inaczej niż do odczytu
+nagłówka. Odrzuca, zostawiając w skrzynce:
+
+| Co | Powód w wyniku |
+|---|---|
+| Dowiązanie symboliczne | `dowiązanie symboliczne` |
+| Pakiet aplikacji (katalog `.app`, `.bundle`, `.framework`, `.pkg` i podobne) | `pakiet aplikacji` |
+| Rozszerzenie wykonywalne (m.in. `.sh`, `.command`, `.exe`, `.dmg`, `.pkg`, `.py`, `.jar`, `.dylib`) | `plik wykonywalny (.ROZSZ)` |
+| Nagłówek ELF, Mach-O albo PE | `plik wykonywalny (nagłówek …)` |
+| Plik zaczynający się od `#!` | `skrypt (nagłówek #!)` |
+| Plik powyżej 50 MB | `za duży` |
+| Znaki sterujące w nazwie | `znaki sterujące w nazwie` |
+
+ZIP jest rozpakowywany do folderu o nazwie archiwum (`makiety.zip` → `KATALOG/makiety/`), tylko gdy
+lista wpisów (`zipinfo`) przejdzie kontrolę: brak ścieżek bezwzględnych, `..` i `\`, brak dowiązań,
+najwyżej 2000 plików i 500 MB po rozpakowaniu. Inaczej całe archiwum jest odrzucane. Po rozpakowaniu
+do katalogu tymczasowego `unzip` bez `-:` jeszcze raz sprawdzane są dowiązania, a pliki wykonywalne z
+archiwum i śmieci systemowe (`__MACOSX`, pliki ukryte) są pomijane (`ARCHIWUM:ŚCIEŻKA` w
+`odrzucone`). Archiwum bez plików do przyjęcia jest odrzucane. Inne archiwa (`.tar`, `.7z`) trafiają
+do repo bez rozpakowania.
+
+`--etap` to ścieżka względem `docs/`, której pierwszy element jest etapem (`00-intake/zrodla` daje
+gałąź `stage/00-intake`); `..`, `/` na początku i znaki spoza `A-Za-z0-9._/-` to kod 2. Gdy skrzynka
+nie zawiera niczego nowego: `stan: pusto`. Gdy wszystko zostało odrzucone: kod 4. Ta sama treść już na
+`main`: pliki od razu do `_przeniesione/`, bez PR. Brak skrzynki: kod 3. `--dry-run` sprawdza pliki,
+nie wypycha i nie zapisuje stanu (`stan: do_przyjecia`). Wymaga `unzip` i `zipinfo` tylko przy ZIP.
+
+```sh
+shctl skrzynka przyjmij sklep --json
+```
+
+```json
+{"ok":true,"komenda":"skrzynka","dry_run":false,"wynik":{
+  "projekt":"sklep","skrzynka":"/Users/.../Obsidian Vault/SH/Skrzynka/sklep","stan":"pr_otwarty",
+  "cel":"docs/02-design/zrodla","galaz":"stage/02-design","pr":7,
+  "url":"https://github.com/Sebastian-Temich/sklep/pull/7","przyjete":["logo.png","makiety.zip"],
+  "odrzucone":[{"plik":"makiety.zip:makiety/run.sh","powod":"plik wykonywalny (.sh)"}],
+  "przeniesione":[],"pozostawione":[]}}
 ```
 
 ## doctor

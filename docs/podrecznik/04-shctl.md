@@ -88,7 +88,8 @@ shctl task resume-check 12 --bez-testow --projekt strona-firmowa
 ### new-project
 
 Zakłada projekt: repo z szablonu (domyślnie prywatne), klon w `~/sh/projekty/NAZWA`, etykiety, blok
-portów bazy, konfigurację, kopię `docs/` w Obsidianie, commit i push.
+portów bazy, konfigurację, kopię `docs/` w Obsidianie, skrzynkę na materiały
+`SH/Skrzynka/NAZWA`, commit i push.
 
 ```sh
 shctl new-project strona-firmowa --opis "Strona firmowa z formularzem kontaktowym"
@@ -122,7 +123,7 @@ Kopie dokumentów w vaulcie Obsidiana.
 
 ```sh
 shctl obsidian sync                    # aktualizacja wszystkich kopii teraz
-shctl obsidian link stary-projekt      # kopia docs/ dla projektu założonego wcześniej
+shctl obsidian link stary-projekt      # kopia docs/ i skrzynka dla projektu założonego wcześniej
 shctl obsidian unlink stary-projekt    # usunięcie kopii przy archiwizacji
 ```
 
@@ -131,7 +132,30 @@ nie nadpisuje. Serwer uruchamia go sam co 5 minut. `unlink` odmawia, gdy kopia m
 zmiany.
 
 **Kiedy samemu:** `sync`, gdy nie chcesz czekać 5 minut. `link` i `unlink` przy archiwizacji albo
-przy projekcie bez kopii.
+przy projekcie bez kopii lub skrzynki. `unlink` skrzynki nie usuwa.
+
+### skrzynka
+
+Przenosi Twoje materiały ze skrzynki `SH/Skrzynka/NAZWA` do repo projektu.
+
+```sh
+shctl skrzynka przyjmij strona-firmowa                          # do docs/02-design/zrodla
+shctl skrzynka przyjmij strona-firmowa --etap 00-intake/zrodla  # inne miejsce
+shctl skrzynka przyjmij strona-firmowa --dry-run                # tylko sprawdza pliki
+```
+
+Działa w dwóch krokach:
+
+1. Sprawdza pliki, kopiuje przyjęte do `docs/ETAP/KATALOG` na gałęzi `stage/ETAP` i otwiera PR. Pliki
+   zostają w skrzynce.
+2. Po merge'u PR kolejne wywołanie przenosi je w skrzynce do `_przeniesione/RRRRMMDD/` i od razu
+   bierze nowe pliki, jeśli są.
+
+Programy, skrypty, skróty i pliki powyżej 50 MB są odrzucane i zostają w skrzynce. ZIP jest
+rozpakowywany tylko po kontroli ścieżek; programy z archiwum są pomijane. Nic nie jest uruchamiane.
+
+**Kiedy samemu:** `--dry-run`, gdy chcesz sprawdzić, co zostanie przyjęte. Resztę robi orkiestrator na
+„materiały w skrzynce”.
 
 ## Etapy, dokumenty, decyzje
 
@@ -177,6 +201,9 @@ Otwiera eskalację: plik `E-NNN.md`, status zadania lub etapu, wpis w `status.md
 shctl escalate --dotyczy "#9" --powod "brak klucza testowego Resend" --potrzebne "klucz w .env.local" --opcje "czekać;mock" --projekt strona-firmowa
 ```
 
+Z `--akceptacja` to propozycja do Twojej akceptacji (dziś: podniesienie trybu), a push ma tytuł
+„Czeka na Twoją akceptację: PROJEKT / podniesienie trybu” zamiast „Eskalacja”.
+
 ### escalate close
 
 Zamyka eskalację Twoją odpowiedzią i przywraca poprzedni status.
@@ -186,6 +213,22 @@ shctl escalate close E-001 --odpowiedz "klucz testowy jest w .env.local" --proje
 ```
 
 **Kiedy samemu:** nie trzeba. Odpowiedz w czacie, orkiestrator zamknie eskalację i zrobi commit.
+
+### checkpoint
+
+Wysyła Ci push „Czeka na Twoją akceptację: PROJEKT / ETAP” z linkiem do PR (kliknięcie otwiera PR).
+Działa tylko, gdy review dało PASS dla bieżącego commita PR. Dla tego samego commita nie wysyła drugi
+raz.
+
+```sh
+shctl checkpoint 00-intake --projekt strona-firmowa         # specyfikacja
+shctl checkpoint 04-architektura --projekt strona-firmowa   # architektura i plan
+shctl checkpoint wydanie --projekt strona-firmowa           # odbiór
+shctl checkpoint "#20" --projekt strona-firmowa             # odbiór zadania S
+```
+
+**Kiedy samemu:** nie trzeba, wywołuje go orkiestrator. Odmowa (kod 4) znaczy, że PR nie ma jeszcze
+PASS albo nie istnieje.
 
 ## Zadania i review
 
