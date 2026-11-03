@@ -123,8 +123,12 @@ launchctl kickstart gui/$(id -u)/pl.iskt.softwarehouse.sh-start
 
 1. Na serwerze (albo przez SSH): `~/sh/bin/sh-start.sh`. Uruchamia orkiestratora tylko wtedy, gdy
    nie działa, i podłącza Cię do herdr.
-2. Sprawdź `~/sh/logs/sh-start.log`. Wpis „autostart wyłączony przez właściciela” oznacza flagę
-   `~/sh/stan/autostart.off`.
+2. Sprawdź `~/sh/logs/sh-start.log`. Ostatni wpis przebiegu ma kod wyjścia:
+   - `gotowe (kod 0)`: skrypt uruchomił orkiestratora. Jeśli mimo to go nie ma, zginął później;
+     sprawdź `~/sh/logs/herdr-server.log` (np. `server shutdown initiated reason=SIGTERM`);
+   - `UWAGA (kod 0)`: treść mówi, co poszło nie tak, np. druga instancja w `~/sh`;
+   - `BLAD …, krok: ETAP (kod N)`: miejsce zatrzymania; kod 142 to herdr bez odpowiedzi;
+   - wpis „autostart wyłączony przez właściciela” oznacza flagę `~/sh/stan/autostart.off`.
 3. W nowej sesji napisz „wznów”.
 
 Odłączenie od herdr bez zabijania sesji: `ctrl+b`, potem `q`.

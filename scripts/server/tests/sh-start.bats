@@ -63,7 +63,14 @@ echo "herdr \$*" >>"$T/calls"
 case "\$1 \$2" in
   "workspace list") echo '{"result":{"workspaces":[{"label":"sh","workspace_id":"w1"}]}}' ;;
   "pane list") echo '{"result":{"panes":[{"label":"orkiestrator","pane_id":"w1:p1"},{"label":"powloka","pane_id":"w1:p2"}]}}' ;;
-  "pane process-info") echo '{"result":{"process_info":{"foreground_processes":[{"cmdline":"-zsh"}]}}}' ;;
+  "pane process-info")
+    [ ! -f "$T/pi_fail" ] || exit 3
+    [ ! -f "$T/pi_hang" ] || exec sleep 30
+    if [ -f "$T/run_cmd" ] && [ ! -f "$T/run_output" ]; then
+      echo '{"result":{"process_info":{"foreground_processes":[{"cmdline":"-zsh"},{"cmdline":"claude remote-control"}]}}}'
+    else
+      echo '{"result":{"process_info":{"foreground_processes":[{"cmdline":"-zsh"}]}}}'
+    fi ;;
   "pane read") cat "$T/pane" 2>/dev/null ;;
   "pane run") printf '%s\n' "\$4" >"$T/run_cmd"; cat "$T/run_output" >>"$T/pane" 2>/dev/null ;;
 esac
@@ -110,4 +117,100 @@ MOCK
   [ "$status" -eq 0 ]
   [[ "$output" == *"PID 4242"*"nie uruchamiam drugiej instancji"* ]]
   ! grep -q '^herdr pane run' "$T/calls"
+}
+
+# Ostatnia linia wyjscia to jedyny wpis koncowy przebiegu.
+last_line() { printf '%s\n' "$output" | tail -n 1; }
+final_count() { printf '%s\n' "$output" | grep -cE 'sh-start: (gotowe|UWAGA|BLAD): .*\(kod [0-9]+\)$' || true; }
+
+@test "udany start: start na poczatku, gotowe z kodem 0 na koncu" {
+  mock_herdr
+  HOME="$T/home" SH_SERVED_WAIT_MS=0 PATH="$T/mock:$PATH" run -- bash "$REPO/scripts/server/sh-start.sh" --no-attach
+  [ "$status" -eq 0 ]
+  printf '%s\n' "$output" | head -n 1 | grep -q 'sh-start: start: tryb --no-attach, PID '
+  [[ "$(last_line)" == *"sh-start: gotowe: workspace w1, orkiestrator w1:p1 (kod 0)" ]]
+  [ "$(final_count)" -eq 1 ]
+}
+
+@test "orkiestrator nie wstal po starcie: wpis koncowy UWAGA z kodem 0" {
+  mock_herdr
+  : >"$T/run_output"
+  HOME="$T/home" SH_SERVED_WAIT_MS=0 PATH="$T/mock:$PATH" run -- bash "$REPO/scripts/server/sh-start.sh" --no-attach
+  [ "$status" -eq 0 ]
+  [[ "$(last_line)" == *"sh-start: UWAGA: workspace w1, orkiestrator w1:p1; ostrzezen: 1, ostatnie: po 0 ms nie widac procesu claude w w1:p1 (kod 0)" ]]
+}
+
+@test "druga instancja: wpis koncowy UWAGA z kodem 0" {
+  mock_herdr
+  echo "Error: This folder is already served by a terminal claude remote-control" >"$T/run_output"
+  start --no-attach
+  [ "$status" -eq 0 ]
+  [[ "$(last_line)" == *"sh-start: UWAGA: "*"nie uruchamiam drugiej instancji (kod 0)" ]]
+  [ "$(final_count)" -eq 1 ]
+}
+
+@test "autostart wylaczony: wpis koncowy gotowe z kodem 0" {
+  touch "$T/home/sh/stan/autostart.off"
+  start --autostart
+  [ "$status" -eq 0 ]
+  [[ "$(last_line)" == *"sh-start: gotowe: autostart wyłączony, nic nie uruchamiam (kod 0)" ]]
+}
+
+@test "nieznana opcja: BLAD z krokiem i kodem 1" {
+  start --cos
+  [ "$status" -eq 1 ]
+  [[ "$(last_line)" == *"sh-start: BLAD: nieznana opcja: --cos, krok: przygotowanie (kod 1)" ]]
+  [ "$(final_count)" -eq 1 ]
+}
+
+@test "herdr zwraca blad przy sprawdzaniu panelu: BLAD z krokiem, linia i kodem" {
+  mock_herdr
+  touch "$T/pi_fail"
+  start --no-attach
+  [ "$status" -ne 0 ]
+  [ "$status" -eq 3 ]
+  [[ "$(last_line)" == *"sh-start: BLAD: nieudane polecenie, krok: czekanie na powloke panelu, linia "*"herdr pane process-info"*"(kod 3)" ]]
+  [ "$(final_count)" -eq 1 ]
+}
+
+@test "zawieszony herdr: BLAD z kodem 142 zamiast cichego zawieszenia" {
+  mock_herdr
+  touch "$T/pi_hang"
+  HOME="$T/home" SH_HERDR_TIMEOUT=1 PATH="$T/mock:$PATH" run -- bash "$REPO/scripts/server/sh-start.sh" --no-attach
+  [ "$status" -eq 142 ]
+  [[ "$(last_line)" == *"sh-start: BLAD: herdr nie odpowiedzial w 1 s, krok: czekanie na powloke panelu, linia "*"(kod 142)" ]]
+  [ "$(final_count)" -eq 1 ]
+}
+
+@test "SIGTERM w trakcie czekania: BLAD z sygnalem, krokiem i kodem 143" {
+  mock_herdr
+  HOME="$T/home" SH_SERVED_WAIT_MS=20000 PATH="$T/mock:$PATH" \
+    bash "$REPO/scripts/server/sh-start.sh" --no-attach >"$T/out" 2>&1 &
+  local pid=$! i
+  for ((i = 0; i < 50; i++)); do grep -q 'uruchamiam orkiestratora' "$T/out" && break; sleep 0.2; done
+  kill -TERM "$pid"
+  local rc=0
+  wait "$pid" || rc=$?
+  [ "$rc" -eq 143 ]
+  [[ "$(tail -n 1 "$T/out")" == *"sh-start: BLAD: przerwano sygnalem TERM, krok: "*" (kod 143)" ]]
+  grep -qE "krok: (uruchamianie orkiestratora|czekanie na start orkiestratora) \\(kod 143\\)$" "$T/out"
+}
+
+# Agenty, ktore uruchamiaja sh-start.sh, nie moga zabijac grupy procesow po swoim zakonczeniu.
+abandon_pg() {
+  grep -A1 '<key>AbandonProcessGroup</key>' "$REPO/scripts/server/$1" | grep -q '<true/>'
+}
+
+@test "plisty sh-start i watchdog maja AbandonProcessGroup" {
+  abandon_pg pl.iskt.softwarehouse.sh-start.plist
+  abandon_pg pl.iskt.softwarehouse.sh-watchdog.plist
+}
+
+@test "obsidian-sync bez AbandonProcessGroup: launchd sprzata po przebiegu" {
+  ! abandon_pg pl.iskt.softwarehouse.obsidian-sync.plist
+}
+
+@test "serwer herdr startuje we wlasnej sesji (setsid)" {
+  grep -q "POSIX::setsid(); exec @ARGV" "$REPO/scripts/server/sh-start.sh"
+  grep -q '"$HERDR_BIN" server' "$REPO/scripts/server/sh-start.sh"
 }

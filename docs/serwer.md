@@ -222,6 +222,25 @@ start, gdy `pgrep`/`lsof` znajdą `claude remote-control` z cwd `~/sh` poza pane
 przez 8 s szuka w panelu nowego komunikatu „This folder is already served by a terminal claude
 remote-control”; w obu przypadkach zostawia wpis `UWAGA` w logu i kończy z kodem 0.
 
+Log `~/sh/logs/sh-start.log`: każdy przebieg zaczyna się wpisem `start: tryb …, PID …, rodzic: …`
+(widać, czy uruchomił go launchd, strażnik czy człowiek) i kończy dokładnie jednym wpisem z kodem
+wyjścia:
+
+| Wpis końcowy | Znaczenie |
+|---|---|
+| `gotowe: workspace w2, orkiestrator w2:p1 (kod 0)` | Wszystko działa |
+| `UWAGA: …; ostrzezen: N, ostatnie: … (kod 0)` | Druga instancja, brak Dockera albo sieci, powłoka bez gotowości, brak procesu claude po starcie |
+| `BLAD: …, krok: ETAP, linia N: POLECENIE (kod N)` | Skrypt przerwany; `ETAP` to miejsce zatrzymania, np. `sprawdzanie drugiej instancji`, `czekanie na powloke panelu`, `czekanie na start orkiestratora` |
+
+Kod 142 to herdr bez odpowiedzi w 30 s (`SH_HERDR_TIMEOUT`), 143/129/130 to `SIGTERM`/`SIGHUP`/`SIGINT`.
+Brak wpisu końcowego oznacza `SIGKILL` albo awarię samej powłoki.
+
+Serwer herdr startuje we własnej sesji (`setsid` przez `perl`), a plisty `sh-start` i `sh-watchdog`
+mają `AbandonProcessGroup`. Bez tego launchd po zakończeniu przebiegu zabija całą grupę procesów
+joba. 2026-11-03 tak zginął orkiestrator uruchomiony przez strażnika: `sh-start.sh` zapisał
+„gotowe” o 16:54:26, strażnik skończył o 16:54:28, a serwer herdr dostał `SIGTERM` 0,97 s później.
+`obsidian-sync` (tylko `git pull`) celowo nie ma tego klucza: launchd sprząta po nim zawieszone procesy.
+
 Ręcznie z terminala:
 
 ```sh
@@ -614,7 +633,7 @@ pokazał „ostatnia udana 2026-11-02T23:50:06+0100”.
 | Plik | Rola |
 |---|---|
 | `scripts/server/sh-watchdog.sh` | Skrypt, symlink w `~/sh/bin` |
-| `scripts/server/pl.iskt.softwarehouse.sh-watchdog.plist` | LaunchAgent, `StartInterval` 300 s, `/bin/bash` 3.2 |
+| `scripts/server/pl.iskt.softwarehouse.sh-watchdog.plist` | LaunchAgent, `StartInterval` 300 s, `/bin/bash` 3.2, `AbandonProcessGroup` (orkiestrator przeżywa koniec przebiegu) |
 | `~/sh/watchdog-wzorce.txt` | Wzorce komunikatów, kopia robocza `scripts/server/watchdog-wzorce.txt` |
 | `~/sh/limity.md` | Aktywne wstrzymania, format w `docs/shctl.md` („Format ~/sh/limity.md”) |
 | `~/sh/stan/watchdog-widziane.txt` | Komunikaty już obsłużone |
