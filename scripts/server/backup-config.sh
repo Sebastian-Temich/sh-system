@@ -55,6 +55,7 @@ find .claude \( \
     -o -path .claude/chrome -o -path .claude/downloads -o -path .claude/file-history \
     -o -path .claude/paste-cache -o -path .claude/projects -o -path .claude/session-env \
     -o -path .claude/sessions -o -path .claude/shell-snapshots -o -path .claude/state \
+    -o -path .claude/telemetry \
     -o -path .claude/plugins/.trash -o -path .claude/plugins/cache \
     -o -path .claude/plugins/data -o -path .claude/plugins/marketplaces \
     -o -path .claude/plugins/store -o -path .claude/plugins/synced \

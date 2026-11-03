@@ -209,8 +209,8 @@ Orkiestrator z telefonu: aplikacja Claude, zakładka Code, sesja `sh-orkiestrato
 
 ### SSH
 
-Stan z 2026-11-01: Zdalne logowanie jest włączone (port 22 słucha), hasła są dozwolone, a
-`~/.ssh/authorized_keys` nie istnieje. Włączenie i wyłączenie: Ustawienia systemowe → Ogólne →
+Stan z 2026-11-03 (bez zmian od 2026-11-01): Zdalne logowanie jest włączone (port 22 słucha), hasła
+są dozwolone, a `~/.ssh/authorized_keys` nie istnieje. Włączenie i wyłączenie: Ustawienia systemowe → Ogólne →
 Udostępnianie → Zdalne logowanie albo `sudo systemsetup -setremotelogin on|off`. Przejście na
 same klucze opisuje sekcja „Izolacja agentów”.
 
@@ -663,15 +663,20 @@ Test na serwerze 2026-11-02: panel `test-watchdog` w workspace `sh` z komunikate
 Agenci pracują autonomicznie w `~/sh`. Na maszynie nie ma ważnych danych, więc izolacja jest
 lekka: chroni przed pomyłką agenta, nie przed celowym obejściem.
 
-### Stan systemu (2026-11-01)
+### Stan systemu (2026-11-03)
+
+Przegląd bez sudo, powtórzony 2026-11-03. Od 2026-11-01 nic się nie zmieniło.
 
 | Obszar | Stan | Uwagi |
 |---|---|---|
-| FileVault | wyłączony | |
-| Firewall | włączony | bez trybu ukrycia; podpisane aplikacje przepuszczane |
-| Zdalne logowanie | włączone | hasła dozwolone, brak `authorized_keys` |
-| pmset | `sleep 0`, `disksleep 0`, `autorestart 1`, `womp 1` | ekran gaśnie po 15 min, działa `caffeinate` |
-| Docker Desktop | `AutoStart: false` | uruchamia go `sh-start.sh` |
+| FileVault | wyłączony | `fdesetup status` |
+| Firewall | włączony | bez trybu ukrycia i bez „blokuj wszystko”; podpisane aplikacje (wbudowane i pobrane) przepuszczane |
+| Zdalne logowanie | włączone | `com.openssh.sshd` włączony, port 22 słucha; hasła dozwolone (`sshd_config` bez `PasswordAuthentication`, `UsePAM yes`); `~/.ssh/authorized_keys` nie istnieje, w `~/.ssh` nie ma też kluczy `id_*` |
+| pmset | `sleep 0`, `disksleep 0`, `autorestart 1`, `womp 1`, `powernap 0` | ekran gaśnie po 3 min (`displaysleep 3`); uśpienie blokują `caffeinate`, `sharingd` i TeamViewer |
+| Docker Desktop | `AutoStart: false` | w `settings-store.json`; uruchamia go `sh-start.sh` |
+
+Przejścia na same klucze nie wykonano: w `authorized_keys` nie ma żadnego klucza właściciela, więc
+wyłączenie haseł odcięłoby SSH. Najpierw krok 1 z bloku niżej.
 
 Komendy do wykonania przez właściciela (wymagają sudo):
 
@@ -720,6 +725,25 @@ bezwzględną, do tego służy `//`. Format: <https://code.claude.com/docs/en/pe
 Test z 2026-11-01: `ls ~/Pictures`, `cat`, `find` i narzędzie Read są blokowane, zaś
 `~/Documents` działa. Narzędzie Read jest też blokowane w `Application Support/Firefox`.
 
+Test z 2026-11-03, sesja w `~/sh`: Bash `ls ~/Pictures` daje „Permission to use Bash with command
+ls ~/Pictures has been denied”, a Read na `~/Pictures` daje „File is in a directory that is denied by
+your permission settings”. `ls ~/Documents` działa. Ten sam wynik w sesji
+`claude -p --settings .claude/roles/worker/settings.json` w `~/sh/projekty/sh-test-20261102-2232`,
+mimo `allow` dla `Read` i `Bash(ls *)` w profilu workera.
+
+Zgodność z innymi ustawieniami (sprawdzone 2026-11-03):
+
+| Plik | Co ma | Kolizja |
+|---|---|---|
+| `~/sh/.claude/settings.json` (orkiestrator, symlink do `scripts/server/orkiestrator-settings.json`) | `skillOverrides` i deny `Skill(NAZWA)` | brak: inne reguły, listy `deny` się sumują |
+| `.claude/roles/worker/settings.json` w szablonie | `allow` m.in. `Read`, `Edit`, `Write`, `Bash(ls *)`, `Bash(cp *)` | brak: deny z dowolnego poziomu wygrywa z `allow` z innego |
+| `.claude/roles/reviewer/settings.json` w szablonie | `allow` `Read`, deny `Edit`, `Write` | brak |
+| `~/sh/.claude/settings.local.json` | tylko MCP | brak |
+
+Zasada z dokumentacji („Settings precedence”): deny z dowolnego zakresu jest sprawdzany przed allow,
+więc profil projektu nie może odblokować ścieżek z `~/.claude/settings.json`. Nowy profil roli też
+nie musi powtarzać tych reguł.
+
 Ograniczenia:
 
 - Reguły obejmują narzędzia Claude'a i rozpoznawane polecenia powłoki. Według dokumentacji nie
@@ -736,7 +760,8 @@ Ograniczenia:
 `exclude_tmpdir_env_var`. Kopia sprzed zmiany: `~/.codex/config.toml.bak-sandbox`.
 
 Test przez `codex exec`, uruchomiony w `~/sh`: zapis w katalogu roboczym działa, a `/tmp`,
-`$TMPDIR` i `~` zwracają „Operation not permitted”.
+`$TMPDIR` i `~` zwracają „Operation not permitted”. Stan pliku sprawdzony ponownie 2026-11-03: bez
+zmian. Profil `reviewer.config.toml` ma własne `sandbox_mode = "read-only"` i nie był zmieniany.
 
 - `codex sandbox -- <komenda>` nie czyta `sandbox_mode`, więc nie nadaje się do tego testu.
 - Narzędzia wymagające katalogu tymczasowego mogą nie działać w Codexie. Wtedy usuń
@@ -796,6 +821,33 @@ Przegląd z 2026-11-01 objął tylko ścieżki i nazwy zmiennych, bez otwierania
 
 Te ścieżki nie są objęte regułami deny.
 
+#### Klucze produkcyjne (2026-11-03)
+
+Przegląd bez wypisywania wartości: nazwy zmiennych, a z wartości tylko klasyfikacja (host, długość,
+prefiks typu `sk_live_`). Objął zmienne środowiskowe sesji, `launchctl getenv`, pliki startowe
+powłoki, pliki `.env*` w `~/Projects`, `~/Documents`, `~/Desktop`, `~/Downloads`, `~/sh`,
+`~/.hermes`, `~/.paperclip` i `~/forgejo` oraz pliki konfiguracji narzędzi w `~`.
+
+Kluczy produkcyjnych aplikacji (Stripe live, Supabase service role, bazy produkcyjne, Vercel) w
+plikach nie ma. `~/Projects` nie ma plików `.env`. Dostęp produkcyjny dają za to logowania narzędzi:
+
+| Gdzie | Co | Produkcja? |
+|---|---|---|
+| `gh` (token w pęku kluczy, konto `Sebastian-Temich`) | zakresy `repo`, `workflow`, `read:org`, `gist` | **Tak.** GitHub to środowisko produkcyjne procesu; token pozwala pchać, mergować i zmieniać workflow we wszystkich repo konta. Deny w profilach ról blokuje `gh pr merge`, `gh api`, `gh secret`, `gh workflow`, ale orkiestrator i sesje bez profilu go używają |
+| Konektory claude.ai sesji (m.in. Supabase, Gmail, Google Drive, Kalendarz, Shopify) | OAuth konta claude.ai, poza plikami | **Tak, jeśli konto ma tam projekty produkcyjne.** Supabase daje m.in. `execute_sql` i `apply_migration` na projektach konta. Reguły deny ich nie obejmują |
+| `~/.codex/auth.json`, logowanie Claude Code (pęk kluczy) | konta subskrypcji AI | nie aplikacyjna, ale koszt i limity |
+| `~/.docker/config.json` | `credsStore: desktop`, brak wpisów `auths` | nie |
+| `~/.paperclip/instances/default/.env` | `PAPERCLIP_AGENT_JWT_SECRET`, `PAPERCLIP_TOOL_ACTION_SIGNING_SECRET` | nie, lokalny Paperclip |
+| `~/Documents/Carbon_footprint/{IM_PL/back,carbon/backend,carbon_IMPL/carbon/backend}/.env.local` | `ALCHEMY_URL`, `PRIVATE_KEY_METAMASK`, `PUBLIC_KEY_METAMASK`, `JWT_SECRET_KEY` | nie: `ALCHEMY_URL` wskazuje testnet `polygon-mumbai`; klucz prywatny portfela trzeba jednak traktować jak sekret, gdyby ten sam portfel był używany w mainnecie |
+| `~/Documents/Carbon_footprint/**/.env.dev`, `.env.staging` | bez zmiennych z kluczami | nie |
+| `~/.hermes/.env`, `~/hermes-config-backup-20261022/.env` | wszystkie klucze zakomentowane | nie |
+| `~/forgejo/data/gitea/jwt/private.pem`, `actions_id_token/private.pem` | klucze lokalnego Forgejo | nie |
+| `~/Downloads/certyfikat-stemich-20211019*.p12` (2 pliki) | certyfikat osobisty z 2021 | nie aplikacyjny; nieznane przeznaczenie |
+
+Nie sprawdzano zawartości pęku kluczy (poza `gh auth status`) ani tokenów w aplikacjach.
+Zalecenie dla właściciela: przenieść `.p12` i katalog `Carbon_footprint` poza zasięg agentów albo
+dopisać je do deny, jeśli są jeszcze potrzebne.
+
 ### Backup konfiguracji
 
 ```sh
@@ -811,6 +863,14 @@ niezacommitowane lub niewypchnięte zmiany, skrypt ostrzega i dopisuje wpis do
 pluginów i pamięć projektów. Nie ma w nim sesji, historii, cache, `auth.json`, `.credentials.json`
 ani `.claude.json`. Po spakowaniu sprawdza je gitleaks; przy trafieniu archiwum jest kasowane.
 Archiwum zawiera temat ntfy, więc traktuj je jak dane poufne.
+
+Sprawdzenie z 2026-11-03 (sama lista plików, bez archiwum): z `~/.claude` trafiają `settings.json`,
+`settings.local.json`, `skills/` (463 pliki), 3 pliki list pluginów i pamięć projektów. Do tego
+`~/.codex/config.toml`, `~/.config/sh`, `~/sh/bin` i `~/sh/porty.md`. Pomijane są `backups`,
+`cache`, `sessions`, `session-env`, `shell-snapshots`, `file-history`, `paste-cache`, `projects`
+(poza `memory/`), `history.jsonl`, cache pluginów i pliki poświadczeń. Jedyna luka:
+kolejka nieudanych zdarzeń z `~/.claude/telemetry/` trafiała do archiwum, więc ten katalog jest
+teraz pomijany.
 
 ## Globalny hook git
 

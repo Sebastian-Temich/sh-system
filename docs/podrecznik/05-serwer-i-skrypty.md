@@ -33,6 +33,27 @@ następnym `install.sh`.
 Flagi przetrwają restart Maca i kolejne `install.sh`. Ręczne `sh-start.sh` i ręczne
 `shctl obsidian sync` działają także przy fladze.
 
+## Izolacja agentów
+
+Izolacja jest lekka: chroni przed pomyłką agenta, nie przed celowym obejściem. Na serwerze nie ma
+ważnych danych. Pełny opis i stan z 2026-11-03: [[serwer]], „Izolacja agentów”.
+
+| Narzędzie | Ochrona | Gdzie |
+|---|---|---|
+| Claude Code | Blokada odczytu i edycji: Zdjęcia, Filmy, Muzyka, pęk kluczy, Safari, profile przeglądarek, Wiadomości, Mail, klucze SSH, `~/.gnupg`. `~/Documents`, `~/Desktop` i `~/Downloads` są dostępne | `~/.claude/settings.json`, `permissions.deny` |
+| Codex | Zapis tylko w katalogu roboczym (bez `/tmp`); reviewer tylko odczyt | `~/.codex/config.toml`, `~/.codex/reviewer.config.toml` |
+
+Blokady Claude Code działają też w profilach ról: profil projektu nie może ich odblokować. Sprawdzenie:
+w sesji Claude poproś o `ls ~/Pictures`. Powinna być odmowa.
+
+Do zrobienia przez Ciebie (wymaga sudo albo decyzji):
+
+- SSH przyjmuje hasła, a `authorized_keys` jest pusty. Przejście na same klucze: najpierw dodaj swój
+  klucz (`ssh-copy-id`), potem komendy z [[serwer]]. Jeśli SSH jest zbędne: `sudo systemsetup
+  -setremotelogin off`.
+- Dostęp produkcyjny agentów to głównie logowanie `gh` (pełne prawa do repo konta) i konektory
+  claude.ai (np. Supabase). W plikach nie ma kluczy produkcyjnych aplikacji.
+
 ## Skrypty serwera
 
 ### sh-start.sh
