@@ -123,7 +123,8 @@ Wszystkie wysyła `notify.sh` przez ntfy.sh na Twój telefon.
 | Limit X odnowiony | zwykły | Limit wrócił | Napisz „wznów” |
 | STOP | wysoki | Zadziałał awaryjny stop | Gdy chcesz wrócić do pracy: „wznów” |
 | Brak miejsca | wysoki | Za mało miejsca na dysku, nowe zadania nie startują | Zwolnij miejsce ([[07-gdy-cos-nie-dziala#Brak miejsca na dysku]]) |
-| Claude czeka na Ciebie | zwykły | Worker zatrzymał się i czeka (np. na zgodę); w treści numer zadania | Zapytaj orkiestratora albo zajrzyj do panelu |
+| Claude czeka na zgodę | zwykły | Worker albo orkiestrator pyta o zgodę na narzędzie; w treści numer zadania (u orkiestratora `sh`) | Odpowiedz w panelu albo zapytaj orkiestratora |
+| Claude czeka na Ciebie | zwykły | Worker albo orkiestrator skończył i czeka na wiadomość; w treści numer zadania (u orkiestratora `sh`) | Zapytaj orkiestratora albo zajrzyj do panelu |
 | Obsidian: klon bez synchronizacji | zwykły | Kopia w vaulcie ma lokalne zmiany albo rozjechała się z GitHubem | [[07-gdy-cos-nie-dziala#Obsidian się nie aktualizuje]] |
 | install.sh: agent niezaladowany | wysoki | Usługa serwera nie wystartowała po instalacji | [[05-serwer-i-skrypty#install.sh]] |
 

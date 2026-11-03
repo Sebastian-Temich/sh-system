@@ -143,7 +143,8 @@ zrobiono, testy, decyzje, drobne uwagi, ryzyka, propozycje dla systemu), PR „C
 
 **Zatrzymuje się na Ciebie:** tylko przez eskalację: potrzebny klucz, dostęp, płatna usługa,
 decyzja spoza zadania, ryzyko, sekret znaleziony w repo. Pracuje dalej nad częściami niezależnymi.
-Gdy worker czeka w panelu (np. na zgodę), dostajesz push „Claude czeka na Ciebie” z numerem zadania.
+Gdy worker czeka w panelu, dostajesz push z numerem zadania: „Claude czeka na zgodę” (pytanie o
+zgodę) albo „Claude czeka na Ciebie” (skończył i czeka na wiadomość).
 
 ## sh-review
 
