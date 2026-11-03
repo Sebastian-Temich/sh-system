@@ -49,6 +49,70 @@ sprawdz_uslugi() {
   fi
 }
 
+# PID claude remote-control z katalogiem roboczym $SH_DIR (pusto, gdy brak).
+pid_orkiestratora() {
+  local pid cwd want
+  want="$(cd "$SH_DIR" 2>/dev/null && pwd -P || printf '%s' "$SH_DIR")"
+  for pid in $(pgrep -f 'claude remote-control' 2>/dev/null || true); do
+    cwd="$(lsof -a -p "$pid" -d cwd -Fn 2>/dev/null | sed -n 's/^n//p' || true)"
+    if [ "$cwd" = "$SH_DIR" ] || [ "$cwd" = "$want" ]; then printf '%s' "$pid"; return 0; fi
+  done
+}
+
+# PATH z początkowego środowiska procesu (ps eww, procesy tego samego użytkownika). Wartość
+# kończy się przed następnym „ NAZWA=”, więc katalogi ze spacją zostają całe.
+path_procesu() {
+  ps eww -o command= -p "$1" 2>/dev/null | head -n 1 |
+    sed -n 's/.* PATH=//p' | sed 's/ [A-Za-z_][A-Za-z0-9_]*=.*//'
+}
+
+# PID powłoki panelu z etykietą orkiestrator w workspace sh (pusto, gdy brak).
+powloka_orkiestratora() {
+  local ws panel
+  ws="$(z_limitem 20 herdr workspace list 2>/dev/null |
+    jq -r '[.result.workspaces[]? | select(.label == "sh")][0].workspace_id // empty' 2>/dev/null || true)"
+  [ -n "$ws" ] || return 0
+  panel="$(z_limitem 20 herdr pane list --workspace "$ws" 2>/dev/null |
+    jq -r '[.result.panes[]? | select(.label == "orkiestrator")][0].pane_id // empty' 2>/dev/null || true)"
+  [ -n "$panel" ] || return 0
+  z_limitem 20 herdr pane process-info --pane "$panel" 2>/dev/null |
+    jq -r '.result.process_info.shell_pid // empty' 2>/dev/null || true
+}
+
+# Orkiestrator działa i ma ~/sh/bin w PATH. PATH czytany z procesu orkiestratora (to, co
+# dziedziczą nowe sesje), a gdy nie działa, z powłoki panelu orkiestratora w herdr.
+sprawdz_orkiestrator() {
+  local pid='' zrodlo sciezki
+  if ! command -v pgrep >/dev/null || ! command -v lsof >/dev/null; then
+    wpis "orkiestrator" uwaga "brak pgrep albo lsof, nie sprawdzono"
+  else
+    pid="$(pid_orkiestratora)"
+    if [ -n "$pid" ]; then wpis "orkiestrator" ok "działa (PID $pid)"; else wpis "orkiestrator" blad "nie działa: sh-start.sh"; fi
+  fi
+  if [ -n "$pid" ]; then
+    zrodlo="orkiestrator PID $pid"
+    sciezki="$(path_procesu "$pid")"
+  elif command -v herdr >/dev/null && command -v jq >/dev/null; then
+    zrodlo="$(powloka_orkiestratora "")"
+    if [ -z "$zrodlo" ]; then
+      wpis "PATH panelu herdr" uwaga "nie znaleziono panelu orkiestratora w workspace sh"
+      return 0
+    fi
+    sciezki="$(path_procesu "$zrodlo")"
+    zrodlo="powłoka PID $zrodlo"
+  else
+    return 0
+  fi
+  if [ -z "$sciezki" ]; then
+    wpis "PATH panelu herdr" uwaga "nie udało się odczytać PATH ($zrodlo)"
+    return 0
+  fi
+  case ":$sciezki:" in
+    *":$SH_DIR/bin:"*) wpis "PATH panelu herdr" ok "$SH_DIR/bin jest ($zrodlo)" ;;
+    *) wpis "PATH panelu herdr" blad "brak $SH_DIR/bin ($zrodlo); zatrzymaj orkiestratora i uruchom sh-start.sh" ;;
+  esac
+}
+
 sprawdz_notify() {
   local temat="$HOME/.config/sh/ntfy-topic" test="$1"
   if [ ! -x "$SH_NOTIFY_CMD" ]; then
@@ -176,6 +240,7 @@ komenda_main() {
   sprawdz_narzedzia
   sprawdz_logowania
   sprawdz_uslugi
+  sprawdz_orkiestrator
   sprawdz_notify "$test"
   sprawdz_srodowisko
   sprawdz_obsidian

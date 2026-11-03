@@ -1,11 +1,13 @@
 #!/bin/bash
 # ~/sh/bin/sh-watchdog.sh - strażnik limitów subskrypcji (bez AI). LaunchAgent co 5 minut.
 #
-#   sh-watchdog.sh     jeden przebieg: odnowienia, potem skan paneli herdr
+#   sh-watchdog.sh     jeden przebieg: odnowienia, skan paneli herdr, kontrola orkiestratora
 #
 # 1. Wiersze ~/sh/limity.md z godziną „Do” w przeszłości usuwa i wysyła „Limit X odnowiony”.
 # 2. W panelach workspace „sh” czyta ostatnie linie i szuka wzorców z ~/sh/watchdog-wzorce.txt.
 #    Nowy komunikat: wiersz w limity.md (format: docs/shctl.md) i powiadomienie „Limit X do HH:MM”.
+# 3. Gdy nie działa claude remote-control w $SH_DIR, uruchamia sh-start.sh --no-attach
+#    i wysyła „Orkiestrator uruchomiony ponownie” (flaga ~/sh/stan/autostart.off wyłącza restart).
 # Etap A: strażnik nie wznawia pracy, robi to właściciel („wznów” do orkiestratora).
 #
 # Jedno powiadomienie na zdarzenie: aktywny wiersz wykonawcy wycisza kolejne komunikaty, a teksty
@@ -13,7 +15,8 @@
 # Komunikat bez godziny dostaje szacunek teraz + 5 h.
 #
 # Zmienne (testy): SH_DIR, SH_NOTIFY_CMD, SH_WATCHDOG_WS (sh), SH_WATCHDOG_LINIE (40),
-# SH_WATCHDOG_TERAZ (epoch), SH_WATCHDOG_PAUZA (5, s między próbami notify).
+# SH_WATCHDOG_TERAZ (epoch), SH_WATCHDOG_PAUZA (5, s między próbami notify), SH_START_CMD,
+# SH_WATCHDOG_ORKIESTRATOR (1; 0 wyłącza kontrolę), SH_WATCHDOG_ORCH_CZEKAJ (15, s po restarcie).
 # Napisany pod /bin/bash 3.2 z macOS: bez tablic asocjacyjnych i ${x,,}.
 # Bez -u: w bash 3.2 rozwinięcie pustej tablicy "${a[@]}" to błąd unbound variable.
 set -o pipefail
@@ -30,6 +33,9 @@ WS_LABEL="${SH_WATCHDOG_WS:-sh}"
 LINIE="${SH_WATCHDOG_LINIE:-40}"
 PAUZA="${SH_WATCHDOG_PAUZA:-5}"
 TERAZ="${SH_WATCHDOG_TERAZ:-$(date +%s)}"
+SH_START="${SH_START_CMD:-$SH_DIR/bin/sh-start.sh}"
+ORCH_PILNUJ="${SH_WATCHDOG_ORKIESTRATOR:-1}"
+ORCH_CZEKAJ="${SH_WATCHDOG_ORCH_CZEKAJ:-15}"
 SZACUNEK=$((5 * 3600))
 PAMIEC=$((12 * 3600))
 NAGLOWEK='| Wykonawca | Od | Do | Źródło |'
@@ -378,6 +384,55 @@ zapisz_widziane() {
   rm -f "$teraz_plik" "$tmp"
 }
 
+# --- Orkiestrator ---------------------------------------------------------------------------
+
+# 0, gdy działa claude remote-control z katalogiem roboczym $SH_DIR (w panelu albo poza nim).
+orkiestrator_dziala() {
+  local pid cwd want
+  want="$(cd "$SH_DIR" 2>/dev/null && pwd -P || printf '%s' "$SH_DIR")"
+  for pid in $(pgrep -f 'claude remote-control' 2>/dev/null); do
+    cwd="$(lsof -a -p "$pid" -d cwd -Fn 2>/dev/null | sed -n 's/^n//p')"
+    [ "$cwd" = "$SH_DIR" ] || [ "$cwd" = "$want" ] && return 0
+  done
+  return 1
+}
+
+# Brak orkiestratora: sh-start.sh --no-attach i powiadomienie. Flaga autostart.off wyłącza
+# także ten restart. Nieudany restart zgłaszany raz, do pierwszego udanego.
+pilnuj_orkiestratora() {
+  local blad="$SH_DIR/stan/orkiestrator-restart-blad" i
+  [ "$ORCH_PILNUJ" = 1 ] || return 0
+  if [ -e "$SH_DIR/stan/autostart.off" ]; then
+    orkiestrator_dziala || log "orkiestrator nie działa, restart wyłączony flagą autostart.off"
+    return 0
+  fi
+  command -v pgrep >/dev/null && command -v lsof >/dev/null || {
+    log "UWAGA: brak pgrep albo lsof, pomijam kontrolę orkiestratora"
+    return 0
+  }
+  orkiestrator_dziala && { rm -f "$blad"; return 0; }
+  if [ ! -x "$SH_START" ]; then
+    log "BLAD: orkiestrator nie działa, brak $SH_START"
+    return 0
+  fi
+  log "orkiestrator nie działa, uruchamiam $SH_START --no-attach"
+  "$SH_START" --no-attach >>"$SH_DIR/logs/sh-start.log" 2>&1 || log "UWAGA: $SH_START zakończył się błędem"
+  for ((i = 0; i < ORCH_CZEKAJ; i++)); do
+    orkiestrator_dziala && break
+    sleep 1
+  done
+  if orkiestrator_dziala; then
+    rm -f "$blad"
+    log "orkiestrator uruchomiony ponownie"
+    powiadom high "Orkiestrator" "Orkiestrator uruchomiony ponownie"
+  else
+    log "BLAD: orkiestrator nie wstał po restarcie (log: $SH_DIR/logs/sh-start.log)"
+    [ -e "$blad" ] && return 0
+    touch "$blad"
+    powiadom urgent "Orkiestrator" "Orkiestrator nie wstał po restarcie, sprawdź ~/sh/logs/sh-start.log"
+  fi
+}
+
 # --- Przebieg -------------------------------------------------------------------------------
 
 if ! mkdir "$LOCK" 2>/dev/null; then
@@ -397,4 +452,5 @@ wczytaj_limity
 odnowienia
 skanuj
 [ "$ZMIANA" = 0 ] || zapisz_limity
+pilnuj_orkiestratora
 log "przebieg: paneli $N_PANELI, aktywne limity ${#W_WYK[@]}${W_WYK[*]:+ (${W_WYK[*]})}"

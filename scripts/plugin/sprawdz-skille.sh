@@ -36,6 +36,8 @@ blok_zasad() { awk '/<!-- zasady-wspolne:start -->/{w=1} w{print} /<!-- zasady-w
 frontmatter() { awk 'NR == 1 && $0 == "---" { w = 1; next } w && $0 == "---" { exit } w' "$1"; }
 pole() { frontmatter "$1" | sed -n "s/^$2: *//p" | head -1; }
 # Treść sekcji „## NAZWA” do następnej „## ”.
+# Wynik sekcji trafia do grep -q przez <<<, nie potokiem: przy pipefail grep -q kończący się po
+# pierwszym trafieniu daje awk SIGPIPE na długiej sekcji i fałszywy błąd.
 sekcja() { awk -v n="## $2" '$0 == n { w = 1; next } w && /^## / { exit } w' "$1"; }
 
 # --- manifest i marketplace -----------------------------------------------------------------------
@@ -101,25 +103,25 @@ for f in "$REPO"/plugin/skills/*/SKILL.md; do
   tryby="$(sekcja "$f" Tryby | grep '^### ' || true)"
   [ "$tryby" = "$TRYBY" ] || blad "$wz: Tryby muszą mieć ### Tryb S, ### Tryb M, ### Tryb L i etap B"
 
-  sekcja "$f" "Wejście" | grep -qF "$ZDANIE_WEJSCIA" || blad "$wz: Wejście bez zdania „$ZDANIE_WEJSCIA”"
-  sekcja "$f" "Wejście" | grep -q '^- `' || blad "$wz: Wejście bez listy ścieżek w backtickach"
-  sekcja "$f" "Wyjście" | grep -q '^- `' || blad "$wz: Wyjście bez listy ścieżek w backtickach"
-  sekcja "$f" "Procedura" | grep -qE '^[0-9]+\. ' || blad "$wz: Procedura bez kroków numerowanych"
-  sekcja "$f" "DoD" | grep -qxF -- "$POLE_REVIEW" || blad "$wz: DoD bez pola „$POLE_REVIEW”"
-  sekcja "$f" "Kryteria review" | grep -q '🔴' || blad "$wz: Kryteria review bez wag 🔴🟡⚪"
-  sekcja "$f" "Eskalacja" | grep -q 'shctl escalate' || blad "$wz: Eskalacja bez wywołania shctl escalate"
+  grep -qF "$ZDANIE_WEJSCIA" <<<"$(sekcja "$f" "Wejście")" || blad "$wz: Wejście bez zdania „$ZDANIE_WEJSCIA”"
+  grep -q '^- `' <<<"$(sekcja "$f" "Wejście")" || blad "$wz: Wejście bez listy ścieżek w backtickach"
+  grep -q '^- `' <<<"$(sekcja "$f" "Wyjście")" || blad "$wz: Wyjście bez listy ścieżek w backtickach"
+  grep -qE '^[0-9]+\. ' <<<"$(sekcja "$f" "Procedura")" || blad "$wz: Procedura bez kroków numerowanych"
+  grep -qxF -- "$POLE_REVIEW" <<<"$(sekcja "$f" "DoD")" || blad "$wz: DoD bez pola „$POLE_REVIEW”"
+  grep -q '🔴' <<<"$(sekcja "$f" "Kryteria review")" || blad "$wz: Kryteria review bez wag 🔴🟡⚪"
+  grep -q 'shctl escalate' <<<"$(sekcja "$f" "Eskalacja")" || blad "$wz: Eskalacja bez wywołania shctl escalate"
 
   # Komendy shctl: każde wywołanie w bloku kodu to istniejąca podkomenda, albo „Brak.”.
   wyw="$(sekcja "$f" "Komendy shctl" | awk '/^```/ { w = !w; next } w && /^shctl / { print $2 }')"
   if [ -z "$wyw" ]; then
-    sekcja "$f" "Komendy shctl" | grep -q '^Brak\.' || blad "$wz: Komendy shctl bez wywołań i bez „Brak.”"
+    grep -q '^Brak\.' <<<"$(sekcja "$f" "Komendy shctl")" || blad "$wz: Komendy shctl bez wywołań i bez „Brak.”"
   fi
   for k in $wyw; do
-    printf '%s\n' "$KOMENDY" | grep -qx -- "$k" || blad "$wz: nieznana komenda shctl: $k"
+    grep -qx -- "$k" <<<"$KOMENDY" || blad "$wz: nieznana komenda shctl: $k"
   done
 
   [ "$(blok_zasad "$f")" = "$WZOR_ZASAD" ] || blad "$wz: blok Zasady wspólne różni się od kontraktu"
-  sekcja "$f" "Zasady wspólne" | grep -q '<!-- zasady-wspolne:start -->' || blad "$wz: blok zasad poza sekcją Zasady wspólne"
+  grep -q '<!-- zasady-wspolne:start -->' <<<"$(sekcja "$f" "Zasady wspólne")" || blad "$wz: blok zasad poza sekcją Zasady wspólne"
 done
 [ "$ile" -gt 0 ] || blad "brak skilli w plugin/skills/*/SKILL.md"
 

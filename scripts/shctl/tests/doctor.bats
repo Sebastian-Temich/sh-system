@@ -9,6 +9,36 @@ setup() {
   chmod +x "$T/mock/"*
   mkdir -p "$HOME/.config/sh"
   echo temat >"$HOME/.config/sh/ntfy-topic"
+  # Orkiestrator: claude remote-control (PID 777) w $SH_DIR, PATH z $T/orch-path.
+  printf '#!/bin/sh\n[ -f "%s/orch-off" ] || echo 777\n' "$T" >"$T/mock/pgrep"
+  cat >"$T/mock/lsof" <<MOCK
+#!/bin/sh
+case "\$*" in *"-d cwd"*) echo p777; echo "n$SH_DIR" ;; *) exit 1 ;; esac
+MOCK
+  printf '#!/bin/sh\necho "claude remote-control PATH=$(cat "%s/orch-path") HOME=/x"\n' "$T" >"$T/mock/ps"
+  echo "/usr/bin:$SH_DIR/bin:/bin" >"$T/orch-path"
+  chmod +x "$T/mock/"*
+}
+
+@test "orkiestrator dziala i ma ~/sh/bin w PATH" {
+  run "$SHCTL" doctor --json
+  [ "$status" -eq 0 ]
+  [ "$(jq -r '.wynik.kontrole | map(select(.nazwa == "orkiestrator"))[0].stan' <<<"$output")" = ok ]
+  [ "$(jq -r '.wynik.kontrole | map(select(.nazwa == "PATH panelu herdr"))[0].stan' <<<"$output")" = ok ]
+}
+
+@test "orkiestrator nie dziala: kod 1" {
+  touch "$T/orch-off"
+  run --separate-stderr "$SHCTL" doctor --json
+  [ "$status" -eq 1 ]
+  [ "$(jq -r '.wynik.kontrole | map(select(.nazwa == "orkiestrator"))[0].stan' <<<"$output")" = blad ]
+}
+
+@test "brak ~/sh/bin w PATH orkiestratora: kod 1" {
+  echo "/usr/bin:/bin" >"$T/orch-path"
+  run --separate-stderr "$SHCTL" doctor --json
+  [ "$status" -eq 1 ]
+  jq -e '.wynik.kontrole | map(select(.nazwa == "PATH panelu herdr"))[0] | .stan == "blad" and (.szczegoly | test("orkiestrator PID 777"))' <<<"$output"
 }
 
 @test "wszystko dziala: kod 0, JSON z kontrolami" {

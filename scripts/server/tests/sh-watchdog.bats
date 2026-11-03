@@ -39,6 +39,7 @@ TERAZ_14=1793624400
 
 straznik() {
   PATH="$T/mock:$PATH" SH_DIR="$T/sh" SH_NOTIFY_CMD="$T/mock/notify" SH_WATCHDOG_PAUZA=0 \
+    SH_WATCHDOG_ORKIESTRATOR="${ORKIESTRATOR:-0}" SH_START_CMD="$T/mock/sh-start" SH_WATCHDOG_ORCH_CZEKAJ=2 \
     SH_WATCHDOG_TERAZ="${1:-$TERAZ_14}" run bash "$REPO/scripts/server/sh-watchdog.sh"
 }
 
@@ -199,4 +200,52 @@ wstrzymania_shctl() {
   [ "$(powiadomienia)" = 3 ]
   grep -q 'BLAD: powiadomienie nie wyszło' "$T/sh/logs/watchdog.log"
   grep -q '^| claude' "$T/sh/limity.md"
+}
+
+# --- Orkiestrator: atrapy pgrep/lsof; $T/orch-dziala = działa claude remote-control w $T/sh ---
+
+atrapy_orkiestratora() {
+  printf '#!/bin/sh\n[ -f "%s/orch-dziala" ] && echo 777\nexit 0\n' "$T" >"$T/mock/pgrep"
+  printf '#!/bin/sh\necho p777\necho n%s/sh\n' "$T" >"$T/mock/lsof"
+  # sh-start: zapisuje wywołanie; bez $T/start-psuje „uruchamia” orkiestratora.
+  printf '#!/bin/sh\necho "$*" >>"%s/start-calls"\n[ -f "%s/start-psuje" ] || touch "%s/orch-dziala"\n' "$T" "$T" "$T" >"$T/mock/sh-start"
+  chmod +x "$T/mock/pgrep" "$T/mock/lsof" "$T/mock/sh-start"
+  mkdir -p "$T/sh/logs" "$T/sh/stan"
+}
+
+@test "orkiestrator dziala: bez restartu i powiadomien" {
+  atrapy_orkiestratora
+  touch "$T/orch-dziala"
+  ORKIESTRATOR=1 straznik
+  [ "$status" -eq 0 ]
+  [ ! -f "$T/start-calls" ]
+  [ "$(powiadomienia)" -eq 0 ]
+}
+
+@test "brak orkiestratora: sh-start --no-attach i powiadomienie" {
+  atrapy_orkiestratora
+  ORKIESTRATOR=1 straznik
+  [ "$status" -eq 0 ]
+  [ "$(cat "$T/start-calls")" = "--no-attach" ]
+  grep -q '^high|Orkiestrator|Orkiestrator uruchomiony ponownie$' "$T/notified"
+  grep -q 'orkiestrator uruchomiony ponownie' "$T/sh/logs/watchdog.log"
+}
+
+@test "nieudany restart: jedno pilne powiadomienie na serie" {
+  atrapy_orkiestratora
+  touch "$T/start-psuje"
+  ORKIESTRATOR=1 straznik
+  ORKIESTRATOR=1 straznik
+  [ "$(wc -l <"$T/start-calls" | tr -d ' ')" -eq 2 ]
+  [ "$(powiadomienia)" -eq 1 ]
+  grep -q '^urgent|Orkiestrator|Orkiestrator nie wstał' "$T/notified"
+}
+
+@test "flaga autostart.off: bez restartu" {
+  atrapy_orkiestratora
+  touch "$T/sh/stan/autostart.off"
+  ORKIESTRATOR=1 straznik
+  [ ! -f "$T/start-calls" ]
+  [ "$(powiadomienia)" -eq 0 ]
+  grep -q 'restart wyłączony flagą autostart.off' "$T/sh/logs/watchdog.log"
 }
