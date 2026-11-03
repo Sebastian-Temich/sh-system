@@ -15,14 +15,34 @@ LOG_DIR="$SH_DIR/logs"
 WS_LABEL=sh
 ORCH_LABEL=orkiestrator
 SHELL_LABEL=powloka
-# SH_NOTIFY=1 wlacza hook Notification z ~/.claude/settings.json (push, gdy orkiestrator czeka).
-ORCH_CMD='SH_NOTIFY=1 claude remote-control --name sh-orkiestrator'
 DOCKER_TIMEOUT=300
 NETWORK_TIMEOUT=120
+# Komunikat claude remote-control, gdy ~/sh obsluguje juz inna instancja.
+ALREADY_SERVED='This folder is already served by a terminal claude remote-control'
+SERVED_WAIT_MS="${SH_SERVED_WAIT_MS:-8000}"
 
 MODE="${1:-attach}"
 log() { printf '%s sh-start: %s\n' "$(date '+%F %T')" "$*"; }
 die() { log "BLAD: $*" >&2; exit 1; }
+
+# claude remote-control jest serwerem sesji: kazda nowa sesja dziedziczy jego PATH. Panel
+# herdr i launchd nie gwarantuja pelnego PATH, wiec skrypt uzupelnia biezacy PATH o katalogi
+# narzedzi (bez duplikatow) i przekazuje go jawnie serwerowi herdr i orkiestratorowi.
+build_path() {
+  local out='' dir
+  local -a dirs
+  IFS=: read -ra dirs <<<"${PATH:-}:$HOME/.local/bin:$SH_DIR/bin:$HOME/.softwarehouse/bin:/opt/homebrew/bin:/usr/local/bin:$HOME/.docker/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+  for dir in "${dirs[@]}"; do
+    [[ -n "$dir" && -d "$dir" && ":$out:" != *":$dir:"* ]] || continue
+    out="${out:+$out:}$dir"
+  done
+  printf '%s' "$out"
+}
+PATH="$(build_path)"
+export PATH
+
+# SH_NOTIFY=1 wlacza hook Notification z ~/.claude/settings.json (push, gdy orkiestrator czeka).
+ORCH_CMD="PATH='${PATH//\'/\'\\\'\'}' SH_NOTIFY=1 claude remote-control --name sh-orkiestrator"
 
 # Tylko start przez launchd; recznie sh-start.sh dziala zawsze.
 if [[ "$MODE" == --autostart && -e "$SH_DIR/stan/autostart.off" ]]; then
@@ -118,14 +138,47 @@ wait_shell_ready() {
   log 'UWAGA: powloka nie zglosila gotowosci w 30 s, wysylam komende mimo to'
 }
 
+# PID claude remote-control dzialajacego w $SH_DIR poza panelem orkiestratora (pusto, gdy brak).
+foreign_server_pid() {
+  local pid cwd want
+  want="$(cd "$SH_DIR" 2>/dev/null && pwd -P || printf '%s' "$SH_DIR")"
+  for pid in $(pgrep -f 'claude remote-control' 2>/dev/null || true); do
+    cwd="$(lsof -a -p "$pid" -d cwd -Fn 2>/dev/null | sed -n 's/^n//p')"
+    [[ "$cwd" == "$SH_DIR" || "$cwd" == "$want" ]] && { printf '%s' "$pid"; return 0; }
+  done
+  return 0
+}
+
+served_count() {
+  herdr pane read "$ORCH_PANE" --source recent-unwrapped --lines 500 2>/dev/null |
+    grep -cF "$ALREADY_SERVED" || true
+}
+
 ensure_orchestrator() {
   if orchestrator_running; then
     log "orkiestrator juz dziala w $ORCH_PANE"
     return 0
   fi
+  local pid
+  pid="$(foreign_server_pid)"
+  if [[ -n "$pid" ]]; then
+    log "UWAGA: $SH_DIR obsluguje juz claude remote-control (PID $pid) poza $ORCH_PANE, nie uruchamiam drugiej instancji"
+    return 0
+  fi
   wait_shell_ready
+  local before after i
+  before="$(served_count)"
   log "uruchamiam orkiestratora w $ORCH_PANE"
   herdr pane run "$ORCH_PANE" "$ORCH_CMD" >/dev/null
+  # Druga instancja konczy sie od razu tym komunikatem; startu nie ponawiamy.
+  for ((i = 0; i < SERVED_WAIT_MS / 500; i++)); do
+    after="$(served_count)"
+    if ((after > before)); then
+      log "UWAGA: $SH_DIR obsluguje juz inny terminal claude remote-control, nie uruchamiam drugiej instancji"
+      return 0
+    fi
+    sleep 0.5
+  done
 }
 
 case "$MODE" in

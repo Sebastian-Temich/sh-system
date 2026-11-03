@@ -49,6 +49,13 @@ wielokrotnie.
 Przy autostarcie czeka na Docker Desktop (do 5 minut) i sieć (do 2 minut). Docker Desktop ma
 wyłączony własny autostart, a skrypt tylko go otwiera.
 
+`claude remote-control` to serwer sesji: każda nowa sesja startuje w `~/sh` z jego PATH. Dlatego
+skrypt uzupełnia PATH o katalogi narzędzi (`~/.local/bin`, `~/sh/bin`, `~/.softwarehouse/bin`,
+Homebrew, `~/.docker/bin`) i podaje go jawnie w komendzie orkiestratora. Gdy `~/sh` obsługuje
+już inna instancja (proces `claude remote-control` z katalogiem `~/sh` poza panelem albo komunikat
+„This folder is already served by a terminal claude remote-control”), skrypt zapisuje to w logu
+i nie uruchamia drugiej.
+
 Uwaga: wraca sam orkiestrator. Workerzy po restarcie nie wracają sami; po „wznów” orkiestrator
 sprawdza przerwane zadania i uruchamia je ponownie.
 

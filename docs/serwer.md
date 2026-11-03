@@ -198,6 +198,14 @@ Po zalogowaniu LaunchAgent uruchamia `zsh -lic`, czeka na Docker Desktop (do 300
 (do 120 s), po czym startuje serwer, układ i orkiestratora. Samo `zsh -l` nie czyta `.zshrc`,
 stąd `-i`. Docker Desktop ma wyłączony AutoStart, więc skrypt tylko go otwiera, bez zmiany ustawień.
 
+`claude remote-control` jest serwerem sesji („New sessions will be created in the current
+directory”), więc nowe sesje dziedziczą jego PATH. `sh-start.sh` dokłada do PATH brakujące
+katalogi narzędzi, eksportuje go dla serwera herdr i przekazuje jawnie w `ORCH_CMD`
+(`PATH='…' SH_NOTIFY=1 claude remote-control …`). Druga instancja nie startuje: skrypt pomija
+start, gdy `pgrep`/`lsof` znajdą `claude remote-control` z cwd `~/sh` poza panelem, a po starcie
+przez 8 s szuka w panelu nowego komunikatu „This folder is already served by a terminal claude
+remote-control”; w obu przypadkach zostawia wpis `UWAGA` w logu i kończy z kodem 0.
+
 Ręcznie z terminala:
 
 ```sh
