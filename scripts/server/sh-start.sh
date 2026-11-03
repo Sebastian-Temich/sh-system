@@ -15,7 +15,8 @@ LOG_DIR="$SH_DIR/logs"
 WS_LABEL=sh
 ORCH_LABEL=orkiestrator
 SHELL_LABEL=powloka
-ORCH_CMD='claude remote-control --name sh-orkiestrator'
+# SH_NOTIFY=1 wlacza hook Notification z ~/.claude/settings.json (push, gdy orkiestrator czeka).
+ORCH_CMD='SH_NOTIFY=1 claude remote-control --name sh-orkiestrator'
 DOCKER_TIMEOUT=300
 NETWORK_TIMEOUT=120
 

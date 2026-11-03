@@ -183,7 +183,7 @@ sudo profiles list -all
 ## Herdr
 
 Herdr 0.9.5 (repo przeniesione na `herdrdev/herdr`) to dom orkiestratora. Workspace `sh`:
-panel `orkiestrator` (w1:p1) z `claude remote-control --name sh-orkiestrator` w `~/sh`,
+panel `orkiestrator` (w1:p1) z `SH_NOTIFY=1 claude remote-control --name sh-orkiestrator` w `~/sh`,
 panel `powloka` (w1:p2). ID mogą się zmienić, dlatego skrypty szukają paneli po etykiecie.
 
 - Skrypt: `~/sh/bin/sh-start.sh`, test CLI: `~/sh/bin/test-herdr.sh`
@@ -512,23 +512,30 @@ notify.sh min "Build" "Gotowy" "" white_check_mark   # tagi bez URL-a
 
 ### Hook Claude Code
 
-Hook `Notification` w `~/.claude/settings.json` wysyła push z tytułem „Claude czeka na Ciebie”
-i nazwą katalogu sesji w treści. Działa tylko, gdy proces Claude Code ma `SH_NOTIFY=1`:
+Hook `Notification` w `~/.claude/settings.json` ma dwa wpisy z `matcher`, po jednym na typ
+powiadomienia. W treści pushu jest nazwa katalogu sesji (u workera numer zadania, u orkiestratora
+`sh`):
+
+| `matcher` | Kiedy | Tytuł pushu |
+|---|---|---|
+| `permission_prompt` | Claude pyta o zgodę na narzędzie | „Claude czeka na zgodę” |
+| `idle_prompt` | Claude skończył i czeka na wiadomość | „Claude czeka na Ciebie” |
+
+Inne typy (`auth_success`, `elicitation_dialog` i pozostałe) nie wysyłają pushu.
+
+Hook działa tylko, gdy proces Claude Code ma `SH_NOTIFY=1`:
 
 ```sh
 SH_NOTIFY=1 claude
 ```
 
 Hook dziedziczy środowisko procesu Claude Code, więc zmienną trzeba ustawić przed jego
-startem; zmiana w działającej sesji nic nie da. Domyślnie nic jej nie ustawia, również
-`sh-start.sh`.
+startem; zmiana w działającej sesji nic nie da. Ustawiają ją `shctl task dispatch` (workerzy) i
+`sh-start.sh` (orkiestrator, `ORCH_CMD`). Orkiestrator uruchomiony przed tą zmianą dostaje ją
+dopiero po ponownym starcie.
 
-Bez `matcher` hook reaguje na każdy typ powiadomienia, także `auth_success` czy
-`agent_completed`. Żeby zostawić tylko oczekiwanie na człowieka, dodaj obok `"hooks"`:
-
-```json
-"matcher": "permission_prompt|idle_prompt"
-```
+`~/.claude/settings.json` nie jest w repo; po odtworzeniu serwera wpisy trzeba dodać ręcznie
+(kopię ma archiwum `backup-config.sh`).
 
 Format hooków: <https://code.claude.com/docs/en/hooks>. Hook jest asynchroniczny (`async`),
 więc nie blokuje Claude'a, a błąd wysyłki nie pojawia się w sesji. Diagnoza:

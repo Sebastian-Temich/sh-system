@@ -37,7 +37,7 @@ Flagi przetrwają restart Maca i kolejne `install.sh`. Ręczne `sh-start.sh` i r
 
 ### sh-start.sh
 
-Przygotowuje workspace `sh` w herdr: panel `orkiestrator` z `claude remote-control --name
+Przygotowuje workspace `sh` w herdr: panel `orkiestrator` z `SH_NOTIFY=1 claude remote-control --name
 sh-orkiestrator` i panel `powloka`. Uruchamia tylko to, co nie działa, więc można go wywoływać
 wielokrotnie.
 
@@ -63,8 +63,9 @@ notify.sh high "Tytuł" "Treść" https://link-po-kliknieciu warning
 ```
 
 Priorytety: `min`, `default`, `high`, `urgent`. Używają go shctl, strażnik limitów i `install.sh`.
-Workery mają też hook Claude Code „Claude czeka na Ciebie”: działa tylko w procesie uruchomionym z
-`SH_NOTIFY=1`, a tak startuje każdy worker z `shctl task dispatch`.
+Hook Claude Code wysyła „Claude czeka na zgodę” (pytanie o zgodę) i „Claude czeka na Ciebie”
+(Claude skończył i czeka na wiadomość). Działa tylko w procesie uruchomionym z `SH_NOTIFY=1`, a tak
+startuje każdy worker z `shctl task dispatch` i orkiestrator z `sh-start.sh`.
 
 Test: `shctl doctor --test-notify` albo wywołanie jak wyżej.
 
