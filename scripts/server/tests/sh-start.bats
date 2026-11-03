@@ -73,13 +73,14 @@ MOCK
   chmod +x "$T/mock/herdr" "$T/mock/pgrep"
 }
 
-@test "orkiestrator dostaje jawny PATH z katalogami narzedzi" {
+@test "orkiestrator dostaje jawny PATH: nasze katalogi pierwsze, .softwarehouse ostatni" {
   mock_herdr
-  mkdir -p "$T/home/.local/bin"
-  HOME="$T/home" SH_SERVED_WAIT_MS=0 PATH="$T/mock:/usr/bin:/bin" run -- bash "$REPO/scripts/server/sh-start.sh" --no-attach
+  mkdir -p "$T/home/.local/bin" "$T/home/sh/bin" "$T/home/.softwarehouse/bin"
+  HOME="$T/home" SH_SERVED_WAIT_MS=0 PATH="$T/home/.softwarehouse/bin:$T/mock:/usr/bin:/bin" \
+    run -- bash "$REPO/scripts/server/sh-start.sh" --no-attach
   [ "$status" -eq 0 ]
-  grep -q "^PATH='[^']*$T/home/.local/bin[^']*' SH_NOTIFY=1 claude remote-control --name sh-orkiestrator\$" "$T/run_cmd"
-  grep -q "^PATH='$T/mock:" "$T/run_cmd"
+  grep -q "^PATH='$T/home/sh/bin:$T/home/.local/bin:$T/mock:[^']*:$T/home/.softwarehouse/bin' SH_NOTIFY=1 claude remote-control --name sh-orkiestrator\$" "$T/run_cmd"
+  [ "$(grep -o "$T/home/.softwarehouse/bin" "$T/run_cmd" | wc -l | tr -d ' ')" -eq 1 ]
 }
 
 @test "komunikat already served: log, kod 0, bez ponownego startu" {

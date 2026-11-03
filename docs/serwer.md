@@ -173,6 +173,22 @@ Pełna lista profili na poziomie systemu:
 sudo profiles list -all
 ```
 
+## PATH i powłoka
+
+Kolejność w `~/.zshrc` (blok „PATH”, `typeset -U path`): `~/sh/bin`, `~/.local/bin`, reszta,
+na końcu `~/.softwarehouse/bin`, żeby skrypty Boardu nie przesłaniały naszych poleceń. Stan
+2026-11-03: żadne polecenie nie ma tej samej nazwy w `~/.softwarehouse/bin` i `~/sh/bin` albo
+`~/.local/bin`. Sprawdzenie:
+
+```sh
+for f in ~/.softwarehouse/bin/*; do n=${f:t}; [[ -e ~/sh/bin/$n || -e ~/.local/bin/$n ]] && echo $n; done
+```
+
+`sh-start.sh` składa PATH w tej samej kolejności. Ostrzeżenie `compinit:527: no such file or
+directory: …/_brew_services` dawało martwe dowiązanie `/usr/local/share/zsh/site-functions/_brew_services`
+(tap `homebrew/services` bez pliku uzupełnień); usunięte 2026-11-03. Kopia `~/.zshrc` sprzed zmiany:
+`~/.zshrc.bak-20261103`.
+
 ## Node
 
 - Nowe powłoki zsh: fnm, Node 26 LTS, pnpm przez corepack.
@@ -612,6 +628,12 @@ Jeden przebieg:
    linii (`herdr pane read --source recent-unwrapped`) i szuka wzorców.
 3. Przy nowym komunikacie dopisuje wiersz do `limity.md` i wysyła `notify.sh high`
    „Limit X do HH:MM. Po odnowieniu napisz orkiestratorowi: wznów”.
+4. Sprawdza, czy działa orkiestrator: proces `claude remote-control` z katalogiem roboczym `~/sh`
+   (`pgrep` i `lsof`, w panelu albo poza nim). Gdy nie działa, uruchamia
+   `~/sh/bin/sh-start.sh --no-attach` (wyjście w `~/sh/logs/sh-start.log`), czeka do 15 s i wysyła
+   `notify.sh high` „Orkiestrator uruchomiony ponownie”. Gdy orkiestrator nie wstanie, wysyła raz
+   `urgent` „Orkiestrator nie wstał po restarcie” (flaga `~/sh/stan/orkiestrator-restart-blad`
+   do pierwszego udanego przebiegu). Flaga `~/sh/stan/autostart.off` wyłącza też ten restart.
 
 W etapie A strażnik pracy nie wznawia: robi to właściciel, pisząc orkiestratorowi „wznów”.
 Powiadomienie o odnowieniu przychodzi z opóźnieniem do 5 minut (najbliższy przebieg).

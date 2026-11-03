@@ -26,16 +26,18 @@ log() { printf '%s sh-start: %s\n' "$(date '+%F %T')" "$*"; }
 die() { log "BLAD: $*" >&2; exit 1; }
 
 # claude remote-control jest serwerem sesji: kazda nowa sesja dziedziczy jego PATH. Panel
-# herdr i launchd nie gwarantuja pelnego PATH, wiec skrypt uzupelnia biezacy PATH o katalogi
-# narzedzi (bez duplikatow) i przekazuje go jawnie serwerowi herdr i orkiestratorowi.
+# herdr i launchd nie gwarantuja pelnego PATH, wiec skrypt sklada go sam (bez duplikatow)
+# i przekazuje jawnie serwerowi herdr i orkiestratorowi. Kolejnosc: ~/sh/bin, ~/.local/bin,
+# biezacy PATH, katalogi narzedzi, na koncu ~/.softwarehouse/bin (nie przeslania naszych polecen).
 build_path() {
-  local out='' dir
+  local out='' dir sw="$HOME/.softwarehouse/bin"
   local -a dirs
-  IFS=: read -ra dirs <<<"${PATH:-}:$HOME/.local/bin:$SH_DIR/bin:$HOME/.softwarehouse/bin:/opt/homebrew/bin:/usr/local/bin:$HOME/.docker/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+  IFS=: read -ra dirs <<<"$SH_DIR/bin:$HOME/.local/bin:${PATH:-}:/opt/homebrew/bin:/usr/local/bin:$HOME/.docker/bin:/usr/bin:/bin:/usr/sbin:/sbin"
   for dir in "${dirs[@]}"; do
-    [[ -n "$dir" && -d "$dir" && ":$out:" != *":$dir:"* ]] || continue
+    [[ -n "$dir" && "$dir" != "$sw" && -d "$dir" && ":$out:" != *":$dir:"* ]] || continue
     out="${out:+$out:}$dir"
   done
+  [[ ! -d "$sw" ]] || out="${out:+$out:}$sw"
   printf '%s' "$out"
 }
 PATH="$(build_path)"

@@ -491,7 +491,10 @@ shctl skrzynka przyjmij sklep --json
 shctl doctor [--test-notify]
 ```
 
-Sprawdza narzędzia, logowania gh, codex i claude, Docker, serwer herdr, `notify.sh` i temat ntfy,
+Sprawdza narzędzia, logowania gh, codex i claude, Docker, serwer herdr, orkiestratora
+(`orkiestrator`: proces `claude remote-control` z katalogiem roboczym `~/sh`, `blad`, gdy go nie ma;
+`PATH panelu herdr`: `~/sh/bin` w PATH procesu orkiestratora, a gdy nie działa, w PATH powłoki
+panelu `orkiestrator` w workspace `sh`; brak to `blad`), `notify.sh` i temat ntfy,
 globalny `core.hooksPath`, lokalny `core.hooksPath` w repo z `~/sh/projekty`, wolne miejsce,
 `porty.md`, klony w `SH_OBSIDIAN_DIR` (czy są czyste i zgodne z origin, przez `git ls-remote`, bez
 pobierania; różnica to `uwaga`), datę ostatniej udanej synchronizacji Obsidiana z

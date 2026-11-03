@@ -82,7 +82,10 @@ Strażnik limitów, bez AI. Co 5 minut:
 
 1. usuwa z `~/sh/limity.md` limity, których godzina minęła, i wysyła push „Limit X odnowiony”;
 2. czyta ostatnie linie paneli workspace `sh` i szuka komunikatów o limicie Claude Code i Codexa;
-3. nowy limit zapisuje w `~/sh/limity.md` i wysyła push „Limit X do HH:MM”.
+3. nowy limit zapisuje w `~/sh/limity.md` i wysyła push „Limit X do HH:MM”;
+4. sprawdza, czy działa orkiestrator (`claude remote-control` w `~/sh`); gdy nie, uruchamia go
+   przez `sh-start.sh` i wysyła push „Orkiestrator uruchomiony ponownie”. Flaga
+   `~/sh/stan/autostart.off` wyłącza ten restart.
 
 W etapie A **nie wznawia pracy**: wznawiasz Ty, pisząc „wznów”. Automatyczne wznowienie to etap B
 (jeszcze niedostępne).
