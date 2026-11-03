@@ -3,6 +3,7 @@
 ## 2026-11-03
 
 - `sh-watchdog.sh`: gdy nie działa `claude remote-control` w `~/sh`, uruchamia `sh-start.sh --no-attach` i wysyła „Orkiestrator uruchomiony ponownie” (nieudany restart: jedno `urgent`); flaga `autostart.off` wyłącza restart. `shctl doctor`: kontrole `orkiestrator` i `PATH panelu herdr` (`~/sh/bin`). `sh-start.sh`: PATH w kolejności `~/sh/bin`, `~/.local/bin`, …, `~/.softwarehouse/bin` na końcu. Serwer: ta sama kolejność w `~/.zshrc`, usunięte martwe dowiązanie `_brew_services` (ostrzeżenie `compinit`); bez wspólnych nazw poleceń w `~/.softwarehouse/bin` i `~/sh/bin`.
+- `scripts/plugin/sprawdz-skille.sh`: sekcje skilli do `grep -q` przez `<<<` zamiast potoku; przy `pipefail` długa sekcja (Procedura `sh-intake`) dawała na Linuksie SIGPIPE w `awk` i fałszywe „Procedura bez kroków numerowanych”.
 - `sh-start.sh`: PATH uzupełniony o katalogi narzędzi i przekazany jawnie orkiestratorowi (`claude remote-control` jest serwerem sesji, nowe sesje dziedziczą jego PATH). Bez drugiej instancji: pomija start, gdy `~/sh` obsługuje już inny `claude remote-control`, i wykrywa komunikat „This folder is already served by a terminal claude remote-control”. Testy bats na atrapie herdr.
 - Hook `Notification` w `~/.claude/settings.json`: `matcher` `permission_prompt` („Claude czeka na zgodę”) i `idle_prompt` („Claude czeka na Ciebie”), bez pushu przy innych typach. `sh-start.sh`: `ORCH_CMD` z `SH_NOTIFY=1`, więc push dostaje też orkiestrator. Podręcznik (02, 03, 05, 07) z dwoma tytułami.
 
