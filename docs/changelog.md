@@ -2,6 +2,7 @@
 
 ## 2026-11-03
 
+- `sh-start.sh`: PATH uzupełniony o katalogi narzędzi i przekazany jawnie orkiestratorowi (`claude remote-control` jest serwerem sesji, nowe sesje dziedziczą jego PATH). Bez drugiej instancji: pomija start, gdy `~/sh` obsługuje już inny `claude remote-control`, i wykrywa komunikat „This folder is already served by a terminal claude remote-control”. Testy bats na atrapie herdr.
 - Hook `Notification` w `~/.claude/settings.json`: `matcher` `permission_prompt` („Claude czeka na zgodę”) i `idle_prompt` („Claude czeka na Ciebie”), bez pushu przy innych typach. `sh-start.sh`: `ORCH_CMD` z `SH_NOTIFY=1`, więc push dostaje też orkiestrator. Podręcznik (02, 03, 05, 07) z dwoma tytułami.
 
 - `shctl checkpoint 00-intake|04-architektura|wydanie|#NR`: po PASS review dla bieżącego commita `notify.sh high` „Czeka na Twoją akceptację: PROJEKT / ETAP” z linkiem do PR w `Click`; jedno powiadomienie na commit (`~/sh/stan/checkpointy/NAZWA`). `shctl escalate --akceptacja`: ten sam tytuł dla propozycji podniesienia trybu. `sh-orkiestrator` wywołuje je przy każdym checkpoincie właściciela (specyfikacja, architektura i plan, odbiór, odbiór S, podniesienie trybu).
