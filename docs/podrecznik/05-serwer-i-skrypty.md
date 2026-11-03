@@ -56,6 +56,10 @@ już inna instancja (proces `claude remote-control` z katalogiem `~/sh` poza pan
 „This folder is already served by a terminal claude remote-control”), skrypt zapisuje to w logu
 i nie uruchamia drugiej.
 
+Każdy przebieg kończy się w `~/sh/logs/sh-start.log` jednym wpisem z kodem wyjścia: `gotowe (kod 0)`,
+`UWAGA (kod 0)` albo `BLAD …, krok: ETAP (kod N)`. Szczegóły i znaczenie kodów:
+`docs/serwer.md`, sekcja „Uruchomienie”.
+
 Uwaga: wraca sam orkiestrator. Workerzy po restarcie nie wracają sami; po „wznów” orkiestrator
 sprawdza przerwane zadania i uruchamia je ponownie.
 
@@ -85,7 +89,8 @@ Strażnik limitów, bez AI. Co 5 minut:
 3. nowy limit zapisuje w `~/sh/limity.md` i wysyła push „Limit X do HH:MM”;
 4. sprawdza, czy działa orkiestrator (`claude remote-control` w `~/sh`); gdy nie, uruchamia go
    przez `sh-start.sh` i wysyła push „Orkiestrator uruchomiony ponownie”. Flaga
-   `~/sh/stan/autostart.off` wyłącza ten restart.
+   `~/sh/stan/autostart.off` wyłącza ten restart. Orkiestrator przeżywa koniec przebiegu
+   strażnika (`AbandonProcessGroup` w pliście).
 
 W etapie A **nie wznawia pracy**: wznawiasz Ty, pisząc „wznów”. Automatyczne wznowienie to etap B
 (jeszcze niedostępne).

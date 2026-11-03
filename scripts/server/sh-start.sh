@@ -8,7 +8,11 @@
 #
 # Idempotentny: niczego nie duplikuje. Po restarcie serwera herdr odtwarza uklad, ale nie
 # procesy, dlatego orkiestrator jest uruchamiany ponownie tylko wtedy, gdy nie dziala.
-set -euo pipefail
+#
+# Kazde uruchomienie zaczyna sie wpisem "start" i konczy dokladnie jednym wpisem koncowym
+# z kodem wyjscia: "gotowe: ... (kod 0)", "UWAGA: ... (kod 0)" albo "BLAD: ... (kod N)".
+# BLAD podaje krok, w ktorym skrypt sie zatrzymal; kod 142 to przekroczony czas herdr.
+set -Eeuo pipefail
 
 SH_DIR="$HOME/sh"
 LOG_DIR="$SH_DIR/logs"
@@ -20,10 +24,68 @@ NETWORK_TIMEOUT=120
 # Komunikat claude remote-control, gdy ~/sh obsluguje juz inna instancja.
 ALREADY_SERVED='This folder is already served by a terminal claude remote-control'
 SERVED_WAIT_MS="${SH_SERVED_WAIT_MS:-8000}"
+# Limit pojedynczego wywolania herdr; zawieszony serwer nie moze zatrzymac skryptu bez sladu.
+HERDR_TIMEOUT="${SH_HERDR_TIMEOUT:-30}"
 
 MODE="${1:-attach}"
+STEP='przygotowanie'
+DONE_MSG=''
+FAIL_MSG=''
+FAIL_CMD=''
+FAIL_LINE=''
+SIGNAL=''
+WARNINGS=()
+
 log() { printf '%s sh-start: %s\n' "$(date '+%F %T')" "$*"; }
-die() { log "BLAD: $*" >&2; exit 1; }
+warn() { WARNINGS+=("$*"); log "UWAGA: $*"; }
+# Wpis BLAD pisze on_exit, z krokiem i kodem.
+die() { FAIL_MSG="$*"; exit 1; }
+
+on_err() {
+  [[ -z "$FAIL_CMD" ]] || return 0
+  FAIL_LINE="$1"
+  FAIL_CMD="$(printf '%s' "$2" | tr -s ' \t\n' '   ')"
+}
+
+on_signal() {
+  SIGNAL="$1"
+  exit "$2"
+}
+
+# Jedyny wpis koncowy kazdego przebiegu.
+final_log() {
+  local code="$1"
+  if ((code != 0)); then
+    if [[ -n "$SIGNAL" ]]; then
+      log "BLAD: przerwano sygnalem $SIGNAL, krok: $STEP (kod $code)" >&2
+    elif [[ -n "$FAIL_MSG" ]]; then
+      log "BLAD: $FAIL_MSG, krok: $STEP (kod $code)" >&2
+    elif ((code == 142)); then
+      log "BLAD: herdr nie odpowiedzial w ${HERDR_TIMEOUT} s, krok: $STEP, linia ${FAIL_LINE:-?}: ${FAIL_CMD:-?} (kod $code)" >&2
+    else
+      log "BLAD: nieudane polecenie, krok: $STEP, linia ${FAIL_LINE:-?}: ${FAIL_CMD:-?} (kod $code)" >&2
+    fi
+  elif ((${#WARNINGS[@]} > 0)); then
+    log "UWAGA: ${DONE_MSG:-zakonczono}; ostrzezen: ${#WARNINGS[@]}, ostatnie: ${WARNINGS[${#WARNINGS[@]} - 1]} (kod 0)"
+  else
+    log "gotowe: ${DONE_MSG:-zakonczono} (kod 0)"
+  fi
+}
+
+on_exit() {
+  local code=$?
+  trap - ERR EXIT
+  final_log "$code"
+  exit "$code"
+}
+
+trap 'on_err "$LINENO" "$BASH_COMMAND"' ERR
+trap on_exit EXIT
+trap 'on_signal TERM 143' TERM
+trap 'on_signal HUP 129' HUP
+trap 'on_signal INT 130' INT
+
+log "start: tryb $MODE, PID $$, rodzic: $(ps -o args= -p "$PPID" 2>/dev/null | cut -c1-80 || true)"
 
 # claude remote-control jest serwerem sesji: kazda nowa sesja dziedziczy jego PATH. Panel
 # herdr i launchd nie gwarantuja pelnego PATH, wiec skrypt sklada go sam (bez duplikatow)
@@ -49,12 +111,19 @@ ORCH_CMD="PATH='${PATH//\'/\'\\\'\'}' SH_NOTIFY=1 claude remote-control --name s
 # Tylko start przez launchd; recznie sh-start.sh dziala zawsze.
 if [[ "$MODE" == --autostart && -e "$SH_DIR/stan/autostart.off" ]]; then
   log 'autostart wyłączony przez właściciela'
+  DONE_MSG='autostart wyłączony, nic nie uruchamiam'
   exit 0
 fi
 
-command -v herdr >/dev/null || die 'brak herdr w PATH'
+HERDR_BIN="$(command -v herdr)" || die 'brak herdr w PATH'
 command -v jq >/dev/null || die 'brak jq w PATH'
+command -v perl >/dev/null || die 'brak perl w PATH'
 mkdir -p "$LOG_DIR"
+
+# Kazde wywolanie herdr z limitem czasu (SIGALRM, kod 142).
+herdr() {
+  perl -e 'alarm shift; exec @ARGV or die "exec $ARGV[0]: $!\n"' "$HERDR_TIMEOUT" "$HERDR_BIN" "$@"
+}
 
 wait_docker() {
   docker info >/dev/null 2>&1 && return 0
@@ -66,7 +135,7 @@ wait_docker() {
     docker info >/dev/null 2>&1 && { log 'Docker gotowy'; return 0; }
     sleep 5
   done
-  log "UWAGA: Docker niegotowy po ${DOCKER_TIMEOUT} s, kontynuuje bez niego"
+  warn "Docker niegotowy po ${DOCKER_TIMEOUT} s, kontynuuje bez niego"
 }
 
 wait_network() {
@@ -76,13 +145,17 @@ wait_network() {
     curl -sS -m 4 -o /dev/null https://api.anthropic.com 2>/dev/null && return 0
     sleep 5
   done
-  log "UWAGA: brak sieci po ${NETWORK_TIMEOUT} s"
+  warn "brak sieci po ${NETWORK_TIMEOUT} s"
 }
 
 ensure_server() {
   herdr workspace list >/dev/null 2>&1 && return 0
   log 'startuje serwer herdr'
-  nohup herdr server >>"$LOG_DIR/herdr-server.log" 2>&1 &
+  # Wlasna sesja (setsid): gdy sh-start.sh uruchamia job launchd bez AbandonProcessGroup
+  # (watchdog), launchd po jego zakonczeniu zabija cala grupe procesow, a z nia serwer
+  # i orkiestratora.
+  nohup perl -MPOSIX -e 'POSIX::setsid(); exec @ARGV or die "exec $ARGV[0]: $!\n"' \
+    "$HERDR_BIN" server >>"$LOG_DIR/herdr-server.log" 2>&1 &
   disown
   local i
   for ((i = 0; i < 40; i++)); do
@@ -137,7 +210,7 @@ wait_shell_ready() {
     [[ "$n" == 1 ]] && return 0
     sleep 0.5
   done
-  log 'UWAGA: powloka nie zglosila gotowosci w 30 s, wysylam komende mimo to'
+  warn 'powloka nie zglosila gotowosci w 30 s, wysylam komende mimo to'
 }
 
 # PID claude remote-control dzialajacego w $SH_DIR poza panelem orkiestratora (pusto, gdy brak).
@@ -157,47 +230,66 @@ served_count() {
 }
 
 ensure_orchestrator() {
+  STEP='sprawdzanie dzialajacego orkiestratora'
   if orchestrator_running; then
     log "orkiestrator juz dziala w $ORCH_PANE"
     return 0
   fi
   local pid
+  STEP='sprawdzanie drugiej instancji'
   pid="$(foreign_server_pid)"
   if [[ -n "$pid" ]]; then
-    log "UWAGA: $SH_DIR obsluguje juz claude remote-control (PID $pid) poza $ORCH_PANE, nie uruchamiam drugiej instancji"
+    warn "$SH_DIR obsluguje juz claude remote-control (PID $pid) poza $ORCH_PANE, nie uruchamiam drugiej instancji"
     return 0
   fi
+  STEP='czekanie na powloke panelu'
   wait_shell_ready
   local before after i
   before="$(served_count)"
+  STEP='uruchamianie orkiestratora'
   log "uruchamiam orkiestratora w $ORCH_PANE"
   herdr pane run "$ORCH_PANE" "$ORCH_CMD" >/dev/null
   # Druga instancja konczy sie od razu tym komunikatem; startu nie ponawiamy.
+  STEP='czekanie na start orkiestratora'
   for ((i = 0; i < SERVED_WAIT_MS / 500; i++)); do
     after="$(served_count)"
     if ((after > before)); then
-      log "UWAGA: $SH_DIR obsluguje juz inny terminal claude remote-control, nie uruchamiam drugiej instancji"
+      warn "$SH_DIR obsluguje juz inny terminal claude remote-control, nie uruchamiam drugiej instancji"
       return 0
     fi
     sleep 0.5
   done
+  STEP='weryfikacja startu orkiestratora'
+  if orchestrator_running; then
+    log "orkiestrator dziala w $ORCH_PANE"
+  else
+    warn "po ${SERVED_WAIT_MS} ms nie widac procesu claude w $ORCH_PANE"
+  fi
 }
 
 case "$MODE" in
   attach | --no-attach) ;;
   --autostart)
+    STEP='czekanie na Docker'
     wait_docker
+    STEP='czekanie na siec'
     wait_network
     ;;
   *) die "nieznana opcja: $MODE" ;;
 esac
 
+STEP='serwer herdr'
 ensure_server
+STEP='uklad workspace'
 ensure_layout
 ensure_orchestrator
-log "gotowe: workspace $WS_ID, orkiestrator $ORCH_PANE"
+DONE_MSG="workspace $WS_ID, orkiestrator $ORCH_PANE"
 
 if [[ "$MODE" == attach && -t 0 && -t 1 && -z "${HERDR_ENV:-}" ]]; then
+  STEP='podlaczanie terminala'
   herdr workspace focus "$WS_ID" >/dev/null
-  exec herdr
+  # exec nie uruchamia pulapki EXIT, wiec wpis koncowy powstaje teraz.
+  trap - ERR EXIT
+  final_log 0
+  exec "$HERDR_BIN"
 fi
