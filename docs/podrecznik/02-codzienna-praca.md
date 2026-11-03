@@ -101,7 +101,8 @@ klienta.
 1. Wrzuć pliki (także w podfolderach albo jako ZIP).
 2. Napisz w czacie: „materiały w skrzynce dla NAZWA”. Domyślnie trafią do
    `docs/02-design/zrodla/`; inne miejsce podaj wprost, np. „do 00-intake/zrodla”.
-3. Orkiestrator otwiera PR z plikami i podaje, co przyjęto, a co odrzucono.
+3. Orkiestrator otwiera PR z plikami i podaje, co przyjęto, a co odrzucono. Po zielonym CI merguje
+   go sam: bez review Codexa i bez Twojej akceptacji (Twoja decyzja w [[decyzje-systemu]]).
 4. Po merge'u przyjęte pliki znikają ze skrzynki i trafiają do jej podfolderu
    `_przeniesione/RRRRMMDD/`. Kopia jest w repo, a w Obsidianie w `docs/` projektu.
 
