@@ -114,6 +114,14 @@ Zmiana listy: oba pliki naraz, a w szablonie test `scripts/tests/profile-skille.
 Zmiany w `sh-system` i `sh-template-projekt` idą przez gałąź i PR, bez bezpośrednich commitów na
 `main`. Po zielonym CI agent merguje PR sam, bez pytania właściciela.
 
+Zasada stała: pracę nad `sh-system` prowadzimy w osobnym worktree
+`~/sh/wt-system/NAZWA-GAŁĘZI` (`git -C ~/sh/sh-system worktree add -b GAŁĄŹ
+~/sh/wt-system/GAŁĄŹ origin/main`). W `~/sh/sh-system` nigdy nie przełączamy gałęzi: `~/sh/bin`,
+plisty LaunchAgentów i `~/sh/.claude/settings.json` to dowiązania do tego katalogu, więc zmiana
+gałęzi zmienia działający system w trakcie pracy orkiestratora. `~/sh/sh-system` stoi zawsze na
+aktualnym `main`: po merge'u `git -C ~/sh/sh-system pull --ff-only`, potem
+`~/sh/sh-system/scripts/server/install.sh`, a worktree usuwamy (`git worktree remove`).
+
 Wyjątek: zmiana dotycząca bezpieczeństwa, dostępów albo produkcji czeka na zgodę właściciela także
 po zielonym CI.
 
@@ -218,9 +226,18 @@ stąd `-i`. Docker Desktop ma wyłączony AutoStart, więc skrypt tylko go otwie
 directory”), więc nowe sesje dziedziczą jego PATH. `sh-start.sh` dokłada do PATH brakujące
 katalogi narzędzi, eksportuje go dla serwera herdr i przekazuje jawnie w `ORCH_CMD`
 (`PATH='…' SH_NOTIFY=1 claude remote-control …`). Druga instancja nie startuje: skrypt pomija
-start, gdy `pgrep`/`lsof` znajdą `claude remote-control` z cwd `~/sh` poza panelem, a po starcie
+start, gdy `ps -ax` i `lsof` znajdą `claude remote-control` z cwd `~/sh` poza panelem, a po starcie
 przez 8 s szuka w panelu nowego komunikatu „This folder is already served by a terminal claude
 remote-control”; w obu przypadkach zostawia wpis `UWAGA` w logu i kończy z kodem 0.
+
+**Czy orkiestrator działa.** Jedna kontrola w `scripts/server/lib/system.sh` (`orkiestrator_pid`),
+używana przez `sh-start.sh`, strażnika i `shctl doctor`: orkiestrator działa, gdy w panelu
+`orkiestrator` workspace `sh` działa proces `claude remote-control` z katalogiem roboczym `~/sh`.
+Procesy panelu (argv, cwd, PID) podaje `herdr pane process-info`, więc wynik nie zależy od tego,
+kto pyta. Wcześniej doctor szukał procesu przez `pgrep`, a `pgrep` na macOS domyślnie pomija
+przodków wywołującego: doctor uruchomiony z sesji orkiestratora (potomka `claude remote-control`)
+zgłaszał „orkiestrator nie działa”, choć działał (2026-11-04). PATH orkiestratora doctor czyta z jego
+procesu (`ps eww`); powłoka logowania panelu (`-zsh`) środowiska w `ps` nie pokazuje.
 
 Log `~/sh/logs/sh-start.log`: każdy przebieg zaczyna się wpisem `start: tryb …, PID …, rodzic: …`
 (widać, czy uruchomił go launchd, strażnik czy człowiek) i kończy dokładnie jednym wpisem z kodem
@@ -609,6 +626,25 @@ merge'a ani resetu. Szczegóły: `docs/shctl.md`, „obsidian sync”.
 Test z 2026-11-02: pierwszy przebieg zaktualizował `SH/sh-system` o jeden commit, a `shctl doctor`
 pokazał „ostatnia udana 2026-11-02T23:50:06+0100”.
 
+**Logowanie git pod launchd.** Agent dostaje minimalne środowisko: PATH z plisty, brak terminala.
+Od 2026-11-03 13:50 każdy przebieg kończył się „fetch z origin nieudany”: git brał token tylko z
+helpera `osxkeychain`, którego wpis dla github.com zniknął (git kasuje go sam po odrzuconym tokenie),
+a bez terminala nie mógł zapytać o hasło („could not read Username”). Teraz:
+
+- `shctl` robi fetch, pull, clone i ls-remote przez `git_gh` (`scripts/shctl/lib/common.sh`): helper
+  `gh auth git-credential` z bezwzględną ścieżką `gh`, `GIT_TERMINAL_PROMPT=0`. Token gh leży w pęku
+  kluczy logowania, dostępnym dla agentów w domenie `gui/UID`. Nie zależy od `~/.gitconfig`.
+- `shctl` dopisuje do PATH brakujące katalogi narzędzi (`~/sh/bin`, `~/.local/bin`, Homebrew,
+  `/usr/local/bin`, `/usr/sbin`), także przy PATH=/usr/bin:/bin.
+- `install.sh` ustawia globalny `credential.https://github.com.helper` na `gh auth git-credential`
+  (dla workerów i orkiestratora przy push), a `shctl doctor` sprawdza go kontrolą `logowanie git`.
+- Log podaje przyczynę z git, np. „fetch z origin nieudany (could not read Username …)”.
+
+Sprawdzenie w kontekście launchd: `launchctl kickstart -k gui/$(id -u)/pl.iskt.softwarehouse.obsidian-sync`,
+potem `tail ~/sh/logs/obsidian-sync.log` i `shctl doctor` (wiersz „Obsidian sync”). Test
+`scripts/shctl/tests/launchd.bats` uruchamia `shctl obsidian sync --agent` przez `env -i` z
+PATH=/usr/bin:/bin.
+
 ### Obsidian: instrukcja dla właściciela
 
 - W vaulcie włączona jest tylko wtyczka społeczności **Dataview**. Obsidian Git nie jest potrzebny i
@@ -648,7 +684,8 @@ Jeden przebieg:
 3. Przy nowym komunikacie dopisuje wiersz do `limity.md` i wysyła `notify.sh high`
    „Limit X do HH:MM. Po odnowieniu napisz orkiestratorowi: wznów”.
 4. Sprawdza, czy działa orkiestrator: proces `claude remote-control` z katalogiem roboczym `~/sh`
-   (`pgrep` i `lsof`, w panelu albo poza nim). Gdy nie działa, uruchamia
+   w panelu `orkiestrator` (ta sama kontrola co `sh-start.sh` i doctor, sekcja „Uruchomienie”).
+   Taki proces poza panelem to wpis `UWAGA` bez restartu (blokuje drugą instancję). Gdy nie działa, uruchamia
    `~/sh/bin/sh-start.sh --no-attach` (wyjście w `~/sh/logs/sh-start.log`), czeka do 15 s i wysyła
    `notify.sh high` „Orkiestrator uruchomiony ponownie”. Gdy orkiestrator nie wstanie, wysyła raz
    `urgent` „Orkiestrator nie wstał po restarcie” (flaga `~/sh/stan/orkiestrator-restart-blad`

@@ -48,7 +48,8 @@ shctl status show --projekt strona-firmowa
 ### doctor
 
 **Czyta** (jedyny zapis: zdejmuje z listy do usunięcia repo testowe, których już nie ma). Sprawdza
-zdrowie serwera: narzędzia, logowania gh, codex i claude, Docker, herdr, czy działa orkiestrator
+zdrowie serwera: narzędzia, logowania gh, codex i claude, logowanie git do GitHuba, Docker, herdr,
+czy w panelu `orkiestrator` działa orkiestrator (ta sama kontrola co przy starcie i w strażniku)
 i czy ma `~/sh/bin` w PATH, powiadomienia, hook git,
 wolne miejsce, porty, kopie w Obsidianie i datę ostatniej synchronizacji, repo testowe do usunięcia.
 Stany: `ok`, `uwaga`, `blad`.

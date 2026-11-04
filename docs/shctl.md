@@ -492,9 +492,12 @@ shctl doctor [--test-notify]
 ```
 
 Sprawdza narzędzia, logowania gh, codex i claude, Docker, serwer herdr, orkiestratora
-(`orkiestrator`: proces `claude remote-control` z katalogiem roboczym `~/sh`, `blad`, gdy go nie ma;
-`PATH panelu herdr`: `~/sh/bin` w PATH procesu orkiestratora, a gdy nie działa, w PATH powłoki
-panelu `orkiestrator` w workspace `sh`; brak to `blad`), `notify.sh` i temat ntfy,
+(`orkiestrator`: w panelu `orkiestrator` workspace `sh` działa proces `claude remote-control` z
+katalogiem roboczym `~/sh`, ta sama kontrola co `sh-start.sh` i strażnik, `scripts/server/lib/system.sh`;
+`blad`, gdy go nie ma, z PID, gdy taki proces działa poza panelem; `PATH panelu herdr`: `~/sh/bin` w
+PATH procesu orkiestratora, brak to `blad`, a gdy orkiestrator nie działa, `uwaga` bez sprawdzenia),
+`logowanie git` (git dostaje token dla github.com bez pytania, helper z `install.sh`; brak to `blad`),
+`notify.sh` i temat ntfy,
 globalny `core.hooksPath`, lokalny `core.hooksPath` w repo z `~/sh/projekty`, wolne miejsce,
 `porty.md`, klony w `SH_OBSIDIAN_DIR` (czy są czyste i zgodne z origin, przez `git ls-remote`, bez
 pobierania; różnica to `uwaga`), datę ostatniej udanej synchronizacji Obsidiana z
@@ -840,7 +843,8 @@ pliku w `status:todo` bez iteracji, komenda nic nie robi (`"zmiana":false`).
 bats scripts/shctl/tests
 ```
 
-Testy używają atrap `gh`, `herdr`, `notify` i `lsof` oraz projektu w katalogu tymczasowym. Testy zadań
+Testy używają atrap `gh`, `herdr`, `notify`, `ps` i `lsof` oraz projektu w katalogu tymczasowym.
+`launchd.bats` uruchamia shctl przez `env -i` z PATH=/usr/bin:/bin, jak LaunchAgent. Testy zadań
 (`task-*.bats`, `review.bats`, `reset-dryrun.bats`) mają stanowe atrapy w `tests/atrapy/`: `gh`
 (issue, PR, komentarze, CI, milestone'y; merge to prawdziwy squash na lokalnym repo zdalnym), `herdr`
 (panele; `pane run` wykonuje komendę od razu), `codex`, `claude` i `df`.

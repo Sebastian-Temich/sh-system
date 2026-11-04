@@ -47,6 +47,7 @@ case "\$1 \$2" in
   "issue edit") [ ! -f "$T/gh-fail" ] ;;
   "issue list") cat "$T/issues.json" 2>/dev/null || exit 1 ;;
   "label create") ;;
+  "auth git-credential") [ ! -f "$T/gh-bez-tokenu" ] && printf 'username=x-access-token\npassword=atrapa\n' ;;
   "api repos/"*) ;;
 esac
 MOCK

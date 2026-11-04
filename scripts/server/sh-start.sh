@@ -27,6 +27,18 @@ SERVED_WAIT_MS="${SH_SERVED_WAIT_MS:-8000}"
 # Limit pojedynczego wywolania herdr; zawieszony serwer nie moze zatrzymac skryptu bez sladu.
 HERDR_TIMEOUT="${SH_HERDR_TIMEOUT:-30}"
 
+# Kontrola orkiestratora i PATH: scripts/server/lib/system.sh (wspolna z watchdogiem i doctorem).
+# ~/sh/bin/sh-start.sh to dowiazanie, wiec katalog repo bierzemy z celu dowiazania.
+src="${BASH_SOURCE[0]}"
+while [[ -L "$src" ]]; do
+  dir="$(cd -P "$(dirname "$src")" && pwd)"
+  src="$(readlink "$src")"
+  [[ "$src" == /* ]] || src="$dir/$src"
+done
+# shellcheck source=lib/system.sh
+. "$(cd -P "$(dirname "$src")" && pwd)/lib/system.sh"
+unset src dir
+
 MODE="${1:-attach}"
 STEP='przygotowanie'
 DONE_MSG=''
@@ -197,8 +209,7 @@ ensure_layout() {
 }
 
 orchestrator_running() {
-  herdr pane process-info --pane "$ORCH_PANE" |
-    jq -e '[.result.process_info.foreground_processes[].cmdline] | any(test("(^|/)claude( |$)"))' >/dev/null
+  orkiestrator_dziala "$ORCH_PANE"
 }
 
 # Powloka jest gotowa, gdy zostal sam proces glowny (.zshrc odpala podprocesy).
@@ -211,17 +222,6 @@ wait_shell_ready() {
     sleep 0.5
   done
   warn 'powloka nie zglosila gotowosci w 30 s, wysylam komende mimo to'
-}
-
-# PID claude remote-control dzialajacego w $SH_DIR poza panelem orkiestratora (pusto, gdy brak).
-foreign_server_pid() {
-  local pid cwd want
-  want="$(cd "$SH_DIR" 2>/dev/null && pwd -P || printf '%s' "$SH_DIR")"
-  for pid in $(pgrep -f 'claude remote-control' 2>/dev/null || true); do
-    cwd="$(lsof -a -p "$pid" -d cwd -Fn 2>/dev/null | sed -n 's/^n//p')"
-    [[ "$cwd" == "$SH_DIR" || "$cwd" == "$want" ]] && { printf '%s' "$pid"; return 0; }
-  done
-  return 0
 }
 
 served_count() {
@@ -237,7 +237,7 @@ ensure_orchestrator() {
   fi
   local pid
   STEP='sprawdzanie drugiej instancji'
-  pid="$(foreign_server_pid)"
+  pid="$(ork_pid_poza_panelem)"
   if [[ -n "$pid" ]]; then
     warn "$SH_DIR obsluguje juz claude remote-control (PID $pid) poza $ORCH_PANE, nie uruchamiam drugiej instancji"
     return 0

@@ -29,7 +29,7 @@ obsidian_polacz() {
   fi
   if [ "$DRY" -eq 0 ]; then
     mkdir -p "$SH_OBSIDIAN_DIR"
-    git clone --quiet --filter=blob:none --sparse "https://github.com/$slug.git" "$kat" >&2 ||
+    git_gh clone --quiet --filter=blob:none --sparse "https://github.com/$slug.git" "$kat" >&2 ||
       die "$E_WYKONANIE" "nie można sklonować $slug do $kat; ponów: shctl obsidian link $nazwa"
     git -C "$kat" sparse-checkout set --no-cone /docs/ >&2 ||
       die "$E_WYKONANIE" "sparse-checkout nieudany w $kat"
@@ -60,7 +60,7 @@ obsidian_stan() {
   fi
   g="$(git -C "$kat" symbolic-ref --short -q HEAD || true)"
   lok="$(git -C "$kat" rev-parse HEAD 2>/dev/null || true)"
-  zdal="$(z_limitem 20 git -C "$kat" ls-remote origin "refs/heads/${g:-main}" 2>/dev/null | cut -f1 || true)"
+  zdal="$(git_gh -t 20 -C "$kat" ls-remote origin "refs/heads/${g:-main}" 2>/dev/null | cut -f1 || true)"
   if [ -z "$zdal" ]; then
     echo "origin niedostępny"
   elif [ "$zdal" = "$lok" ]; then
@@ -89,7 +89,7 @@ obsidian_klony() {
 
 # Jeden klon: tylko git pull --ff-only, nigdy merge ani reset. Wypisuje „ok:opis” albo „pominiety:powód”.
 obsidian_sync_klon() {
-  local kat="$1" zmiany g przed po ahead behind
+  local kat="$1" zmiany g przed po ahead behind blad
   zmiany="$(git -C "$kat" status --porcelain 2>/dev/null || echo blad)"
   if [ -n "$zmiany" ]; then
     echo "pominiety:lokalne zmiany (plików: $(printf '%s\n' "$zmiany" | wc -l | tr -d ' '))"
@@ -97,7 +97,12 @@ obsidian_sync_klon() {
   fi
   g="$(git -C "$kat" symbolic-ref --short -q HEAD || true)"
   [ -n "$g" ] || { echo "pominiety:odłączony HEAD"; return 0; }
-  z_limitem 60 git -C "$kat" fetch -q origin "$g" 2>/dev/null || { echo "pominiety:fetch z origin nieudany"; return 0; }
+  if ! blad="$(git_gh -t 60 -C "$kat" fetch -q origin "$g" 2>&1 >/dev/null)"; then
+    # Pierwsza linia z git (np. brak logowania) od razu wskazuje przyczynę w logu.
+    blad="$(printf '%s\n' "$blad" | sed -n '/./{s/^fatal: //;p;q;}' | cut -c1-160)"
+    echo "pominiety:fetch z origin nieudany${blad:+ ($blad)}"
+    return 0
+  fi
   ahead="$(git -C "$kat" rev-list --count "FETCH_HEAD..HEAD" 2>/dev/null || echo x)"
   behind="$(git -C "$kat" rev-list --count "HEAD..FETCH_HEAD" 2>/dev/null || echo x)"
   case "$ahead$behind" in *x*) echo "pominiety:nie można porównać z origin/$g"; return 0 ;; esac
@@ -108,7 +113,7 @@ obsidian_sync_klon() {
   [ "$ahead" -eq 0 ] || { echo "pominiety:niewypchnięte commity: $ahead"; return 0; }
   [ "$behind" -gt 0 ] || { echo "ok:aktualny"; return 0; }
   przed="$(git -C "$kat" rev-parse --short HEAD)"
-  z_limitem 120 git -C "$kat" pull -q --ff-only origin "$g" >/dev/null 2>&1 ||
+  git_gh -t 120 -C "$kat" pull -q --ff-only origin "$g" >/dev/null 2>&1 ||
     { echo "pominiety:git pull --ff-only nieudany"; return 0; }
   po="$(git -C "$kat" rev-parse --short HEAD)"
   echo "ok:$przed..$po (commitów: $behind)"

@@ -6,7 +6,8 @@
 # 1. Wiersze ~/sh/limity.md z godziną „Do” w przeszłości usuwa i wysyła „Limit X odnowiony”.
 # 2. W panelach workspace „sh” czyta ostatnie linie i szuka wzorców z ~/sh/watchdog-wzorce.txt.
 #    Nowy komunikat: wiersz w limity.md (format: docs/shctl.md) i powiadomienie „Limit X do HH:MM”.
-# 3. Gdy nie działa claude remote-control w $SH_DIR, uruchamia sh-start.sh --no-attach
+# 3. Gdy w panelu orkiestratora nie działa claude remote-control z cwd $SH_DIR (lib/system.sh),
+#    uruchamia sh-start.sh --no-attach
 #    i wysyła „Orkiestrator uruchomiony ponownie” (flaga ~/sh/stan/autostart.off wyłącza restart).
 # Etap A: strażnik nie wznawia pracy, robi to właściciel („wznów” do orkiestratora).
 #
@@ -23,6 +24,19 @@ set -o pipefail
 shopt -s nocasematch
 
 SH_DIR="${SH_DIR:-$HOME/sh}"
+
+# Kontrola orkiestratora i PATH: scripts/server/lib/system.sh (wspólna z sh-start.sh i doctorem).
+# ~/sh/bin/sh-watchdog.sh to dowiązanie, więc katalog repo bierzemy z celu dowiązania.
+src="${BASH_SOURCE[0]}"
+while [ -L "$src" ]; do
+  dir="$(cd -P "$(dirname "$src")" && pwd)"
+  src="$(readlink "$src")"
+  case "$src" in /*) ;; *) src="$dir/$src" ;; esac
+done
+# shellcheck source=lib/system.sh
+. "$(cd -P "$(dirname "$src")" && pwd)/lib/system.sh"
+unset src dir
+sh_uzupelnij_path
 LIMITY="$SH_DIR/limity.md"
 WZORCE="$SH_DIR/watchdog-wzorce.txt"
 WIDZIANE="$SH_DIR/stan/watchdog-widziane.txt"
@@ -386,31 +400,30 @@ zapisz_widziane() {
 
 # --- Orkiestrator ---------------------------------------------------------------------------
 
-# 0, gdy działa claude remote-control z katalogiem roboczym $SH_DIR (w panelu albo poza nim).
-orkiestrator_dziala() {
-  local pid cwd want
-  want="$(cd "$SH_DIR" 2>/dev/null && pwd -P || printf '%s' "$SH_DIR")"
-  for pid in $(pgrep -f 'claude remote-control' 2>/dev/null); do
-    cwd="$(lsof -a -p "$pid" -d cwd -Fn 2>/dev/null | sed -n 's/^n//p')"
-    [ "$cwd" = "$SH_DIR" ] || [ "$cwd" = "$want" ] && return 0
-  done
-  return 1
-}
+# Orkiestrator: orkiestrator_dziala z lib/system.sh (panel „orkiestrator” w workspace $WS_LABEL,
+# proces claude remote-control z cwd $SH_DIR).
+ORK_WS="$WS_LABEL"
 
 # Brak orkiestratora: sh-start.sh --no-attach i powiadomienie. Flaga autostart.off wyłącza
 # także ten restart. Nieudany restart zgłaszany raz, do pierwszego udanego.
 pilnuj_orkiestratora() {
-  local blad="$SH_DIR/stan/orkiestrator-restart-blad" i
+  local blad="$SH_DIR/stan/orkiestrator-restart-blad" i obcy
   [ "$ORCH_PILNUJ" = 1 ] || return 0
   if [ -e "$SH_DIR/stan/autostart.off" ]; then
     orkiestrator_dziala || log "orkiestrator nie działa, restart wyłączony flagą autostart.off"
     return 0
   fi
-  command -v pgrep >/dev/null && command -v lsof >/dev/null || {
-    log "UWAGA: brak pgrep albo lsof, pomijam kontrolę orkiestratora"
+  command -v herdr >/dev/null && command -v jq >/dev/null || {
+    log "UWAGA: brak herdr albo jq w PATH, pomijam kontrolę orkiestratora"
     return 0
   }
   orkiestrator_dziala && { rm -f "$blad"; return 0; }
+  # Instancja poza panelem blokuje start drugiej; restart nic by nie dał.
+  obcy="$(ork_pid_poza_panelem)"
+  if [ -n "$obcy" ]; then
+    log "UWAGA: claude remote-control (PID $obcy) działa w $SH_DIR poza panelem orkiestratora, nie restartuję"
+    return 0
+  fi
   if [ ! -x "$SH_START" ]; then
     log "BLAD: orkiestrator nie działa, brak $SH_START"
     return 0
