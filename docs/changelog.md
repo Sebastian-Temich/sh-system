@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-11-04 (lista dozwolonych orkiestratora: git -C)
+
+- `orkiestrator-settings.json`: `git -C * add|commit|push|ls-files` i `jq` w allow, bo `sh-orkiestrator` używa `git -C KATALOG` zamiast `cd KATALOG && git` (zawsze wymaga zgody). Każda reguła deny dla `git` ma odpowiednik z `-C` (force push, `--delete`, `production`, `reset --hard`, `clean`); nowe deny: `git switch|checkout` (także z `-C`) i usuwanie gałęzi. Test `orkiestrator-settings.bats`.
+
 ## 2026-11-04 (poprawki operacyjne, część 2)
 
 - Propozycje dla systemu: `shctl task close` dopisuje wpis do jednego otwartego PR miesiąca w `sh-system` (gałąź `propozycje-RRRR-MM`) zamiast PR na każde zadanie; po merge'u kolejny PR od `main`. PR #33–#43 połączone w jeden.
