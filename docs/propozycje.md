@@ -117,3 +117,8 @@ bez dublowania.
 <!-- propozycje:sh-dryrun:T-38 -->
 - Profil workera blokuje `gh api` (np. odczyt wydań akcji GitHub). Przy przypinaniu akcji do SHA w zadaniu szkieletu przydałby się dozwolony odczyt `gh api repos/*/releases` albo gotowa lista SHA w szablonie `ci.yml`.
 - Szablon `ci.yml` mógłby od razu zawierać kroki `pnpm/action-setup` i `actions/setup-node` z przypiętymi SHA dla projektów Node; zadanie szkieletu podmieniałoby tylko komendy.
+
+## sh-dryrun T-41 (2026-11-04)
+
+<!-- propozycje:sh-dryrun:T-41 -->
+- Lista plików w „Zakresie” issue mogłaby zawsze zawierać `docs/07-realizacja/T-NR.md`, żeby raport nie wymagał decyzji „plik spoza Zakresu”.
