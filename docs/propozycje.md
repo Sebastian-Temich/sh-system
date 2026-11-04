@@ -38,3 +38,10 @@ bez dublowania.
   `herdr agent prompt`; propozycja: `shctl task nudge NR --powod kontynuuj|od-nowa`;
 - wpis „Punktu przekazania” w `status.md`; propozycja: `shctl handoff` z danymi `status show`,
   wynikiem `doctor` i wierszem autoryzacji.
+
+## sh-dryrun T-13 (2026-11-04)
+
+<!-- propozycje:sh-dryrun:T-13 -->
+- Profil workera blokuje złożone polecenia powłoki (np. kilka komend przez `;`). Krok 1 Procedury
+  wygodniej byłoby opisać jako osobne polecenia albo dodać `shctl task whereami` zwracające katalog,
+  gałąź, iterację i numer PR w jednym JSON.
