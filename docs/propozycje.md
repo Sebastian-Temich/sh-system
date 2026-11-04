@@ -111,3 +111,9 @@ bez dublowania.
 <!-- propozycje:sh-dryrun:T-36 -->
 - Narzędzie Write/Edit zamieniało w teście sekwencję ` ` na literalny znak, co blokował eslint.
   Warto w szablonie testów zalecać `\s` zamiast ` ` w wyrażeniach regularnych.
+
+## sh-dryrun T-38 (2026-11-04)
+
+<!-- propozycje:sh-dryrun:T-38 -->
+- Profil workera blokuje `gh api` (np. odczyt wydań akcji GitHub). Przy przypinaniu akcji do SHA w zadaniu szkieletu przydałby się dozwolony odczyt `gh api repos/*/releases` albo gotowa lista SHA w szablonie `ci.yml`.
+- Szablon `ci.yml` mógłby od razu zawierać kroki `pnpm/action-setup` i `actions/setup-node` z przypiętymi SHA dla projektów Node; zadanie szkieletu podmieniałoby tylko komendy.
