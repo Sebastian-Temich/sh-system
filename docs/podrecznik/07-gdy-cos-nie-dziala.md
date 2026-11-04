@@ -27,8 +27,8 @@ Automatyczne wznowienie po limicie to etap B (jeszcze niedostępne).
 
 ## Zawieszony worker
 
-**Objaw:** zadanie długo „w toku”, brak postępu w statusie, albo push „Claude czeka na zgodę” lub
-„Claude czeka na Ciebie” z numerem zadania w treści.
+**Objaw:** zadanie długo „w toku”, brak postępu w statusie, albo push „Claude czeka na zgodę” z
+treścią `PROJEKT / worker #NR`.
 
 **Co robisz:**
 
@@ -36,8 +36,8 @@ Automatyczne wznowienie po limicie to etap B (jeszcze niedostępne).
    - panel bez agenta, brak PR: sprawdza stan (`shctl task resume-check`) i uruchamia workera
      ponownie (`shctl task dispatch`);
    - agent bezczynny bez PR: wysyła mu polecenie dokończenia.
-2. Push „Claude czeka na zgodę” oznacza pytanie o zgodę w panelu workera, a „Claude czeka na
-   Ciebie” agenta bezczynnego, który czeka na wiadomość. Możesz zajrzeć do
+2. Push „Claude czeka na zgodę” oznacza pytanie o zgodę w panelu workera. Bezczynnego workera
+   (bez pushu) wykrywa orkiestrator. Możesz zajrzeć do
    panelu `worker:PROJEKT:NR` w herdr (na serwerze albo przez SSH: `/Users/Shared/sh/bin/sh-start.sh`) i
    odpowiedzieć.
 3. Sam możesz sprawdzić blokady: `shctl task ready --projekt NAZWA`.

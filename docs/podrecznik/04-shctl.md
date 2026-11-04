@@ -299,6 +299,23 @@ shctl reset-dryrun
 
 **Kiedy samemu:** tylko przy teście regresji systemu.
 
+## Utrzymanie projektów
+
+### profile update
+
+Przenosi do istniejącego projektu aktualne profile uprawnień agentów (`.claude/roles/*/settings.json`)
+z szablonu: commit na `main` projektu, bez przełączania gałęzi. Z `--baseline` (projekt wzorcowy)
+przesuwa też tag `baseline`, a poprzedni zachowuje jako `baseline-DATA`. `--dry-run` pokazuje, co
+się zmieni.
+
+```sh
+shctl profile update --projekt sh-dryrun --baseline --dry-run
+shctl profile update --projekt sh-dryrun --baseline
+```
+
+**Kiedy samemu:** po zmianie uprawnień agentów w szablonie, zwykle robi to agent pracujący nad
+systemem. Zadania w toku dostają nowe profile dopiero po rebase'ie na `main`.
+
 ## Czego `shctl` nie ma
 
 Tych operacji nie ma jeszcze komendą: merge PR etapu, przypomnienie bezczynnemu workerowi, wpis
@@ -307,5 +324,5 @@ drobnych uwag z QA do backlogu. Orkiestrator robi je ręcznie i zapisuje propozy
 
 Zapowiedziane komendy:
 
-- `shctl upgrade`: aktualizacja projektów do nowego szablonu, etap B (jeszcze niedostępne);
+- `shctl upgrade`: aktualizacja projektów do nowego szablonu poza profilami ról, etap B (jeszcze niedostępne);
 - `shctl cykl new`: nowy cykl etapów w trwającym projekcie, etap B (jeszcze niedostępne).
