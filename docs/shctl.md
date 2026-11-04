@@ -943,6 +943,34 @@ otwarte zadania z pliku w `status:todo` bez iteracji, komenda nic nie robi (`"zm
   "mapa":{"T1":38,"T2":39},"przebieg":3,"obsidian":"odtworzony","zmiana":true}}
 ```
 
+### profile update
+
+```sh
+shctl profile update [--baseline] [--dry-run] [--json] [--projekt NAZWA]
+```
+
+Kopiuje profile ról (`.claude/roles/*/settings.json`) z `main` szablonu `SH_TEMPLATE` (płytki klon z
+GitHuba) do istniejącego projektu. Klon projektu musi stać na `main`: komenda nie przełącza gałęzi,
+inna gałąź to odmowa (kod 4). Przed zmianą `fetch` i przewinięcie `main` do `origin/main`; lokalne
+commity spoza `origin/main` albo niezacommitowane zmiany w profilach to odmowa. Różniące się pliki
+trafiają do commita „profile ról z SH_TEMPLATE SHA” na `main` i push.
+
+`--baseline` (projekt wzorcowy): buduje commit „baseline + profile” na starym `baseline` przez
+osobny indeks, bez dotykania katalogu roboczego, zapisuje stary tag jako
+`baseline-RRRRMMDD-HHMMSS`, wypycha go i przesuwa `baseline` (force push tagu). Pozostała treść
+baseline bez zmian, więc `reset-dryrun` działa dalej. Cofnięcie: `git tag -f baseline
+baseline-RRRRMMDD-HHMMSS && git push --force origin refs/tags/baseline`.
+
+`--dry-run` tylko porównuje z `origin/main` i tagiem, niczego nie zmienia. Zadania w toku mają
+stare profile do czasu rebase'u ich gałęzi na `main`.
+
+```json
+{"ok":true,"komenda":"profile","dry_run":false,"wynik":{"szablon":"7aa9c64...",
+ "main":{"przed":"48c3441...","po":"9b1e0d2...","pliki":[".claude/roles/worker/settings.json"]},
+ "baseline":{"przed":"0ea967b...","po":"5c3a8f1...","archiwum":"baseline-20261104-221500","pliki":[...]},
+ "zmiana":true}}
+```
+
 ## Testy
 
 ```sh

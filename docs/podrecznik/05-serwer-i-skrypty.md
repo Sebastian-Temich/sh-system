@@ -74,11 +74,19 @@ notify.sh high "Tytuł" "Treść" https://link-po-kliknieciu warning
 ```
 
 Priorytety: `min`, `default`, `high`, `urgent`. Używają go shctl, strażnik limitów i `install.sh`.
-Hook Claude Code wysyła „Claude czeka na zgodę” (pytanie o zgodę) i „Claude czeka na Ciebie”
-(Claude skończył i czeka na wiadomość). Działa tylko w procesie uruchomionym z `SH_NOTIFY=1`, a tak
+Hook Claude Code (`notify-hook.sh`) wysyła „Claude czeka na zgodę” (pytanie o zgodę) i „Claude
+czeka na Ciebie” (orkiestrator skończył i czeka na wiadomość; workery tego nie wysyłają). W treści
+jest projekt i rola, np. `sh-dryrun / orkiestrator` albo `sh-dryrun / worker #11`. Działa tylko w procesie uruchomionym z `SH_NOTIFY=1`, a tak
 startuje każdy worker z `shctl task dispatch` i orkiestrator z `sh-start.sh`.
 
 Test: `shctl doctor --test-notify` albo wywołanie jak wyżej.
+
+### odczyt-hook.sh
+
+Pilnuje, co agenci mogą czytać narzędziami Read, Glob i Grep: worker i reviewer tylko swój
+worktree, konfigurację Claude (`~/.claude`, skille SH) i swój katalog tymczasowy, orkiestrator
+`/Users/Shared/sh`. Próba odczytu poza zakresem kończy się odmową z powodem w sesji agenta. Szczegóły:
+`docs/serwer.md`, „Uprawnienia sesji SH”.
 
 ### sh-watchdog.sh
 
