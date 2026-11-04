@@ -38,3 +38,11 @@ bez dublowania.
   `herdr agent prompt`; propozycja: `shctl task nudge NR --powod kontynuuj|od-nowa`;
 - wpis „Punktu przekazania” w `status.md`; propozycja: `shctl handoff` z danymi `status show`,
   wynikiem `doctor` i wierszem autoryzacji.
+
+## sh-dryrun T-23 (2026-11-04)
+
+<!-- propozycje:sh-dryrun:T-23 -->
+- Profil workera: dopuścić `git ls-remote --tags https://github.com/*` (tylko odczyt), żeby zadanie szkieletu mogło przypinać akcje GitHub po SHA bez obchodzenia przez WebFetch.
+- Przenieść poprawkę `scripts/tests/sync-status.bats` (fixture'y zamiast kopii żywego `docs/`) do `sh-template-projekt`, żeby nowe projekty nie miały czerwonego CI po pierwszej decyzji orkiestratora.
+- Profil workera: dopuścić `bats scripts/tests/*`, żeby worker mógł lokalnie sprawdzić testy skryptów przed pushem.
+- Szablon CI: dać od razu przypięty `actions/setup-node` (zakomentowany), skoro większość projektów to Node.
