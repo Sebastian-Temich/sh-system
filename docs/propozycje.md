@@ -38,3 +38,11 @@ bez dublowania.
   `herdr agent prompt`; propozycja: `shctl task nudge NR --powod kontynuuj|od-nowa`;
 - wpis „Punktu przekazania” w `status.md`; propozycja: `shctl handoff` z danymi `status show`,
   wynikiem `doctor` i wierszem autoryzacji.
+
+## sh-dryrun T-10 (2026-11-04)
+
+<!-- propozycje:sh-dryrun:T-10 -->
+- Numer PR do raportu znany jest dopiero po `gh pr create`, więc raport wymaga drugiego commita.
+  Szablon mógłby dopuszczać `PR:` uzupełniane przez `shctl review run` albo `task close`.
+- Profil workera nadal odrzuca złożone polecenia powłoki (`&&`, heredoc), więc commit, push i
+  `gh pr create` trzeba wywoływać osobno; warto to opisać w skillu albo poluzować profil.
