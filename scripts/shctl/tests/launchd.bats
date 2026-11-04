@@ -41,6 +41,8 @@ jak_launchd() {
 # Przyczyna awarii z 2026-11-03: pod launchd git nie miał skąd wziąć tokenu (osxkeychain pusty,
 # terminala brak), więc fetch kończył się „could not read Username”. git_gh bierze token z gh.
 @test "launchd: git_gh dostaje token dla github.com z gh, bez terminala i bez ~/.gitconfig" {
+  # Runner Ubuntu ma gh w /usr/bin: przesłoniłby atrapę z ~/.local/bin. Na macOS /usr/bin nie ma gh.
+  [ ! -x /usr/bin/gh ] && [ ! -x /bin/gh ] || skip "gh w /usr/bin przesłania atrapę (runner CI)"
   rm "$HOME/.gitconfig"
   run jak_launchd bash -c '
     SHCTL_DIR="$1"
