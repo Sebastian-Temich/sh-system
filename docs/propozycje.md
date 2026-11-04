@@ -38,3 +38,8 @@ bez dublowania.
   `herdr agent prompt`; propozycja: `shctl task nudge NR --powod kontynuuj|od-nowa`;
 - wpis „Punktu przekazania” w `status.md`; propozycja: `shctl handoff` z danymi `status show`,
   wynikiem `doctor` i wierszem autoryzacji.
+
+## sh-dryrun T-24 (2026-11-04)
+
+<!-- propozycje:sh-dryrun:T-24 -->
+- Profil workera nie pozwala na `gh pr list`; sprawdzenie istnienia PR robię przez `gh pr view task/NR-slug`, co skill już opisuje, ale warto to podkreślić. Złożone komendy Bash (`;`, `&&`) są nadal odrzucane (jak w T-26).
