@@ -38,3 +38,12 @@ bez dublowania.
   `herdr agent prompt`; propozycja: `shctl task nudge NR --powod kontynuuj|od-nowa`;
 - wpis „Punktu przekazania” w `status.md`; propozycja: `shctl handoff` z danymi `status show`,
   wynikiem `doctor` i wierszem autoryzacji.
+
+## sh-dryrun T-8 (2026-11-04)
+
+<!-- propozycje:sh-dryrun:T-8 -->
+- Profil workera nie pozwala na `fnm` ani `cat`/`head`; dodać `Bash(fnm list)` / `Bash(fnm current)`, żeby worker mógł sprawdzić wersję Node zgodnie z kontraktem „Node LTS przez fnm”.
+- Szablon CI mógłby od razu zawierać przypięte SHA `pnpm/action-setup` i `actions/setup-node` (zakomentowane), bo worker nie ma `gh api` i musi szukać SHA przez WebFetch.
+- Przenieść poprawkę `scripts/tests/sync-status.bats` z fixture'ami (`scripts/tests/fixtures/sync-status/`) do `sh-template-projekt`; bez niej każdy nowy projekt ma czerwony `testy-skryptow` po pierwszych wpisach orkiestratora.
+- Dodać `Bash(bats *)` do profilu workera, żeby worker mógł lokalnie uruchomić testy skryptów przed pushem.
+- Zadanie szkieletu powinno mieć w „Zakresie” `src/**` i `tsconfig.build.json` (albo ogólnie katalog kodu), skoro kryterium wymaga kodu w `src/`.
