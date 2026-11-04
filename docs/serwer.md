@@ -906,11 +906,17 @@ Profile w istniejącym projekcie aktualizuje `shctl profile update [--baseline]`
 komendy: `shctl`, `notify.sh`, `herdr` do odczytu i sterowania agentami (`agent list|get|read|wait|
 explain|prompt`, `pane list|get|read|process-info|wait-output|close`, `workspace|tab list`,
 `status`), `gh pr|issue|run|repo view|label list` i `gh api repos/...`, `git` do odczytu,
-`fetch|pull|add|commit|push|tag|merge` (także `git -C ŚCIEŻKA` dla odczytu i
-`fetch|pull`) oraz `ps`. Bez `git switch` i `checkout`: w `/Users/Shared/sh/sh-system` i klonach projektów
+`fetch|pull|add|commit|push|tag|merge` (także `git -C ŚCIEŻKA` dla odczytu, `fetch|pull` i
+`add|commit|push`), `jq` oraz `ps`. Każda reguła `deny` dla `git` ma odpowiednik z `-C` (test
+`scripts/server/tests/orkiestrator-settings.bats`), bo `git -C KATALOG push --force` nie pasuje do
+`git push --force*`. Bez `git switch` i `checkout`: w `/Users/Shared/sh/sh-system` i klonach projektów
 nie przełączamy gałęzi. Bez reguły zostają `herdr pane run|send-text|send-keys` i `herdr agent
 send-keys` (wykonują dowolny tekst w innym panelu). `deny`: `git push` z `--force`/`-f`,
-`--delete`, `:GAŁĄŹ` i na `production`, `git reset --hard`, `git clean`, `gh api` z `-X`,
+`--delete`, `:GAŁĄŹ` i na `production`, `git reset --hard`, `git clean`, `git switch|checkout`,
+usuwanie gałęzi (`git branch -d|-D|--delete`), wymuszony push przez refspec z `+`
+(`git push origin +main`), `git push --mirror|--prune`, każde `git -c …` (pozwala ustawić
+`core.sshCommand`, `core.hooksPath` albo alias i uruchomić dowolny program), `--exec`,
+`--receive-pack`, `--upload-pack` w każdej komendzie git, `gh api` z `-X`,
 `--method`, `-f`, `-F`, `--field`, `--raw-field` (te cztery zmieniają metodę na POST), `--input`,
 flaga przed albo po ścieżce, `gh repo delete`, `gh secret`,
 `gh auth`, `gh workflow`.
