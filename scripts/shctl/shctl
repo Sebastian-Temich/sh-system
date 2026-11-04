@@ -47,6 +47,7 @@ Użycie: shctl KOMENDA [argumenty] [--dry-run] [--json] [--projekt NAZWA]
   pr check PR [--czekaj] [--timeout SEKUNDY]
   review run PR [--timeout SEKUNDY]
   reset-dryrun
+  profile update [--baseline]
 
 Dokumentacja: sh-system/docs/shctl.md
 TXT
@@ -59,7 +60,7 @@ shift
 case "$KOMENDA" in
   -h | --help | help) pomoc; exit 0 ;;
   new-project | stage | doc | decision | escalate | ports | status | stop-all | obsidian | doctor) ;;
-  task | review | reset-dryrun | checkpoint | skrzynka | pr) ;;
+  task | review | reset-dryrun | checkpoint | skrzynka | pr | profile) ;;
   *) echo "BŁĄD: nieznana komenda: $KOMENDA (shctl --help)" >&2; exit "$E_UZYCIE" ;;
 esac
 

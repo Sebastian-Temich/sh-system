@@ -87,3 +87,27 @@ decyzja() { printf '%s' "$output" | jq -r '.hookSpecificOutput.permissionDecisio
   run odczyt "$T/sh/wt/p/11" Bash "{\"command\":\"cat $T/obcy/x\"}"
   [ "$status" -eq 0 ] && [ -z "$output" ]
 }
+
+@test "fail-closed: nierozpoznana rola to deny" {
+  for p in "$T/sh/projekty/p" "$T/sh/wt/p" "$T/sh/wt/p/11/src" "$T/obcy"; do
+    run odczyt "$p" Read "{\"file_path\":\"$p/a.txt\"}"
+    [ "$(decyzja)" = deny ] || { echo "bez odmowy: $p"; false; }
+    [[ "$output" == *"Nierozpoznana rola"* ]] || false
+  done
+  run odczyt "$T/sh/wt/p/review-9" Read "{\"file_path\":\"$T/sh/wt/p/review-9/a.txt\"}"
+  [ -z "$output" ]
+}
+
+@test "fail-closed: bledny JSON i brak tool_name to kod 2" {
+  run --separate-stderr "$REPO/scripts/server/odczyt-hook.sh" <<<'to nie json'
+  [ "$status" -eq 2 ]
+  run --separate-stderr "$REPO/scripts/server/odczyt-hook.sh" <<<'{"cwd":"/x"}'
+  [ "$status" -eq 2 ]
+}
+
+@test "fail-closed: komenda z ustawien blokuje, gdy skryptu brak" {
+  K="$(jq -r '.hooks.PreToolUse[0].hooks[0].command' "$REPO/scripts/server/orkiestrator-settings.json")"
+  [ "$K" = "/Users/Shared/sh/bin/odczyt-hook.sh || exit 2" ]
+  run sh -c "${K/\/Users\/Shared\/sh\/bin/$T/brak}" </dev/null
+  [ "$status" -eq 2 ]
+}

@@ -11,12 +11,19 @@
 #   - katalogu tymczasowym wlasnej sesji Claude Code (/private/tmp/claude-UID/*/SESSION_ID:
 #     scratchpad, wyniki zadan w tle); tu tez "allow". Katalogi innych sesji: "deny".
 # Kazda inna sciezka: "deny" z powodem. Sciezki z "..", ktorych nie da sie rozwiazac, tez "deny".
+# Fail-closed: rola rozpoznana tylko dla SH_DIR (orkiestrator) i SH_DIR/wt/NAZWA/KATALOG (worker,
+# reviewer); inny katalog projektu to "deny". Brak jq, bledny JSON albo brak nazwy narzedzia: kod 2
+# (Claude Code blokuje narzedzie). Komenda w ustawieniach ma "|| exit 2", wiec brak skryptu i kazdy
+# inny niezerowy kod tez blokuja.
 # Hook nie obejmuje Basha (cat, grep): u workera w trybie dontAsk blokuje je sprawdzanie sciezek
 # Claude Code, u orkiestratora decyduje tryb Auto.
 set -uo pipefail
 
 SH_DIR="${SH_DIR:-/Users/Shared/sh}"
+blad() { printf 'odczyt-hook.sh: %s; odczyt zablokowany\n' "$1" >&2; exit 2; }
+command -v jq >/dev/null || blad 'brak jq'
 WEJSCIE="$(cat)"
+printf '%s' "$WEJSCIE" | jq -e 'type == "object"' >/dev/null 2>&1 || blad 'wejscie hooka nie jest obiektem JSON'
 pole() { printf '%s' "$WEJSCIE" | jq -r "$1 // empty" 2>/dev/null; }
 
 decyzja() {
@@ -58,6 +65,7 @@ prefiks_wzorca() {
 w_katalogu() { [ -n "$2" ] && case "$1/" in "$2"/*) true ;; *) false ;; esac; }
 
 NARZEDZIE="$(pole .tool_name)"
+[ -n "$NARZEDZIE" ] || blad 'brak tool_name w wejsciu hooka'
 CWD="$(pole .cwd)"
 CWD="${CWD:-$PWD}"
 SESJA="$(pole .session_id)"
@@ -74,6 +82,16 @@ case "$NARZEDZIE" in
 esac
 
 PROJEKT="$(rozwiaz "${CLAUDE_PROJECT_DIR:-$CWD}" /)"
+SH_R="$(rozwiaz "$SH_DIR" /)"
+[ -n "$PROJEKT" ] && [ -n "$SH_R" ] || blad 'nie da sie ustalic katalogu projektu sesji'
+case "$PROJEKT" in
+  "$SH_R") ;;
+  "$SH_R"/wt/*/*)
+    reszta="${PROJEKT#"$SH_R"/wt/}"
+    case "$reszta" in */*/*) decyzja deny "Nierozpoznana rola sesji SH (katalog projektu $PROJEKT); odczyt zablokowany." ;; esac
+    ;;
+  *) decyzja deny "Nierozpoznana rola sesji SH (katalog projektu $PROJEKT); odczyt zablokowany." ;;
+esac
 DOM="$(rozwiaz "$HOME" /)"
 KONFIG=("$DOM/.claude" "$(rozwiaz "$SH_DIR/sh-system/plugin" /)")
 TMP=("$(rozwiaz "/private/tmp/claude-$(id -u)" /)" "$(rozwiaz "/tmp/claude-$(id -u)" /)")

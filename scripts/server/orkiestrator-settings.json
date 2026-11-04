@@ -77,7 +77,6 @@
       "Bash(git fetch *)",
       "Bash(git pull)",
       "Bash(git pull *)",
-      "Bash(git switch *)",
       "Bash(git add *)",
       "Bash(git commit *)",
       "Bash(git push)",
@@ -122,6 +121,13 @@
       "Bash(gh api * --field *)",
       "Bash(gh api * --raw-field *)",
       "Bash(gh api * --input *)",
+      "Bash(gh api -X*)",
+      "Bash(gh api --method*)",
+      "Bash(gh api -f *)",
+      "Bash(gh api -F *)",
+      "Bash(gh api --field*)",
+      "Bash(gh api --raw-field*)",
+      "Bash(gh api --input*)",
       "Bash(gh repo delete *)",
       "Bash(gh secret *)",
       "Bash(gh auth *)",
@@ -135,7 +141,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "/Users/Shared/sh/bin/odczyt-hook.sh",
+            "command": "/Users/Shared/sh/bin/odczyt-hook.sh || exit 2",
             "timeout": 10
           }
         ]

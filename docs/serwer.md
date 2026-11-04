@@ -885,17 +885,25 @@ taką ścieżką działają, więc deny z sekcji „Claude Code” wyżej obowi�
 
 Ograniczenia: hook nie obejmuje Basha. U workera (`dontAsk`) `cat`, `head` i `grep` na pliku poza
 worktree odrzuca sprawdzanie ścieżek Claude Code (test jw.); u orkiestratora decyduje tryb Auto.
-Brak `odczyt-hook.sh` w `bin` to błąd hooka bez blokady (odczyt wraca do zwykłych reguł).
+Hook działa fail-closed: komenda w ustawieniach to `odczyt-hook.sh || exit 2`, więc brak skryptu,
+brak `jq`, błędne wejście i każdy niezerowy kod blokują narzędzie (kod 2). Rola jest rozpoznana
+tylko dla `/Users/Shared/sh` (orkiestrator) i `/Users/Shared/sh/wt/NAZWA/KATALOG` (worker, reviewer
+`review-ID`); inny katalog projektu sesji to odmowa. Przekroczenie limitu czasu hooka (10 s)
+Claude Code traktuje jako błąd bez blokady.
+
+Profile w istniejącym projekcie aktualizuje `shctl profile update [--baseline]` (`docs/shctl.md`).
 
 **Lista dozwolonych orkiestratora.** `orkiestrator-settings.json` zezwala bez pytania na rutynowe
 komendy: `shctl`, `notify.sh`, `herdr` do odczytu i sterowania agentami (`agent list|get|read|wait|
 explain|prompt`, `pane list|get|read|process-info|wait-output|close`, `workspace|tab list`,
 `status`), `gh pr|issue|run|repo view|label list` i `gh api repos/...`, `git` do odczytu,
-`fetch|pull|switch|add|commit|push|tag|merge` (także `git -C ŚCIEŻKA` dla odczytu i
-`fetch|pull`) oraz `ps`. Bez reguły zostają `herdr pane run|send-text|send-keys` i `herdr agent
+`fetch|pull|add|commit|push|tag|merge` (także `git -C ŚCIEŻKA` dla odczytu i
+`fetch|pull`) oraz `ps`. Bez `git switch` i `checkout`: w `/Users/Shared/sh/sh-system` i klonach projektów
+nie przełączamy gałęzi. Bez reguły zostają `herdr pane run|send-text|send-keys` i `herdr agent
 send-keys` (wykonują dowolny tekst w innym panelu). `deny`: `git push` z `--force`/`-f`,
 `--delete`, `:GAŁĄŹ` i na `production`, `git reset --hard`, `git clean`, `gh api` z `-X`,
-`--method`, `-f`, `-F`, `--field`, `--raw-field`, `--input`, `gh repo delete`, `gh secret`,
+`--method`, `-f`, `-F`, `--field`, `--raw-field` (te cztery zmieniają metodę na POST), `--input`,
+flaga przed albo po ścieżce, `gh repo delete`, `gh secret`,
 `gh auth`, `gh workflow`.
 
 Czego reguły nie załatwią (test z 2026-11-04):
