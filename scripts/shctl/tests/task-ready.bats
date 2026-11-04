@@ -24,16 +24,36 @@ gotowe() { jq -r '[.wynik.gotowe[].nr] | join(",")' <<<"$output"; }
   [ "$(jq -r .wynik.mozna_dispatch <<<"$output")" = true ]
 }
 
-@test "ready: max_local liczy panele workerow wszystkich projektow" {
+@test "ready: globalny max_local liczy panele workerow wszystkich projektow, domyslnie 2" {
   issue 1 "Gotowe" "status:todo"
+  sed -i.bak '/^max_local:/d' docs/konfiguracja.md
   panel w1:p5 worker:inny:4 claude
   panel w1:p6 review:demo:2 codex
   run --separate-stderr "$SHCTL" task ready --json
+  [ "$(gotowe)" = "1" ]
+  [ "$(jq -r '.wynik.sloty | [.max_local, .max_local_globalny, .max_local_projektu, .aktywne, .wolne] | join(" ")' <<<"$output")" = "2 2  1 1" ]
+  panel w1:p7 worker:inny:5 claude
+  run --separate-stderr "$SHCTL" task ready --json
   [ "$(gotowe)" = "" ]
-  [ "$(jq -r '.wynik.blokady[0].rodzaj, .wynik.sloty.aktywne' <<<"$output" | tr '\n' ' ')" = "max_local 1 " ]
-  sed -i.bak 's/^max_local: 1/max_local: 2/' docs/konfiguracja.md
+  [[ "$(jq -r '.wynik.blokady[0].opis' <<<"$output")" == *"max_local=2"*"wszystkie projekty"* ]] || false
+  printf -- '---\nmax_local: 3\n---\n' >"$SH_DIR/konfiguracja.md"
   run --separate-stderr "$SHCTL" task ready --json
   [ "$(gotowe)" = "1" ]
+}
+
+@test "ready: max_local projektu obniza limit i liczy tylko workerow projektu" {
+  issue 1 "Gotowe" "status:todo"
+  panel w1:p5 worker:demo:4 claude
+  run --separate-stderr "$SHCTL" task ready --json
+  [ "$(gotowe)" = "" ]
+  [[ "$(jq -r '.wynik.blokady[0].opis' <<<"$output")" == *"projektu demo: 1 z max_local=1"* ]] || false
+  [ "$(jq -r '.wynik.sloty | [.max_local, .max_local_projektu, .aktywne_projektu, .wolne] | join(" ")' <<<"$output")" = "1 1 1 0" ]
+  # Wyższa wartość w projekcie nie podnosi limitu Maca.
+  sed -i.bak 's/^max_local: 1/max_local: 5/' docs/konfiguracja.md
+  printf -- '---\nmax_local: 1\n---\n' >"$SH_DIR/konfiguracja.md"
+  run --separate-stderr "$SHCTL" task ready --json
+  [ "$(gotowe)" = "" ]
+  [ "$(jq -r .wynik.sloty.max_local <<<"$output")" = 1 ]
 }
 
 @test "ready: db:migracja maksymalnie jedna naraz w projekcie" {

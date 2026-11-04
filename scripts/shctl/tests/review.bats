@@ -162,3 +162,23 @@ ZGL='[{"waga":"istotne","plik":"src/a.ts","linia":4,"opis":"brak walidacji"},{"w
   run --separate-stderr "$SHCTL" review run 20
   [ "$status" -eq 4 ]
 }
+
+@test "review: drugie review tego samego PR w trakcie pierwszego to odmowa" {
+  mkdir -p "$SH_DIR/stan/review/demo-pr20.lock"
+  sleep 300 &
+  echo $! >"$SH_DIR/stan/review/demo-pr20.lock/pid"
+  run --separate-stderr "$SHCTL" review run 20
+  kill %1 2>/dev/null || true
+  [ "$status" -eq 4 ]
+  [[ "$stderr" == *"review PR #20 już trwa"* ]] || false
+  [ ! -s "$CODEX_ATRAPA/calls" ]
+}
+
+@test "review: blokada po martwym procesie nie blokuje i znika po review" {
+  mkdir -p "$SH_DIR/stan/review/demo-pr20.lock"
+  echo 999999 >"$SH_DIR/stan/review/demo-pr20.lock/pid"
+  run --separate-stderr "$SHCTL" review run 20 --json
+  echo "$output $stderr"
+  [ "$status" -eq 0 ]
+  [ ! -e "$SH_DIR/stan/review/demo-pr20.lock" ]
+}

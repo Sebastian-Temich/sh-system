@@ -45,6 +45,20 @@ numer() {
 
 etykieta_workera() { printf 'worker:%s:%s' "$PROJEKT" "$1"; }
 etykieta_review() { printf 'review:%s:%s' "$PROJEKT" "$1"; }
+# Panel workera eskalowanego zadania: zostaje do wglądu, ale nie zajmuje slotu (liczą się tylko worker:*).
+etykieta_eskalacji() { printf 'eskalacja:%s:%s' "$PROJEKT" "$1"; }
+
+# Eskalacja zwalnia slot: panel worker:P:NR dostaje etykietę eskalacja:P:NR. Panelu nie zamykamy, bo
+# worker może sam wołać shctl escalate i musi dokończyć raport. Wypisuje pane_id albo nic.
+zwolnij_slot() {
+  local p
+  herdr workspace list >/dev/null 2>&1 || return 0
+  p="$(panel_po_etykiecie "$(panele_herdr)" "$(etykieta_workera "$1")")"
+  [ -n "$p" ] || return 0
+  [ "$DRY" -eq 1 ] || herdr pane rename "$p" "$(etykieta_eskalacji "$1")" >/dev/null ||
+    { uwaga "nie zmieniono etykiety panelu $p; slot zostaje zajęty"; return 0; }
+  printf '%s' "$p"
+}
 
 # --- GitHub -----------------------------------------------------------------------------------
 
@@ -212,19 +226,44 @@ aktywni_workerzy() {
   jq -r --arg bez "$2" '[.[] | select((.label | startswith("worker:")) and .label != $bez)] | length' <<<"$1"
 }
 
+# Limit workerów całego Maca: frontmatter /Users/Shared/sh/konfiguracja.md (max_local), domyślnie 2.
+MAX_LOCAL_DOMYSLNY=2
+max_local_globalny() {
+  local v=""
+  [ ! -f "$KONFIG_SH" ] || v="$(yq --front-matter=extract '.max_local // ""' "$KONFIG_SH" 2>/dev/null || true)"
+  case "$v" in "" | null) printf '%s' "$MAX_LOCAL_DOMYSLNY" ;; *[!0-9]* | 0) die "$E_BRAK" "$KONFIG_SH: max_local musi być liczbą dodatnią, jest '$v'" ;; *) printf '%s' "$v" ;; esac
+}
+
+aktywni_workerzy_projektu() {
+  jq -r --arg p "worker:$PROJEKT:" --arg bez "$2" '[.[] | select((.label | startswith($p)) and .label != $bez)] | length' <<<"$1"
+}
+
 # Ocena zadań do startu. Wejście: JSON wszystkich issue, JSON paneli, etykieta pomijana w limicie.
 # Wynik: {kandydaci, zablokowane, blokady, sloty, kolejka_review, wolne_gb, min_wolne_gb}.
+# Sloty: limit globalny Maca liczy workerów wszystkich projektów; max_local projektu może go tylko
+# obniżyć i liczy workerów tego projektu.
 ocen_gotowe() {
-  local issues="$1" panele="$2" bez="${3:-}" max_local max_q min_gb wolne aktywni blokady='[]' w
-  max_local="$(konf_liczba max_local 1)"
+  local issues="$1" panele="$2" bez="${3:-}" max_local max_g max_p max_q min_gb wolne aktywni akt_p blokady='[]' w wolne_s
+  max_g="$(max_local_globalny)"
+  max_p="$(konf max_local "")"
+  case "$max_p" in "") ;; *[!0-9]*) die "$E_BRAK" "konfiguracja.md: max_local musi być liczbą, jest '$max_p'" ;; esac
+  max_local="$max_g"
+  if [ -n "$max_p" ] && [ "$max_p" -lt "$max_g" ]; then max_local="$max_p"; fi
   max_q="$(konf_liczba max_review_queue 3)"
   min_gb="$(konf_liczba min_wolne_gb 15)"
   wolne="$(wolne_gb "$ROOT_G")"
   [ -n "$wolne" ] || wolne=0
   aktywni="$(aktywni_workerzy "$panele" "$bez")"
+  akt_p="$(aktywni_workerzy_projektu "$panele" "$bez")"
+  wolne_s=$((max_g - aktywni))
+  [ $((max_local - akt_p)) -ge "$wolne_s" ] || wolne_s=$((max_local - akt_p))
+  [ "$wolne_s" -ge 0 ] || wolne_s=0
 
-  if [ "$aktywni" -ge "$max_local" ]; then
-    blokady="$(jq -c --arg o "aktywni workerzy: $aktywni z max_local=$max_local (wszystkie projekty)" \
+  if [ "$aktywni" -ge "$max_g" ]; then
+    blokady="$(jq -c --arg o "aktywni workerzy: $aktywni z max_local=$max_g ($KONFIG_SH, wszystkie projekty)" \
+      '. + [{rodzaj:"max_local", opis:$o}]' <<<"$blokady")"
+  elif [ "$akt_p" -ge "$max_local" ]; then
+    blokady="$(jq -c --arg o "aktywni workerzy projektu $PROJEKT: $akt_p z max_local=$max_local (konfiguracja.md projektu)" \
       '. + [{rodzaj:"max_local", opis:$o}]' <<<"$blokady")"
   fi
   if [ "$wolne" -lt "$min_gb" ]; then
@@ -238,7 +277,8 @@ ocen_gotowe() {
   alarm_dysku "$wolne" "$min_gb"
 
   jq -c --argjson b "$blokady" --argjson ml "$max_local" --argjson a "$aktywni" --argjson mq "$max_q" \
-    --argjson wg "$wolne" --argjson mg "$min_gb" "$JQ_ZALEZNOSCI"'
+    --argjson wg "$wolne" --argjson mg "$min_gb" --argjson g "$max_g" --arg mp "$max_p" --argjson ap "$akt_p" \
+    --argjson ws "$wolne_s" "$JQ_ZALEZNOSCI"'
     def et: [.labels[].name];
     def status: (et | map(select(startswith("status:")) | ltrimstr("status:"))[0]) // "todo";
     (map({key: (.number | tostring), value: .}) | from_entries) as $mapa
@@ -263,7 +303,8 @@ ocen_gotowe() {
     | {kandydaci: [$ocena.lista[] | select(.powody | length == 0) | del(.powody)],
        zablokowane: [$ocena.lista[] | select(.powody | length > 0)],
        blokady: $blok,
-       sloty: {max_local: $ml, aktywne: $a, wolne: ([$ml - $a, 0] | max)},
+       sloty: {max_local: $ml, max_local_globalny: $g, max_local_projektu: (if $mp == "" then null else ($mp | tonumber) end),
+         aktywne: $a, aktywne_projektu: $ap, wolne: $ws},
        kolejka_review: {max: $mq, czeka: $q},
        wolne_gb: $wg, min_wolne_gb: $mg}' <<<"$issues"
 }
@@ -326,6 +367,48 @@ stan_zapisz() {
   mv "$t.n" "$f"
   rm -f "$t"
   odblokuj "$f.lock"
+}
+
+# Stan etapu (klucz .etapy): pamięć powtórek shctl stage iter; iteracja etapu jest w DoD.md na main.
+stan_etapu() {
+  local f
+  f="$(plik_stanu)"
+  [ -f "$f" ] || { echo null; return 0; }
+  jq -c --arg e "$1" '.etapy[$e] // null' "$f"
+}
+
+stan_etapu_zapisz() {
+  local e="$1" obj="$2" f t
+  [ "$DRY" -eq 0 ] || return 0
+  f="$(plik_stanu)"
+  mkdir -p "$STAN"
+  zablokuj "$f.lock"
+  t="$(tmp_plik)"
+  if [ -f "$f" ]; then cp "$f" "$t"; else jq -n --arg p "$PROJEKT" '{projekt:$p, zadania:{}}' >"$t"; fi
+  jq --arg e "$e" --argjson o "$obj" '.etapy = (.etapy // {}) | .etapy[$e] = ((.etapy[$e] // {}) + $o)' "$t" >"$t.n"
+  mv "$t.n" "$f"
+  rm -f "$t"
+  odblokuj "$f.lock"
+}
+
+# --- PR: konflikt z main ----------------------------------------------------------------------------
+
+# Stan scalania PR z GitHuba: MERGEABLE, CONFLICTING albo UNKNOWN. GitHub liczy go leniwie, więc
+# UNKNOWN ponawiamy kilka razy. Przy CONFLICTING workflowy pull_request nie startują, a CI zostaje „brak”.
+mergeable_pr() {
+  local pr="$1" m i=0 proby="${SHCTL_MERGEABLE_PROBY:-5}"
+  while :; do
+    m="$(gh pr view "$pr" --repo "$SLUG" --json mergeable --jq '.mergeable // "UNKNOWN"' 2>/dev/null || echo UNKNOWN)"
+    [ "$m" = UNKNOWN ] || break
+    i=$((i + 1))
+    [ "$i" -lt "$proby" ] || break
+    sleep "${SHCTL_MERGEABLE_PAUZA:-3}"
+  done
+  printf '%s' "${m:-UNKNOWN}"
+}
+
+komunikat_konfliktu() {
+  printf 'PR #%s ma konflikt z main (mergeable: CONFLICTING): CI nie wystartuje, nie czekaj na nie. Zaktualizuj gałąź %s: git merge origin/main, rozwiąż konflikt, push' "$1" "$2"
 }
 
 # --- git ------------------------------------------------------------------------------------------

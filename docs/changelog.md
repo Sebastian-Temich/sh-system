@@ -1,5 +1,20 @@
 # Changelog
 
+## 2026-11-04 (poprawki po teście A5.1)
+
+Raport testu: `sh-dryrun`, `docs/metryki.md` i `docs/status.md`.
+
+- `shctl reset-dryrun`: archiwizuje znaczniki `shctl:id` we wszystkich issue, także zamkniętych (wcześniej `task create` po resecie uznawał zamknięte zadania za istniejące); usuwa lokalne gałęzie `stage/*` i `task/*`; `metryki.md` przechodzi przez reset, a każdy przebieg dostaje sekcję „Przebieg dryrun N” z własną tabelą (commit `reset-dryrun: przebieg N`); odmawia, gdy tag `baseline` ma artefakty przebiegu; po resecie zakłada od nowa klon `docs/` w vaulcie Obsidiana. `task close` dopisuje wiersz metryk do ostatniej tabeli, nie na koniec pliku.
+- Konflikt frontmattera `DoD.md` w PR etapu: `shctl stage iter ETAP` podbija `iteracja` i ustawia `in-progress` na `main`, gałąź `stage/ETAP` frontmattera nie zmienia; po 3. FAIL eskalacja. `review run` czyta iterację etapu z `main`. `shctl pr check PR [--czekaj]`: przed czekaniem na CI sprawdza `mergeable` i przy konflikcie zgłasza go wprost (kod 4); `task close` też.
+- Czerwone CI: worker naprawia najwyżej 2 razy, `pr check` liczy czerwone commity zadania i zwraca `limit_napraw_ci`; potem review (przyczyna w zadaniu) albo eskalacja (poza zadaniem). Reguła w `proces-v1.md`, `sh-orkiestrator` i `sh-worker`.
+- `shctl task cancel NR [--powod]`: issue „not planned”, zamknięcie PR z gałęzią, worktree, panele i wpis w stanie. Eskalacja zadania zwalnia slot: panel `worker:` dostaje etykietę `eskalacja:NAZWA:NR`; `task dispatch` po rozstrzygnięciu sprawdza slot i przywraca etykietę.
+- `shctl escalate` z worktree zapisuje w głównej kopii projektu na `main` (blokada, jedna numeracja E-NNN), worktree zostaje czysty.
+- `shctl stage skip` etapu trybu M z obowiązkową `--notatka` (pole `uzasadnienie_pominiecia`); w DoD stan „nie dotyczy”: `- [-] … (nie dotyczy: powód)`, akceptowany przez `check-dod.sh` (szablon).
+- `max_local` globalny dla Maca w `/Users/Shared/sh/konfiguracja.md` (domyślnie 2, zakłada `install.sh`); `max_local` projektu tylko go obniża i liczy workerów projektu. Szablon nie ustawia już `max_local`.
+- `shctl review run`: blokada równoległego review tego samego PR (PID, martwa blokada przejmowana).
+- `shctl task wait NR [--timeout]`: czekanie na workera z limitem czasu i sprawdzeniem stanu (PR z raportem, `idle`, `blocked`, brak agenta) zamiast gołego `herdr agent wait`, który na panelu `idle` wraca od razu.
+- Szablon: testy skryptów tylko na własnych danych (`scripts/tests/dane`, od `sh-template-projekt#12`). Nowy test `new-project-szablon.bats`: `shctl new-project` na atrapie z prawdziwym szablonem, potem `check-dod.sh` i testy skryptów na pierwszym commicie i po typowych zmianach orkiestratora (pomijany bez szablonu, np. w CI).
+
 ## 2026-11-04
 
 - Katalog SH przeniesiony z `~/sh` do `/Users/Shared/sh` (uprawnienia 700): Claude Code blokował Write/Edit pod `/Users/sebastiant.` („suspicious Windows path pattern”), więc workery w trybie `dontAsk` nie mogły zapisywać plików. Domyślne `SH_DIR` w `shctl`, `sh-start.sh`, `sh-watchdog.sh`, `install.sh`, `backup-config.sh` i `setup-toolchain.sh`; plisty z `SH_DIR` w `EnvironmentVariables`; skille, dokumentacja i podręcznik z nową ścieżką. `~/sh` zostaje dowiązaniem tylko dla zgodności wstecz. `backup-config.sh` pakuje `bin` i `porty.md` z katalogu SH wprost (nazwy w archiwum bez zmian). `shctl doctor`: kontrola `katalog SH` (segment z kropką na końcu: `blad`; dowiązanie albo uprawnienia inne niż 700: `uwaga`). Testy `sh-start.bats` i `launchd.bats` podają `SH_DIR` jawnie, żeby nie sięgać do prawdziwego katalogu (`docs/serwer.md`, „Katalog SH”).

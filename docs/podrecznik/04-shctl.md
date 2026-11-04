@@ -172,10 +172,15 @@ shctl stage start 04-architektura --projekt strona-firmowa
 shctl stage review 04-architektura --projekt strona-firmowa
 shctl stage done 04-architektura --projekt strona-firmowa
 shctl stage skip 01-brief --projekt strona-firmowa
+shctl stage skip 08-qa --notatka "biblioteka bez UI" --projekt strona-firmowa
 shctl stage escalate 04-architektura --projekt strona-firmowa
+shctl stage iter 04-architektura --projekt strona-firmowa
 ```
 
-`done` przechodzi tylko przy kompletnym `DoD.md`. `skip` dotyczy tylko etapów spoza trybu.
+`done` przechodzi tylko przy kompletnym `DoD.md`; pole bez zastosowania ma postać
+`- [-] ... (nie dotyczy: powód)`. `skip` etapu z trybu wymaga `--notatka` z uzasadnieniem. `iter` po
+nieudanym review etapu podbija iterację i wraca do pracy, a po trzeciej eskaluje. Status i iteracja
+etapu zmieniają się tylko na `main`, więc PR etapu nie ma z nimi konfliktu.
 
 ### doc new
 
@@ -241,9 +246,12 @@ Pętla realizacji. Wywołuje ją orkiestrator.
 | `shctl task create --plik zadania.yaml` | Zakłada issue i kamienie z pliku YAML |
 | `shctl task ready` | Czyta: zadania gotowe do startu i blokady |
 | `shctl task dispatch NR` | Kopia robocza, panel `worker:PROJEKT:NR`, start workera |
-| `shctl review run PR` | Review Codexa w czystej kopii, komentarz z werdyktem w PR |
+| `shctl task wait NR` | Czeka na workera z limitem czasu; zwraca stan: gotowe, idle, blocked, pracuje |
+| `shctl pr check PR` | Konflikt z `main` i wynik CI; z `--czekaj` czeka na CI, liczy nieudane naprawy |
+| `shctl review run PR` | Review Codexa w czystej kopii, komentarz z werdyktem w PR; jedno naraz na PR |
 | `shctl task iter NR` | Po FAIL: kolejna iteracja poprawek; po 3. FAIL eskalacja |
 | `shctl task close NR` | Merge (tylko zielone CI i PASS), wpisy w plikach wspólnych, sprzątanie |
+| `shctl task cancel NR` | Anuluje zadanie: issue „not planned”, PR, kopia robocza, panel, stan |
 | `shctl task resume-check NR` | Czyta: stan zadania po przerwie |
 
 ```sh
@@ -252,12 +260,14 @@ shctl review run 15 --projekt strona-firmowa
 shctl task close 12 --projekt strona-firmowa
 ```
 
-`task dispatch` odmawia, gdy brak wolnego miejsca na workera (`max_local` w `konfiguracja.md`,
-w pilocie 1), mniej niż 15 GB na dysku, pełna kolejka review albo aktywny limit Claude. `task close`
-odmawia bez zielonego CI i bez PASS dla bieżącego commita.
+`task dispatch` odmawia, gdy brak wolnego miejsca na workera (`max_local` w
+`/Users/Shared/sh/konfiguracja.md`, domyślnie 2 na cały Mac; projekt może go obniżyć w swoim
+`konfiguracja.md`), mniej niż 15 GB na dysku, pełna kolejka review albo aktywny limit Claude.
+Eskalowane zadanie nie zajmuje miejsca. `task close` odmawia bez zielonego CI i bez PASS dla
+bieżącego commita. `pr check` przy konflikcie z `main` mówi to wprost: CI wtedy nie startuje.
 
-**Kiedy samemu:** nie uruchamiaj ich równolegle z orkiestratorem. Wyjątek to `task ready` i
-`task resume-check`, bo tylko czytają.
+**Kiedy samemu:** nie uruchamiaj ich równolegle z orkiestratorem. Wyjątek to `task ready`,
+`task resume-check` i `pr check` bez `--czekaj`, bo tylko czytają.
 
 ## Awaryjne
 
@@ -279,7 +289,9 @@ opisuje [[07-gdy-cos-nie-dziala#Awaryjny STOP]].
 ### reset-dryrun
 
 Przywraca projekt wzorcowy `sh-dryrun` do stanu wyjściowego, żeby po zmianach w systemie przejść go
-ponownie i porównać czas, iteracje i eskalacje. Działa wyłącznie na tym projekcie.
+ponownie i porównać czas, iteracje i eskalacje. Działa wyłącznie na tym projekcie. `metryki.md`
+zostaje: każdy przebieg dostaje w nim nową sekcję „Przebieg dryrun N”. Klon `docs/` w vaulcie
+Obsidiana powstaje od nowa.
 
 ```sh
 shctl reset-dryrun

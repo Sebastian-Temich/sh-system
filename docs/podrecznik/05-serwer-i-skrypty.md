@@ -209,6 +209,7 @@ Zmiana w shctl, skillach lub skryptach serwera wymaga aktualizacji tego podręcz
 | Plik | Zawartość |
 |---|---|
 | `/Users/Shared/sh/limity.md` | Aktywne limity subskrypcji |
+| `/Users/Shared/sh/konfiguracja.md` | Limit workerów Maca `max_local` (domyślnie 2); zmieniasz go tu, projekt może go tylko obniżyć |
 | `/Users/Shared/sh/porty.md` | Bloki portów baz projektów |
 | `/Users/Shared/sh/stan/NAZWA.json` | Mapa zadań projektu na panele, stan po STOP |
 | `/Users/Shared/sh/stan/do-usuniecia.md` | Repo testowe do usunięcia przez Ciebie |

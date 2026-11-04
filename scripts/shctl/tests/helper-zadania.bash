@@ -7,6 +7,7 @@ zadania_setup() {
   export PATH="$BATS_TEST_DIRNAME/atrapy:$PATH"
   export GH_ATRAPA="$T/gh" HERDR_ATRAPA="$T/herdr" CODEX_ATRAPA="$T/codex" CLAUDE_ATRAPA="$T/claude"
   export CODEX_HOME="$T/codex-home" SH_SYSTEM_DIR="$T/sys" SHCTL_REVIEW_TIMEOUT=20 SH_CLAUDE_JSON="$T/claude.json"
+  export SHCTL_MERGEABLE_PROBY=1 SHCTL_CI_PAUZA=0
   unset DF_GB SHCTL_DRYRUN_NAZWA
   mkdir -p "$GH_ATRAPA" "$HERDR_ATRAPA" "$CODEX_ATRAPA" "$CLAUDE_ATRAPA" "$CODEX_HOME"
   : >"$CLAUDE_ATRAPA/calls"
@@ -88,7 +89,8 @@ stan_issue() { jq -r --argjson n "$1" '.[] | select(.number == $n) | .state' "$G
 # Panel w atrapie herdr: panel ID ETYKIETA [AGENT]
 panel() {
   [ -f "$HERDR_ATRAPA/panele.json" ] || echo '[]' >"$HERDR_ATRAPA/panele.json"
-  jq --arg p "$1" --arg l "$2" --arg a "${3:-}" '. + [{pane_id:$p, workspace_id:"w1", label:$l, agent:$a, cwd:"/tmp"}]' \
+  jq --arg p "$1" --arg l "$2" --arg a "${3:-}" --arg s "${4:-}" \
+    '. + [{pane_id:$p, workspace_id:"w1", label:$l, agent:$a, agent_status:$s, cwd:"/tmp"}]' \
     "$HERDR_ATRAPA/panele.json" >"$T/p.json" && mv "$T/p.json" "$HERDR_ATRAPA/panele.json"
 }
 etykiety_paneli() { jq -r '[.[].label // ""] | join(" ")' "$HERDR_ATRAPA/panele.json" 2>/dev/null; }
@@ -131,12 +133,15 @@ MD
   jq --arg r "$R" --argjson n "$prn" --argjson i "$nr" --arg b "$br" --arg s "$sha" --arg c "$ci" \
     '. + [{repo:$r, number:$n, title:"Zadanie \($i)", state:"OPEN", headRefName:$b, headRefOid:$s,
       closingIssuesReferences:[{number:$i}], url:"https://github.com/\($r)/pull/\($n)",
-      createdAt:"2026-11-01T10:00:00Z", comments:[],
+      createdAt:"2026-11-01T10:00:00Z", comments:[], mergeable:"MERGEABLE",
+      files:[{path:"docs/07-realizacja/T-\($i).md"}, {path:"src/praca-\($i).txt"}],
       statusCheckRollup:[{status:"COMPLETED", conclusion:$c}]}]' "$GH_ATRAPA/prs.json" 2>/dev/null >"$T/pr.json" ||
     jq -n --arg r "$R" --argjson n "$prn" --argjson i "$nr" --arg b "$br" --arg s "$sha" --arg c "$ci" \
       '[{repo:$r, number:$n, title:"Zadanie \($i)", state:"OPEN", headRefName:$b, headRefOid:$s,
         closingIssuesReferences:[{number:$i}], url:"https://github.com/\($r)/pull/\($n)",
-        createdAt:"2026-11-01T10:00:00Z", comments:[], statusCheckRollup:[{status:"COMPLETED", conclusion:$c}]}]' >"$T/pr.json"
+        createdAt:"2026-11-01T10:00:00Z", comments:[], mergeable:"MERGEABLE",
+      files:[{path:"docs/07-realizacja/T-\($i).md"}, {path:"src/praca-\($i).txt"}],
+        statusCheckRollup:[{status:"COMPLETED", conclusion:$c}]}]' >"$T/pr.json"
   mv "$T/pr.json" "$GH_ATRAPA/prs.json"
   [ "$(cat "$GH_ATRAPA/licznik" 2>/dev/null || echo 0)" -ge "$prn" ] || echo "$prn" >"$GH_ATRAPA/licznik"
 }

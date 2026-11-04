@@ -41,5 +41,11 @@ case "${1:-} ${2:-}" in
     ;;
   "pane read") echo "atrapa: wyjście panelu $3" ;;
   "pane close") zapisz -c --arg p "$3" 'map(select(.pane_id != $p))' ;;
+  "agent wait")
+    # Plik $D/po-wait: stan agenta (np. idle) po zakończeniu czekania.
+    jq -e --arg p "$3" 'any(.[]; .pane_id == $p and (.agent // "") != "")' "$D/panele.json" >/dev/null ||
+      { echo "agent not found" >&2; exit 1; }
+    [ ! -f "$D/po-wait" ] || zapisz -c --arg p "$3" --arg s "$(cat "$D/po-wait")" 'map(if .pane_id == $p then .agent_status = $s else . end)'
+    ;;
   *) echo "atrapa herdr: nieobsługiwane: $*" >&2; exit 2 ;;
 esac

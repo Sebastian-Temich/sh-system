@@ -81,10 +81,19 @@ zaznacz() { sed -i.bak 's/^- \[ \]/- [x]/' "$(dod "$1")"; rm -f "$(dod "$1").bak
   [ "$status" -eq 4 ]
 }
 
-@test "skip etapu z trybu M: odmowa" {
+@test "skip etapu z trybu M bez notatki: odmowa" {
   run --separate-stderr "$SHCTL" stage skip 04-architektura
   [ "$status" -eq 4 ]
-  [[ "$stderr" == *"należy do trybu M"* ]] || false
+  [[ "$stderr" == *"pominięcie wymaga --notatka"* ]] || false
+  [ "$(fm "$(dod 04-architektura)" status)" = todo ]
+}
+
+@test "skip etapu z trybu M z notatka: uzasadnienie w DoD.md i dzienniku" {
+  run --separate-stderr "$SHCTL" stage skip 04-architektura --notatka "biblioteka bez architektury: jeden moduł"
+  [ "$status" -eq 0 ]
+  [ "$(fm "$(dod 04-architektura)" status)" = pominiety ]
+  [ "$(fm "$(dod 04-architektura)" uzasadnienie_pominiecia)" = "biblioteka bez architektury: jeden moduł" ]
+  grep -qF '`04-architektura`: pominiety, biblioteka bez architektury: jeden moduł' docs/status.md
 }
 
 @test "skip etapu spoza trybu M" {

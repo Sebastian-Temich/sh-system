@@ -109,6 +109,7 @@ Przy `--dry-run` pole `porty` to sam zakres, np. `"55121-55129"`.
 
 ```sh
 shctl stage start|review|done|skip|escalate ETAP [--notatka "..."]
+shctl stage iter ETAP
 ```
 
 `ETAP` to nazwa folderu, np. `00-intake`, `04-architektura`, `wydanie`. Mapowanie etapów trybu M:
@@ -120,11 +121,12 @@ shctl stage start|review|done|skip|escalate ETAP [--notatka "..."]
 | `start` | `todo`, `review`, `escalated`, `in-progress` | `in-progress` |
 | `review` | `in-progress`, `review` | `review` |
 | `done` | `review`, `done` | `done`, po zielonym `check-dod.sh` |
-| `skip` | `todo`, `pominiety`, tylko etap spoza trybu | `pominiety` |
+| `skip` | `todo`, `pominiety`; etap trybu tylko z `--notatka` | `pominiety` |
 | `escalate` | `todo`, `in-progress`, `review`, `escalated` | `escalated` |
 
 `done` uruchamia `check-dod.sh` na repo i na kopii `docs/` ze statusem `done`; przy brakach kończy
-się kodem 4, a status zostaje. Licznika `iteracja` shctl nie podbija w tej części. `stage escalate`
+się kodem 4, a status zostaje. `skip` etapu trybu bez `--notatka` to kod 4; z notatką shctl zapisuje
+ją w `uzasadnienie_pominiecia` w `DoD.md` (wymaga go `check-dod.sh`) i w dzienniku. `stage escalate`
 zmienia tylko status: eskalację z plikiem i powiadomieniem otwiera `shctl escalate`. Etap czekający
 na coś zewnętrznego to `stage start ETAP --notatka "czeka na ..."`.
 
@@ -135,6 +137,19 @@ shctl stage review 04-architektura --notatka "gotowe do review" --json
 ```json
 {"ok":true,"komenda":"stage","dry_run":false,"wynik":{
   "projekt":"sklep","etap":"04-architektura","poprzedni":"in-progress","status":"review","zmiana":true}}
+```
+
+### stage iter
+
+Po FAIL review etapu: podbija `iteracja` w `docs/ETAP/DoD.md` i ustawia `in-progress`, oba pola na
+main (`proces-v1.md`, „Pliki wspólne i konflikty”). Gałąź `stage/ETAP` frontmattera nie zmienia, więc
+PR etapu nie ma konfliktu z main. Wymaga otwartego PR z gałęzi `stage/ETAP` i wyniku `review run` FAIL
+dla jego bieżącego commita (inaczej kod 4). Iteracja 0 liczy się jak 1. Powtórka dla tego samego
+review nic nie zmienia (`.etapy[ETAP].iter_review` w `/Users/Shared/sh/stan/NAZWA.json`). FAIL w
+iteracji 3 otwiera eskalację przez `shctl escalate` zamiast podbicia.
+
+```json
+{"ok":true,"komenda":"stage","dry_run":false,"wynik":{"etap":"08-qa","pr":35,"iteracja":2,"eskalowano":false,"zmiana":true}}
 ```
 
 ## doc new
@@ -209,6 +224,15 @@ issue albo status `escalated` etapu, aktualizuje sekcję „Otwarte eskalacje”
 Powtórka z tym samym `--dotyczy` i `--powod` dotyczy tej samej otwartej eskalacji. Nieudane
 powiadomienie daje kod 1, a ponowienie komendy wysyła je jeszcze raz.
 
+Wywołanie z worktree (worker, skill etapu) zapisuje plik i `status.md` w głównej kopii projektu
+(`/Users/Shared/sh/projekty/NAZWA`), która musi stać na main (inaczej kod 4); worktree zostaje
+nietknięty, a commit robi orkiestrator. Numer E-NNN przydziela się pod blokadą w `.git` projektu, więc
+numeracja jest jedna dla projektu.
+
+Eskalacja zadania zwalnia slot workera: panel `worker:NAZWA:NR` dostaje etykietę `eskalacja:NAZWA:NR`
+i przestaje liczyć się do `max_local`. Panel zostaje (worker może dokończyć raport, właściciel czyta
+kontekst). Po rozstrzygnięciu `task dispatch NR` sprawdza wolny slot i przywraca etykietę workera.
+
 Zamknięcie: zapisuje odpowiedź w „Rozstrzygnięcie”, przywraca poprzedni status issue lub etapu i
 usuwa wpis ze `status.md`. Gdy na to samo zadanie czeka inna otwarta eskalacja, etykieta zostaje.
 Błąd gh zostawia eskalację otwartą. Powtórka z tą samą odpowiedzią nic nie zmienia, a z inną kończy
@@ -220,7 +244,8 @@ shctl escalate --dotyczy "#12" --powod "brak klucza Stripe" --potrzebne "klucz t
 
 ```json
 {"ok":true,"komenda":"escalate","dry_run":false,"wynik":{
-  "id":"E-001","dotyczy":"#12","plik":"docs/07-realizacja/escalations/E-001.md","nowa":true}}
+  "id":"E-001","dotyczy":"#12","plik":"docs/07-realizacja/escalations/E-001.md",
+  "katalog":"/Users/Shared/sh/projekty/sklep","z_worktree":false,"nowa":true,"slot_zwolniony":true,"panel":"w1:p7"}}
 ```
 
 ## checkpoint
@@ -518,9 +543,10 @@ jego jedyny zapis; przy `--dry-run` tylko je wskazuje. Błąd sieci lub logowani
 
 ## Zadania
 
-Cykl zadania w etapie A: `task create` → `task ready` → `task dispatch` → praca workera (PR) →
-`review run` → przy FAIL `task iter` i znów `review run` → `task close`. Każde zadanie ma `runner:local`
-i `wykonawca:claude`, a review robi Codex. Po przerwie: `task resume-check`.
+Cykl zadania w etapie A: `task create` → `task ready` → `task dispatch` → praca workera (`task wait`
+do PR z raportem) → `pr check --czekaj` → `review run` → przy FAIL `task iter` i znów `review run` →
+`task close`. Każde zadanie ma `runner:local` i `wykonawca:claude`, a review robi Codex. Po przerwie:
+`task resume-check`. Rezygnacja z zadania: `task cancel`.
 
 ### Pliki, panele, stan
 
@@ -529,7 +555,7 @@ i `wykonawca:claude`, a review robi Codex. Po przerwie: `task resume-check`.
 | Worktree workera | `/Users/Shared/sh/wt/NAZWA/NR`, gałąź `task/NR-slug` |
 | Worktree review | `/Users/Shared/sh/wt/NAZWA/review-NR`, odłączony HEAD na commicie PR, bez plików env |
 | Worktree propozycji | `/Users/Shared/sh/wt/NAZWA/sys-propozycje-NR`, gałąź w `sh-system`, usuwany po PR |
-| Panel workera | Karta herdr w workspace `sh` z panelem `worker:NAZWA:NR` |
+| Panel workera | Karta herdr w workspace `sh` z panelem `worker:NAZWA:NR`; po eskalacji `eskalacja:NAZWA:NR` |
 | Panel review | Karta z panelem `review:NAZWA:NR`, zamykana po review |
 | Mapa NR → panel | `/Users/Shared/sh/stan/NAZWA.json`, klucz `zadania` (`stop-all` go zachowuje) |
 | Wynik review | Komentarz w PR ze znacznikiem `<!-- shctl:review head=SHA werdykt=... -->` |
@@ -543,11 +569,15 @@ Slug gałęzi to tytuł issue z transliteracją polskich znaków, małe litery, 
 „Zażółć gęślą jaźń: Łódź” daje `task/12-zazolc-gesla-jazn-lodz`. Istniejąca gałąź `task/NR-*` ma
 pierwszeństwo, więc zmiana tytułu nie zakłada nowej.
 
+Limit workerów Maca: `max_local` we frontmatterze `/Users/Shared/sh/konfiguracja.md` (domyślnie 2,
+plik zakłada `install.sh`), liczony z paneli `worker:*` wszystkich projektów. Panele `eskalacja:*`
+się nie liczą.
+
 Z `docs/konfiguracja.md` (frontmatter) zadania czytają:
 
 | Pole | Domyślnie | Użycie |
 |---|---|---|
-| `max_local` | 1 | Limit workerów, liczony z paneli `worker:*` we wszystkich projektach |
+| `max_local` | brak | Obniża limit Maca dla projektu; liczy panele `worker:NAZWA:*` tego projektu |
 | `max_review_queue` | 3 | Tyle otwartych issue w `status:review` zatrzymuje dispatch |
 | `min_wolne_gb` | 15 | Mniej wolnego miejsca na dysku projektu zatrzymuje dispatch |
 | `env_files` | brak | Lista dodatkowych plików env (ścieżki względne, bez `..`) dla workera |
@@ -608,7 +638,8 @@ Tylko czyta. `kandydaci` to otwarte issue `status:todo`, których wszystkie zale
 `zablokowane` z powodem. Z kilku zadań `db:migracja` kandydatem jest tylko pierwsze, a żadne, gdy w
 projekcie trwa już takie zadanie (status inny niż `todo`).
 
-Blokady całego dispatchu (`blokady`): brak wolnego slotu `max_local`, wolne miejsce poniżej
+Blokady całego dispatchu (`blokady`): brak wolnego slotu `max_local` (limit Maca albo niższy limit
+projektu), wolne miejsce poniżej
 `min_wolne_gb`, kolejka review pełna (`max_review_queue`), wstrzymanie Claude w `/Users/Shared/sh/limity.md`.
 `gotowe` to kandydaci, gdy blokad nie ma, inaczej pusta lista.
 
@@ -621,7 +652,8 @@ miejsce wróci).
 {"ok":true,"komenda":"task","dry_run":false,"wynik":{
   "gotowe":[{"nr":12,"tytul":"Schemat bazy","db_migracja":true}],"kandydaci":[...],
   "zablokowane":[{"nr":13,"tytul":"Logowanie","db_migracja":false,"powody":["zależność #12 otwarta"]}],
-  "blokady":[],"sloty":{"max_local":1,"aktywne":0,"wolne":1},"kolejka_review":{"max":3,"czeka":0},
+  "blokady":[],"sloty":{"max_local":2,"max_local_globalny":2,"max_local_projektu":null,"aktywne":1,
+    "aktywne_projektu":0,"wolne":1},"kolejka_review":{"max":3,"czeka":0},
   "wolne_gb":25,"min_wolne_gb":15,"mozna_dispatch":true}}
 ```
 
@@ -704,11 +736,57 @@ nie liczą. Inne linie (tytuł, akapity, komentarze) są ignorowane.
 
 `status show` pokazuje te same wpisy jako „Wstrzymania”.
 
+### task wait
+
+```sh
+shctl task wait NR [--timeout SEKUNDY]
+```
+
+Czekanie na workera z limitem czasu (domyślnie 600 s) zamiast gołego `herdr agent wait`, który na
+panelu `idle` wraca od razu, a na panelu bez agenta kończy się błędem. Najpierw stan: PR z `Closes
+#NR` z raportem `docs/07-realizacja/T-NR.md` w plikach to `gotowe`; panel `idle`/`done` bez tego to
+`idle`; `blocked`, `brak_agenta`, `brak_panelu` wracają od razu. Na pracującego agenta czeka porcjami
+(`herdr agent wait` z limitem, `SHCTL_WAIT_KROK`, domyślnie 60 s) i po każdej sprawdza stan znowu.
+Po limicie: `pracuje`, `"limit_czasu":true`. Pole `nastepny_krok` podpowiada dalszy krok.
+
+```json
+{"ok":true,"komenda":"task","dry_run":false,"wynik":{"nr":12,"stan":"idle","pr":null,"raport":false,
+  "czekano_s":0,"limit_czasu":false,"nastepny_krok":"agent czeka bez PR z raportem: polecenie dokończenia (herdr agent prompt)"}}
+```
+
+### pr check
+
+```sh
+shctl pr check PR [--czekaj] [--timeout SEKUNDY]
+```
+
+Stan PR przed czekaniem na CI. Najpierw `mergeable` z GitHuba (UNKNOWN ponawia kilka razy): przy
+`CONFLICTING` GitHub nie uruchamia workflowów `pull_request`, więc komenda kończy się kodem 4 z
+komunikatem o konflikcie, zamiast czekać. Potem CI (`pass`, `fail`, `pending`, `brak`); z `--czekaj`
+czeka, aż CI się rozstrzygnie (domyślnie do 1800 s, przy `brak` do `SHCTL_CI_BRAK`, 180 s), i w każdym
+obiegu znów sprawdza konflikt.
+
+Dla PR zadania liczy czerwone commity (`.zadania[NR].ci_czerwone` w stanie). Pierwszy czerwony to
+wynik pracy, kolejne to nieudane naprawy: przy 2 (`MAKS_NAPRAW_CI`) zwraca `"limit_napraw_ci":true` i
+krok „review albo eskalacja” (`proces-v1.md`, „Review, QA, pętla poprawek”).
+
+```json
+{"ok":true,"komenda":"pr","dry_run":false,"wynik":{"pr":20,"nr":12,"head":"...","mergeable":"MERGEABLE",
+  "konflikt":false,"ci":"fail","czerwone_commity":3,"nieudane_naprawy_ci":2,"maks_napraw_ci":2,
+  "limit_napraw_ci":true,"nastepny_krok":"limit napraw CI: review albo eskalacja (proces-v1.md, „Czerwone CI”)"}}
+```
+
+`task close` przy CI innym niż `pass` też sprawdza konflikt i zgłasza go wprost.
+
 ### review run
 
 ```sh
 shctl review run PR [--timeout SEKUNDY]
 ```
+
+Jedno review naraz dla PR: blokada `/Users/Shared/sh/stan/review/NAZWA-prPR.lock` z PID. Drugie
+wywołanie w trakcie kończy się kodem 4 („review PR #N już trwa”); blokada po martwym procesie jest
+przejmowana. Iteracja review etapu pochodzi z `DoD.md` na main (`stage iter`).
 
 Zadanie wynika z `Closes #NR` albo gałęzi `task/NR-` (review PR). PR z gałęzi `stage/ETAP` bez
 `Closes` to review etapu: wymaga `docs/ETAP/DoD.md`, nie ma issue ani etykiet, a worktree, panel i
@@ -785,12 +863,12 @@ niezacommitowane zmiany albo commity spoza PR. Potem, na main po `git pull --ff-
 | „Decyzje” z `docs/07-realizacja/T-NR.md` | `docs/decyzje.md`; `pytanie → decyzja` dzieli kolumny, inaczej Pytanie to `-` |
 | „Drobne uwagi” z raportu | `docs/backlog-drobne.md`, stan `otwarta` |
 | Zgłoszenia ⚪ z ostatniego review (komentarz w PR) | `docs/backlog-drobne.md`, źródło `review PR #N` |
-| Czas od dispatchu, iteracje, eskalacje | Wiersz `| #NR tytuł | tryb | czas | 1 | iteracje | eskalacje | PR #N |` w `docs/metryki.md` |
+| Czas od dispatchu, iteracje, eskalacje | Wiersz `| #NR tytuł | tryb | czas | 1 | iteracje | eskalacje | PR #N |` na końcu ostatniej tabeli `docs/metryki.md` (w `sh-dryrun`: tabela bieżącego przebiegu) |
 | Tytuł i PR | `- #NR: tytuł (PR #N)` w sekcji „Niewydane” `CHANGELOG.md` |
 | „Propozycje dla systemu” | PR do `sh-system`: gałąź `propozycje/NAZWA-T-NR`, wpis w `docs/propozycje.md` |
 
 Pozycje sekcji to punkty listy (z kontynuacją) albo akapity; „brak” jest pomijane. Na końcu usuwa
-worktree, gałąź `task/NR-*` i panel, zamyka issue, zdejmuje etykiety `status:*`, uruchamia
+worktree, gałąź `task/NR-*` i panel (także `eskalacja:NAZWA:NR`), zamyka issue, zdejmuje etykiety `status:*`, uruchamia
 `scripts/sync-status.sh` i kasuje wpis zadania w stanie. Zmian w plikach wspólnych nie commituje.
 
 Powtórka po merge'u pomija gotowe kroki: wiersze nie są dopisywane drugi raz, a istniejący PR propozycji
@@ -821,6 +899,18 @@ Komenda nie zmienia etykiet: przerwanie przez limit nie podbija iteracji.
   "sugestia":"rebase i kontynuuj","uwaga":"przerwanie przez limit nie podbija iteracji"}}
 ```
 
+### task cancel
+
+```sh
+shctl task cancel NR [--powod "..."]
+```
+
+Anulowanie zadania: zamyka PR z usunięciem gałęzi, zamyka panele `worker:`, `eskalacja:` i `review:`
+zadania, usuwa worktree `NR` i `review-NR` (bez zachowania zmian) i gałąź lokalną, zamyka issue jako
+„not planned” z komentarzem (powód), zdejmuje etykiety `status:*`, usuwa wpis z `/Users/Shared/sh/stan/NAZWA.json`
+i uruchamia `sync-status.sh`. Zwalnia slot. Scalony PR to kod 4. Powtórka nic nie zmienia
+(`"zmiana":false`).
+
 ### reset-dryrun
 
 ```sh
@@ -828,14 +918,30 @@ shctl reset-dryrun
 ```
 
 Przywraca projekt wzorcowy `sh-dryrun` do tagu `baseline` (`proces-v1.md`, „Projekt wzorcowy”). Inny
-projekt to kod 4, brak tagu albo pliku zadań w tagu to kod 3. Kolejno: zamyka panele projektu, usuwa
-jego worktree i gałęzie `task/*`, zamyka otwarte PR (z usunięciem gałęzi), otwarte issue zamyka jako
-„not planned” ze znacznikiem zmienionym na `shctl:archiwum-id`, resetuje main do tagu i wypycha go
-(`--force-with-lease`), czyści mapę zadań w stanie i odtwarza issue przez `task create` z
-`zadania.yaml` albo `docs/06-zadania/zadania.yaml` z tagu.
+projekt to kod 4, brak tagu albo pliku zadań w tagu to kod 3, a tag z artefaktami przebiegu (raporty
+`T-NR.md`, `escalations/E-NNN.md`, `08-qa/raport-*.md`, mapa zadań w `06-zadania/index.md`, wpisy
+`CHANGELOG.md`, `DoD.md` poza `todo`/`pominiety` albo z iteracją) to kod 4 z listą.
 
-Gdy main jest na tagu, nie ma otwartych PR, paneli ani worktree, a otwarte issue to dokładnie zadania z
-pliku w `status:todo` bez iteracji, komenda nic nie robi (`"zmiana":false`).
+Kolejno: zapamiętuje `docs/metryki.md` (kopia robocza main albo `origin/main`), zamyka panele projektu,
+usuwa jego worktree, zamyka otwarte PR (z usunięciem gałęzi), w każdym issue ze znacznikiem
+`shctl:id`, także zamkniętym, zmienia go na `shctl:archiwum-id`, a otwarte zamyka jako „not planned”,
+resetuje main do tagu i wypycha go (`--force-with-lease`), usuwa lokalne gałęzie `task/*` i `stage/*`,
+czyści mapę zadań w stanie i odtwarza issue przez `task create` z `zadania.yaml` albo
+`docs/06-zadania/zadania.yaml` z tagu. Potem przywraca metryki z nową sekcją „Przebieg dryrun N” (z
+tabelą, do której `task close` dopisuje wiersze), commituje metryki, mapę zadań i `status.md`
+(„reset-dryrun: przebieg N od baseline SHA”) i wypycha main. Na końcu usuwa klon `docs/` w vaulcie
+Obsidiana (po force push ma starą historię) i zakłada go od nowa; klon z niezacommitowanymi zmianami
+zostaje, a wynik `obsidian` to „pominiety: …”.
+
+Gdy drzewo main poza `metryki.md`, `06-zadania/index.md` i `status.md` jest równe tagowi, nie ma
+otwartych PR, paneli, worktree ani gałęzi `task/*`/`stage/*`, a issue ze znacznikiem to dokładnie
+otwarte zadania z pliku w `status:todo` bez iteracji, komenda nic nie robi (`"zmiana":false`).
+
+```json
+{"ok":true,"komenda":"reset-dryrun","dry_run":false,"wynik":{"baseline":"0ea967b...","zamkniete_pr":[35],
+  "zamkniete_issue":[36],"zarchiwizowane":[23,24,25,26,27,28,36],"plik_zadan":"docs/06-zadania/zadania.yaml",
+  "mapa":{"T1":38,"T2":39},"przebieg":3,"obsidian":"odtworzony","zmiana":true}}
+```
 
 ## Testy
 

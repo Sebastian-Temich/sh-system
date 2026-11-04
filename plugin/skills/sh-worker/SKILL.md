@@ -62,7 +62,9 @@ shctl escalate --dotyczy "#NR" --powod "..." --potrzebne "..." --opcje "A;B"
 ```
 
 - `escalate`: tylko w sytuacjach z sekcji „Eskalacja”. To jedyna komenda shctl w profilu workera.
-  Dispatch, iterację, review i zamknięcie wywołuje orkiestrator.
+  Dispatch, iterację, review i zamknięcie wywołuje orkiestrator. Z worktree shctl zapisuje eskalację
+  w głównej kopii projektu na `main` (jedna numeracja E-NNN), nie w twoim worktree: nie commitujesz
+  jej, nie edytujesz `docs/status.md` i nie zakładasz plików `escalations/` na gałęzi zadania.
 - Kod 0 to sukces, 1 błąd wykonania (ponów), 2 błędne użycie (popraw wywołanie), 3 brak (sprawdź
   warunki), 4 odmowa (przeczytaj powód, nie obchodź jej).
 
@@ -90,7 +92,11 @@ shctl escalate --dotyczy "#NR" --powod "..." --potrzebne "..." --opcje "A;B"
 11. Gdy PR nie istnieje: `gh pr create --base main --head task/NR-slug --title "#NR: TYTUŁ"
     --body-file PLIK`. Treść według `.github/PULL_REQUEST_TEMPLATE.md`: `Closes #NR`, krótki opis i
     checklista DoD zaznaczona zgodnie z prawdą. Gdy PR istnieje, push go aktualizuje.
-12. Sprawdź CI: `gh pr checks NR_PR --watch`. Czerwone CI z twojego kodu naprawiasz i wracasz do kroku 7.
+12. Sprawdź CI: `gh pr checks NR_PR --watch`. Czerwone CI z twojego kodu naprawiasz i wracasz do kroku 7,
+    najwyżej 2 razy. Po drugiej nieudanej naprawie kończysz: przyczynę i wyjście CI opisujesz w
+    „Ryzykach”, a dalej decyduje orkiestrator (review albo eskalacja). Nie zmieniasz testów ani CI
+    tylko po to, żeby było zielone. Gdy `gh pr checks` nie pokazuje żadnych checków, a PR ma konflikt
+    z main: `git merge origin/main`, rozwiąż konflikt w zakresie zadania, testy, push.
 13. Sprawdź „DoD” i zakończ odpowiedzią dla orkiestratora: numer PR, stan CI, otwarte ryzyka. Dalej
     orkiestrator uruchamia `shctl review run`.
 

@@ -83,8 +83,10 @@ Wszystko inne w tym dokumencie to model docelowy, wdrażany w etapie B.
   puli najpierw zwalniamy bloki projektów archiwalnych (`shctl ports release`), a dopiero potem
   sięgamy po kolejny zakres 56X21–56X29. Zadania z migracjami lub resetem bazy mają etykietę
   `db:migracja` i idą pojedynczo w projekcie.
-- **Limity równoległości:** w `docs/konfiguracja.md` (pilot: `max_local=1`, po pomiarach obciążenia
-  maks. 2). Limit lokalny jest wspólny dla wszystkich projektów na Macu. Naraz działa maks. 1 stack
+- **Limity równoległości:** limit lokalnych workerów Maca jest w `/Users/Shared/sh/konfiguracja.md`
+  (`max_local`, domyślnie 2 po pomiarze w `sh-dryrun` 2026-11-04) i liczy workerów wszystkich
+  projektów. `max_local` w `docs/konfiguracja.md` projektu może go tylko obniżyć i liczy workerów
+  tego projektu. Eskalowane zadanie nie zajmuje slotu. Naraz działa maks. 1 stack
   Supabase projektów SH, a orkiestrator zatrzymuje stack nieaktywnego projektu (`supabase stop`).
   `supabase-local` to stary system i nie wlicza się do limitu; właściciel może go zatrzymać na czas
   pilota.
@@ -186,6 +188,9 @@ trwającym projekcie.
 - Nowy projekt zaczyna od M lub L.
 - Etapy, których tryb M lub L nie przewiduje, mają w DoD status `pominiety`. Tryb S nie ma DoD
   etapów.
+- Etap trybu pomija się tylko z uzasadnieniem: `shctl stage skip ETAP --notatka "..."` zapisuje je w
+  `uzasadnienie_pominiecia` w `DoD.md` i w dzienniku etapów, a `check-dod.sh` bez niego odrzuca
+  `pominiety` w etapie trybu.
 - Podniesienie trybu w trakcie: orkiestrator proponuje, właściciel decyduje, nigdy po cichu.
 
 ## Typ projektu
@@ -233,6 +238,16 @@ Pliki wspólne (`status.md`, `decyzje.md`, `metryki.md`, `06-zadania/index.md`, 
 `CHANGELOG.md`) aktualizuje WYŁĄCZNIE orkiestrator, na main, po merge'u zadania (przez shctl,
 `CHANGELOG.md` w `shctl task close`).
 
+Frontmatter `DoD.md` (`status`, `iteracja`) zmienia się tylko na main, przez `shctl stage`. Gałąź
+`stage/ETAP` zmienia wyłącznie treść dokumentów i pola checklisty, więc PR etapu nie ma konfliktu z
+main. Eskalacje (`escalations/E-NNN.md`) też powstają tylko na main: `shctl escalate` wywołane z
+worktree zapisuje je w głównej kopii projektu, a commituje orkiestrator. Numeracja E-NNN jest jedna
+dla projektu.
+
+Przed czekaniem na CI orkiestrator sprawdza PR przez `shctl pr check PR --czekaj`. PR z konfliktem z
+main (`mergeable: CONFLICTING`) nie uruchamia workflowów, więc shctl zgłasza konflikt wprost (kod 4),
+zamiast czekać na CI. Konflikt rozwiązuje autor gałęzi: `git merge origin/main`, poprawka, push.
+
 Worker pisze tylko własne pliki: kod, testy, docs obszaru swojego zadania i raport
 `docs/07-realizacja/T-NR.md` z sekcjami „Decyzje”, „Drobne uwagi” i „Propozycje dla systemu”.
 Orkiestrator przenosi dwie pierwsze do plików wspólnych, a propozycje zbiera do
@@ -244,7 +259,8 @@ właściciel przegląda je w retro pilota (prompt ręczny), a od etapu B robi to
 `DoD.md` etapu zawiera:
 
 - frontmatter: `etap` (nazwa folderu, np. `04-architektura`), `status`
-  (`todo|in-progress|review|done|escalated|pominiety`), `iteracja` (`0-3`);
+  (`todo|in-progress|review|done|escalated|pominiety`), `iteracja` (`0-3`), przy pominięciu etapu
+  trybu `uzasadnienie_pominiecia`;
 - sekcje: Dokumentacja, Funkcjonalność, Checklisty jakości, Checkpoint (review PASS, akceptacja
   właściciela, jeśli wymagana).
 
@@ -252,6 +268,10 @@ Etap jest done tylko wtedy, gdy wszystkie pola są zaznaczone, a review dało PA
 zaznacza review sam sobie. `scripts/check-dod.sh` działa w CI.
 
 W DoD etapu nie ma statusu `blocked`: etap czekający na coś zewnętrznego ma `in-progress` i notatkę.
+
+Pole, które w projekcie nie ma zastosowania (np. E2E w bibliotece bez UI), ma stan „nie dotyczy”:
+`- [-] treść pola (nie dotyczy: powód)`. `check-dod.sh` liczy je jak zamknięte, a pole `[-]` bez
+powodu jest błędem. Review sprawdza, czy powód jest prawdziwy.
 
 Każdy `DoD.md` zawiera checklistę trybu M. Punkty tylko dla trybu L stoją w bloku:
 
@@ -290,9 +310,18 @@ migracje zgodne wstecz.
   merge.
 - **QA zbiorcze** po kamieniu milowym (testy E2E, integracja, zgodność z wymaganiami). Błędy stają
   się nowymi issue.
-- **Pętla:** maks. 3 iteracje. Licznik podbija orkiestrator, wyłącznie po FAIL review; przerwanie
-  przez limit go nie podbija. W iteracji poprawia się tylko zgłoszenia z review. Po 3. FAIL:
-  eskalacja. Eskalacja nie zatrzymuje zadań niezależnych.
+- **Pętla:** maks. 3 iteracje. Licznik podbija orkiestrator, wyłącznie po FAIL review (`shctl task
+  iter` dla zadania, `shctl stage iter` dla etapu); przerwanie przez limit go nie podbija. W iteracji
+  poprawia się tylko zgłoszenia z review. Po 3. FAIL: eskalacja. Eskalacja nie zatrzymuje zadań
+  niezależnych i zwalnia slot workera.
+- **Czerwone CI:** naprawia je worker zadania, najwyżej 2 próby (2 kolejne czerwone commity po
+  pierwszym czerwonym). `shctl pr check` liczy czerwone commity i po 2 nieudanych naprawach zwraca
+  `limit_napraw_ci: true`. Wtedy orkiestrator: przyczyna w zakresie zadania (kod, testy) → `shctl
+  review run` mimo czerwonego CI, a FAIL idzie zwykłą pętlą iteracji; przyczyna poza zadaniem
+  (środowisko, sekret, sprzeczne kryteria, CI szablonu) → `shctl escalate`. Merge nadal wymaga
+  zielonego CI.
+- **Anulowanie zadania:** `shctl task cancel NR --powod "..."` zamyka issue jako „not planned”, PR z
+  gałęzią, worktree i panele oraz czyści stan zadania. Scalonego PR nie anuluje się.
 
 Waga zgłoszeń:
 
@@ -476,6 +505,13 @@ Właściciel potwierdza tę listę przed pierwszym uruchomieniem projektu wzorco
 
 Repo `sh-dryrun` to test regresji systemu. Po każdej istotnej zmianie skilli lub shctl uruchamiamy
 go ponownie (`shctl reset-dryrun`) i porównujemy czas, iteracje i eskalacje w `metryki.md`.
+
+`reset-dryrun` przywraca tag `baseline`, ale `metryki.md` przechodzi przez reset: każdy przebieg
+dostaje sekcję „Przebieg dryrun N” z własną tabelą, do której `task close` dopisuje zadania. Tag
+`baseline` nie może zawierać artefaktów przebiegu (raporty `T-NR.md`, eskalacje, raporty QA, mapa
+zadań, wpisy `CHANGELOG.md`, DoD poza `todo`/`pominiety` albo z iteracją): reset odmawia. Znaczniki
+`shctl:id` archiwizuje we wszystkich issue, także zamkniętych, a klon `docs/` w vaulcie Obsidiana
+zakłada od nowa.
 
 ## Znane ograniczenia
 
