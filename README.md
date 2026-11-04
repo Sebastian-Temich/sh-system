@@ -14,6 +14,7 @@ Centralne repozytorium software house'u prowadzonego przez agentów AI.
 | `scripts/shctl/` | Narzędzie `shctl` |
 | `scripts/plugin/` | `sprawdz-skille.sh`: zgodność skilli z kontraktem |
 | `scripts/docs/` | `sprawdz-podrecznik.sh`: komendy `shctl` i skille z podręcznika istnieją (CI) |
+| `scripts/ci/` | `zakres.sh`: które testy uruchamia CI (oszczędność minut, `docs/serwer.md`, „CI i minuty GitHub Actions”) |
 | `scripts/sync-codex.sh` | Prompty Codexa ze skilli; `--check` w CI (`scripts/tests/sync-codex.bats`) |
 | `zrodla/skille-istniejace/` | Istniejące skille jako materiał źródłowy |
 

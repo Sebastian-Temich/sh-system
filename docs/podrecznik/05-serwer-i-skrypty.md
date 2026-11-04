@@ -197,9 +197,29 @@ Do pracy nad samym systemem, uruchamiane też w CI:
 | `scripts/plugin/sprawdz-skille.sh` | Każdy skill ma sekcje i zasady z kontraktu |
 | `scripts/sync-codex.sh` | Prompt Codexa `codex/sh-review.md` jest zgodny ze skillem `sh-review` |
 | `scripts/docs/sprawdz-podrecznik.sh` | Każda komenda `shctl` i każdy skill wymieniony w tym podręczniku istnieje |
+| `scripts/ci/zakres.sh` | Które testy uruchamia CI: pełne tylko przy zmianie poza dokumentacją |
 
 Zmiana w shctl, skillach lub skryptach serwera wymaga aktualizacji tego podręcznika w tym samym PR
 ([[serwer]], „Praca nad systemem”).
+
+## CI i minuty GitHub Actions
+
+Konto ma plan Free: 2000 minut miesięcznie dla repo prywatnych, a każdy job liczy się co najmniej
+jako minuta. Dlatego CI w `sh-system`, w szablonie i w każdym nowym projekcie:
+
+- uruchamia pełne testy na PR ze zmianą kodu, nocą (tylko gdy w ciągu doby był commit) i ręcznie
+  (Actions → workflow → Run workflow);
+- na PR z samą dokumentacją (`docs/`, `*.md`) uruchamia tylko lekkie kontrole: w projekcie
+  `check-dod` i `gitleaks`;
+- po merge'u i po commitach orkiestratora na `main` robi tylko smoke: w projekcie jeden job
+  `check-dod` ze skanem sekretów;
+- anuluje poprzedni bieg PR po nowym pushu;
+- ma limit czasu w każdym jobie;
+- migracje staging uruchamia tylko przy zmianie w `supabase/migrations/`.
+
+Na PR z dokumentacją joby `lint` i `test` mają status „Skipped”. To nie błąd: orkiestrator i
+`shctl` traktują je jak zaliczone. Pomiar zużycia i szczegóły: [[serwer]], „CI i minuty GitHub
+Actions”. Zużycie widzisz w GitHubie: Settings → Billing and plans → Usage.
 
 ## Logi
 
