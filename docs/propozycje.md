@@ -38,3 +38,9 @@ bez dublowania.
   `herdr agent prompt`; propozycja: `shctl task nudge NR --powod kontynuuj|od-nowa`;
 - wpis „Punktu przekazania” w `status.md`; propozycja: `shctl handoff` z danymi `status show`,
   wynikiem `doctor` i wierszem autoryzacji.
+
+## sh-dryrun T-36 (2026-11-04)
+
+<!-- propozycje:sh-dryrun:T-36 -->
+- Narzędzie Write/Edit zamieniało w teście sekwencję ` ` na literalny znak, co blokował eslint.
+  Warto w szablonie testów zalecać `\s` zamiast ` ` w wyrażeniach regularnych.
