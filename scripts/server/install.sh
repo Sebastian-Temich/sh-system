@@ -13,6 +13,7 @@
 # ladowanie agenta sh-start; plista jest nadal kopiowana, bez dotykania launchd.
 # Tak samo ~/sh/stan/obsidian-sync.off dla agenta obsidian-sync (shctl obsidian sync co 5 minut).
 # Git: globalny core.hooksPath na scripts/server/git-hooks. Inna wartosc to blad, nie nadpisujemy.
+# Logowanie git do github.com: helper gh auth git-credential (bezwzgledna sciezka), gdy go brak.
 # Repo z lokalnym core.hooksPath w SH_DIR i SH_DIR/projekty dostaje ostrzezenie, bo wygrywa on z globalnym.
 # Katalogi docelowe: SH_DIR, SH_BIN, SH_AGENTS. Powiadomienie: SH_NOTIFY_CMD.
 set -euo pipefail
@@ -126,6 +127,28 @@ git_hooki() {
   done
 }
 
+# Logowanie git do github.com przez gh: token z pęku kluczy gh, helper z bezwzględną ścieżką, więc
+# działa także pod launchd (minimalny PATH, bez terminala). Pusty helper przed nim wyłącza dla
+# github.com osxkeychain, z którego git kasuje wpis po pierwszym odrzuconym tokenie.
+git_logowanie() {
+  local gh obecny
+  obecny="$(git config --global --get-all credential.https://github.com.helper || true)"
+  case "$obecny" in
+    *"auth git-credential"*)
+      echo "ok:      git credential helper (gh)"
+      return
+      ;;
+  esac
+  gh="$(command -v gh || true)"
+  if [ -z "$gh" ]; then
+    echo "UWAGA:   brak gh w PATH, git nie ma logowania do github.com" >&2
+    return
+  fi
+  git config --global --replace-all credential.https://github.com.helper ''
+  git config --global --add credential.https://github.com.helper "!'$gh' auth git-credential"
+  echo "git:     credential.https://github.com.helper -> $gh auth git-credential"
+}
+
 for src in "$REPO"/scripts/server/*.sh; do
   [ "$(basename "$src")" = install.sh ] || link "$src" "$BIN/$(basename "$src")"
 done
@@ -163,6 +186,7 @@ for src in "$REPO"/scripts/server/*.plist; do
 done
 
 git_hooki
+git_logowanie
 
 # Pliki spoza repo: tylko ostrzezenie, nic nie kasujemy.
 for dst in "$BIN"/*; do

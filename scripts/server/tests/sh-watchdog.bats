@@ -23,6 +23,12 @@ case "\$1 \$2" in
       jq -nc --arg i "\${id/_/:}" --arg l "\$(cat "$T/panele/\$id.label" 2>/dev/null)" '{pane_id:\$i, label:\$l}'
     done | jq -sc '{result:{panes:.}}' ;;
   "pane read") cat "$T/panele/\${3/:/_}.txt" ;;
+  "pane process-info")
+    if [ -f "$T/orch-dziala" ]; then
+      echo '{"result":{"process_info":{"foreground_processes":[{"argv":["claude","remote-control","--name","sh-orkiestrator"],"cwd":"$T/sh","pid":777}]}}}'
+    else
+      echo '{"result":{"process_info":{"foreground_processes":[{"argv":["-zsh"],"cwd":"$T/sh","pid":11}]}}}'
+    fi ;;
   *) exit 2 ;;
 esac
 MOCK
@@ -202,14 +208,17 @@ wstrzymania_shctl() {
   grep -q '^| claude' "$T/sh/limity.md"
 }
 
-# --- Orkiestrator: atrapy pgrep/lsof; $T/orch-dziala = działa claude remote-control w $T/sh ---
+# --- Orkiestrator: panel w1:p1 „orkiestrator” w atrapie herdr; $T/orch-dziala = w panelu działa
+# claude remote-control z cwd $T/sh. $T/orch-obcy = taki proces działa poza panelem (ps, lsof). ---
 
 atrapy_orkiestratora() {
-  printf '#!/bin/sh\n[ -f "%s/orch-dziala" ] && echo 777\nexit 0\n' "$T" >"$T/mock/pgrep"
-  printf '#!/bin/sh\necho p777\necho n%s/sh\n' "$T" >"$T/mock/lsof"
+  : >"$T/panele/w1_p1.txt"
+  echo orkiestrator >"$T/panele/w1_p1.label"
+  printf '#!/bin/sh\n[ -f "%s/orch-obcy" ] && echo " 4242 claude remote-control"\nexit 0\n' "$T" >"$T/mock/ps"
+  printf '#!/bin/sh\necho p4242\necho n%s/sh\n' "$T" >"$T/mock/lsof"
   # sh-start: zapisuje wywołanie; bez $T/start-psuje „uruchamia” orkiestratora.
   printf '#!/bin/sh\necho "$*" >>"%s/start-calls"\n[ -f "%s/start-psuje" ] || touch "%s/orch-dziala"\n' "$T" "$T" "$T" >"$T/mock/sh-start"
-  chmod +x "$T/mock/pgrep" "$T/mock/lsof" "$T/mock/sh-start"
+  chmod +x "$T/mock/ps" "$T/mock/lsof" "$T/mock/sh-start"
   mkdir -p "$T/sh/logs" "$T/sh/stan"
 }
 
@@ -248,4 +257,28 @@ atrapy_orkiestratora() {
   [ ! -f "$T/start-calls" ]
   [ "$(powiadomienia)" -eq 0 ]
   grep -q 'restart wyłączony flagą autostart.off' "$T/sh/logs/watchdog.log"
+}
+
+@test "claude remote-control poza panelem: bez restartu, wpis w logu" {
+  atrapy_orkiestratora
+  touch "$T/orch-obcy"
+  ORKIESTRATOR=1 straznik
+  [ "$status" -eq 0 ]
+  [ ! -f "$T/start-calls" ]
+  [ "$(powiadomienia)" -eq 0 ]
+  grep -q 'PID 4242) działa w .* poza panelem orkiestratora, nie restartuję' "$T/sh/logs/watchdog.log"
+}
+
+@test "minimalne srodowisko launchd (PATH=/usr/bin:/bin): herdr z ~/.local/bin, orkiestrator widoczny" {
+  atrapy_orkiestratora
+  touch "$T/orch-dziala"
+  mkdir -p "$T/home/.local/bin"
+  cp "$T/mock/herdr" "$T/mock/sh-start" "$T/home/.local/bin/"
+  ln -s "$(command -v jq)" "$T/home/.local/bin/jq"
+  run env -i HOME="$T/home" PATH=/usr/bin:/bin SH_DIR="$T/sh" SH_NOTIFY_CMD="$T/mock/notify" \
+    SH_WATCHDOG_PAUZA=0 SH_START_CMD="$T/home/.local/bin/sh-start" SH_WATCHDOG_TERAZ="$TERAZ_14" \
+    bash "$REPO/scripts/server/sh-watchdog.sh"
+  [ "$status" -eq 0 ]
+  [ ! -f "$T/start-calls" ]
+  grep -q 'przebieg: paneli 1' "$T/sh/logs/watchdog.log"
 }

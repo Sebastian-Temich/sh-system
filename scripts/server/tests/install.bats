@@ -224,3 +224,16 @@ globalny_hooks_path() {
   ! grep -q obsidian-sync "$T/calls-inne" 2>/dev/null
   [ -f "$T/loaded" ]
 }
+
+@test "git: helper gh auth git-credential z bezwzgledna sciezka, drugi raz bez zmian" {
+  printf '#!/bin/sh\nexit 0\n' >"$T/mock/gh"
+  chmod +x "$T/mock/gh"
+  install
+  [ "$status" -eq 0 ]
+  helpery="$(GIT_CONFIG_NOSYSTEM=1 GIT_CONFIG_GLOBAL="$T/gitconfig" git config --global --get-all credential.https://github.com.helper)"
+  [ "$helpery" = "$(printf '\n%s' "!'$T/mock/gh' auth git-credential")" ]
+  install
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"ok:      git credential helper (gh)"* ]] || false
+  [ "$(GIT_CONFIG_NOSYSTEM=1 GIT_CONFIG_GLOBAL="$T/gitconfig" git config --global --get-all credential.https://github.com.helper | wc -l | tr -d ' ')" -eq 2 ]
+}

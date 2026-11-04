@@ -37,6 +37,21 @@ sprawdz_logowania() {
   fi
 }
 
+# git do github.com dostaje token bez pytania (helper z ~/.gitconfig ustawia install.sh). Z tego
+# korzystają workery i orkiestrator przy push; shctl ma własny helper (git_gh). Bez sieci: helper gh
+# czyta token lokalnie, a wynik sprawdzamy bez wypisywania go.
+sprawdz_logowanie_git() {
+  local helper
+  helper="$(git config --global --get-all credential.https://github.com.helper 2>/dev/null | sed '/^$/d' | tail -n 1 || true)"
+  if printf 'protocol=https\nhost=github.com\n\n' |
+    z_limitem 20 env GIT_TERMINAL_PROMPT=0 git credential fill 2>/dev/null |
+    awk '/^password=./ { ok = 1 } END { exit !ok }'; then
+    wpis "logowanie git" ok "github.com: ${helper:-helper systemowy}"
+  else
+    wpis "logowanie git" blad "git nie ma tokenu dla github.com: install.sh (helper gh auth git-credential)"
+  fi
+}
+
 sprawdz_uslugi() {
   if command -v docker >/dev/null; then
     if z_limitem 20 docker info >/dev/null 2>&1; then wpis "Docker" ok "działa"; else wpis "Docker" blad "nie odpowiada, uruchom Docker Desktop"; fi
@@ -49,67 +64,39 @@ sprawdz_uslugi() {
   fi
 }
 
-# PID claude remote-control z katalogiem roboczym $SH_DIR (pusto, gdy brak).
-pid_orkiestratora() {
-  local pid cwd want
-  want="$(cd "$SH_DIR" 2>/dev/null && pwd -P || printf '%s' "$SH_DIR")"
-  for pid in $(pgrep -f 'claude remote-control' 2>/dev/null || true); do
-    cwd="$(lsof -a -p "$pid" -d cwd -Fn 2>/dev/null | sed -n 's/^n//p' || true)"
-    if [ "$cwd" = "$SH_DIR" ] || [ "$cwd" = "$want" ]; then printf '%s' "$pid"; return 0; fi
-  done
-}
-
-# PATH z początkowego środowiska procesu (ps eww, procesy tego samego użytkownika). Wartość
-# kończy się przed następnym „ NAZWA=”, więc katalogi ze spacją zostają całe.
-path_procesu() {
-  ps eww -o command= -p "$1" 2>/dev/null | head -n 1 |
-    sed -n 's/.* PATH=//p' | sed 's/ [A-Za-z_][A-Za-z0-9_]*=.*//'
-}
-
-# PID powłoki panelu z etykietą orkiestrator w workspace sh (pusto, gdy brak).
-powloka_orkiestratora() {
-  local ws panel
-  ws="$(z_limitem 20 herdr workspace list 2>/dev/null |
-    jq -r '[.result.workspaces[]? | select(.label == "sh")][0].workspace_id // empty' 2>/dev/null || true)"
-  [ -n "$ws" ] || return 0
-  panel="$(z_limitem 20 herdr pane list --workspace "$ws" 2>/dev/null |
-    jq -r '[.result.panes[]? | select(.label == "orkiestrator")][0].pane_id // empty' 2>/dev/null || true)"
-  [ -n "$panel" ] || return 0
-  z_limitem 20 herdr pane process-info --pane "$panel" 2>/dev/null |
-    jq -r '.result.process_info.shell_pid // empty' 2>/dev/null || true
-}
-
-# Orkiestrator działa i ma ~/sh/bin w PATH. PATH czytany z procesu orkiestratora (to, co
-# dziedziczą nowe sesje), a gdy nie działa, z powłoki panelu orkiestratora w herdr.
+# Ta sama kontrola co sh-start.sh i strażnik: orkiestrator_pid z scripts/server/lib/system.sh.
+# PATH czytany z procesu orkiestratora: to, co dziedziczą nowe sesje.
 sprawdz_orkiestrator() {
-  local pid='' zrodlo sciezki
-  if ! command -v pgrep >/dev/null || ! command -v lsof >/dev/null; then
-    wpis "orkiestrator" uwaga "brak pgrep albo lsof, nie sprawdzono"
-  else
-    pid="$(pid_orkiestratora)"
-    if [ -n "$pid" ]; then wpis "orkiestrator" ok "działa (PID $pid)"; else wpis "orkiestrator" blad "nie działa: sh-start.sh"; fi
-  fi
-  if [ -n "$pid" ]; then
-    zrodlo="orkiestrator PID $pid"
-    sciezki="$(path_procesu "$pid")"
-  elif command -v herdr >/dev/null && command -v jq >/dev/null; then
-    zrodlo="$(powloka_orkiestratora "")"
-    if [ -z "$zrodlo" ]; then
-      wpis "PATH panelu herdr" uwaga "nie znaleziono panelu orkiestratora w workspace sh"
-      return 0
-    fi
-    sciezki="$(path_procesu "$zrodlo")"
-    zrodlo="powłoka PID $zrodlo"
-  else
+  local panel pid obcy sciezki
+  if ! command -v herdr >/dev/null || ! command -v jq >/dev/null; then
+    wpis "orkiestrator" uwaga "brak herdr albo jq w PATH, nie sprawdzono"
     return 0
   fi
+  panel="$(ork_panel)"
+  pid=""
+  [ -z "$panel" ] || pid="$(orkiestrator_pid "$panel")"
+  if [ -n "$pid" ]; then
+    wpis "orkiestrator" ok "działa w panelu $panel (PID $pid)"
+  else
+    obcy="$(ork_pid_poza_panelem)"
+    if [ -n "$obcy" ]; then
+      wpis "orkiestrator" blad "claude remote-control (PID $obcy) działa w $SH_DIR poza panelem orkiestratora; zatrzymaj go i uruchom sh-start.sh"
+    elif [ -z "$panel" ]; then
+      wpis "orkiestrator" blad "brak panelu orkiestrator w workspace $ORK_WS: sh-start.sh"
+    else
+      wpis "orkiestrator" blad "nie działa w panelu $panel: sh-start.sh"
+    fi
+    wpis "PATH panelu herdr" uwaga "nie sprawdzono, orkiestrator nie działa (sh-start.sh przekazuje PATH jawnie)"
+    return 0
+  fi
+  sciezki="$(ork_path_procesu "$pid")"
   if [ -z "$sciezki" ]; then
-    wpis "PATH panelu herdr" uwaga "nie udało się odczytać PATH ($zrodlo)"
+    wpis "PATH panelu herdr" uwaga "nie udało się odczytać PATH (orkiestrator PID $pid)"
     return 0
   fi
   case ":$sciezki:" in
-    *":$SH_DIR/bin:"*) wpis "PATH panelu herdr" ok "$SH_DIR/bin jest ($zrodlo)" ;;
-    *) wpis "PATH panelu herdr" blad "brak $SH_DIR/bin ($zrodlo); zatrzymaj orkiestratora i uruchom sh-start.sh" ;;
+    *":$SH_DIR/bin:"*) wpis "PATH panelu herdr" ok "$SH_DIR/bin jest (orkiestrator PID $pid)" ;;
+    *) wpis "PATH panelu herdr" blad "brak $SH_DIR/bin (orkiestrator PID $pid); zatrzymaj orkiestratora i uruchom sh-start.sh" ;;
   esac
 }
 
@@ -239,6 +226,7 @@ komenda_main() {
   : >"$SHCTL_TMP/doctor"
   sprawdz_narzedzia
   sprawdz_logowania
+  sprawdz_logowanie_git
   sprawdz_uslugi
   sprawdz_orkiestrator
   sprawdz_notify "$test"

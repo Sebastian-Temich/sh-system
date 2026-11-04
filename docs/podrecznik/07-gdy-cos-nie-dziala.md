@@ -75,6 +75,10 @@ orkiestrator zgłosi je w „Czeka na Ciebie” albo eskalacją.
 **Przyczyna zwykle:** zmiana zapisana w pliku w `SH/Projekty` albo `SH/sh-system`. Synchronizacja
 nie nadpisuje lokalnych zmian, więc pomija tę kopię. Skrzynki (`SH/Skrzynka`) to nie dotyczy.
 
+**Gdy log mówi „fetch z origin nieudany”:** serwer nie może się zalogować do GitHuba. W nawiasie
+jest przyczyna z git. Sprawdź `gh auth status` i wiersz `logowanie git` w `shctl doctor`; przy
+błędzie uruchom `~/sh/sh-system/scripts/server/install.sh` (ustawia logowanie git przez gh).
+
 **Co robisz:**
 
 1. Cofnij zmianę w Obsidianie (albo poproś orkiestratora: „uporządkuj klon Obsidiana projektu

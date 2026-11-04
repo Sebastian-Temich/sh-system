@@ -20,6 +20,11 @@ LIMITY="$SH_DIR/limity.md"
 STAN="$SH_DIR/stan"
 LOG="$SH_DIR/logs/shctl.log"
 
+# PATH pod launchd i kontrola orkiestratora: wspólne ze skryptami serwera.
+# shellcheck source=../../server/lib/system.sh
+. "$SHCTL_DIR/../server/lib/system.sh"
+sh_uzupelnij_path
+
 DRY=0
 JSON=0
 PROJEKT=""
@@ -181,6 +186,24 @@ z_limitem() {
   else
     "$@"
   fi
+}
+
+# Git z siecią (fetch, pull, clone, ls-remote) do github.com: logowanie zawsze przez gh, bez pytania
+# o hasło. Pod launchd nie ma terminala, a wpis osxkeychain znika po pierwszym odrzuconym tokenie
+# (git sam go kasuje), więc nie polegamy ani na nim, ani na globalnym ~/.gitconfig. Helper ma
+# bezwzględną ścieżkę gh, bo git uruchamia go przez sh z PATH wywołującego.
+# Wywołanie: git_gh [-t SEKUNDY] ARGUMENTY_GIT (-t: limit czasu jak z_limitem).
+git_gh() {
+  local gh limit=""
+  if [ "${1:-}" = -t ]; then limit="$2"; shift 2; fi
+  gh="$(command -v gh 2>/dev/null || true)"
+  if [ -n "$gh" ]; then
+    set -- env GIT_TERMINAL_PROMPT=0 git -c credential.https://github.com.helper= \
+      -c "credential.https://github.com.helper=!'$gh' auth git-credential" "$@"
+  else
+    set -- env GIT_TERMINAL_PROMPT=0 git "$@"
+  fi
+  if [ -n "$limit" ]; then z_limitem "$limit" "$@"; else "$@"; fi
 }
 
 powiadom() {

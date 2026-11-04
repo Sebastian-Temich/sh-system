@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-11-04
+
+- Kontrola orkiestratora w jednym miejscu, `scripts/server/lib/system.sh` (`orkiestrator_pid`), dla `sh-start.sh`, `sh-watchdog.sh` i `shctl doctor`: w panelu `orkiestrator` workspace `sh` działa `claude remote-control` z cwd `~/sh` (dane z `herdr pane process-info`). Naprawia fałszywe „BLAD orkiestrator nie działa” w doctorze uruchomionym z sesji orkiestratora: `pgrep` na macOS pomija przodków wywołującego. `PATH panelu herdr` czytany z procesu orkiestratora (powłoka `-zsh` nie pokazuje środowiska w `ps`). Instancja poza panelem: doctor `blad` z PID, strażnik bez restartu.
+- `shctl obsidian sync` (LaunchAgent): git z siecią przez `git_gh` (helper `gh auth git-credential` z bezwzględną ścieżką, `GIT_TERMINAL_PROMPT=0`), PATH uzupełniany o katalogi narzędzi; log podaje przyczynę nieudanego fetch. Od 2026-11-03 13:50 fetch padał pod launchd, bo wpis `osxkeychain` dla github.com zniknął. `install.sh` ustawia globalny helper gh dla github.com, doctor ma kontrolę `logowanie git`.
+- Zasada stała: praca nad `sh-system` w worktree `~/sh/wt-system/GAŁĄŹ`, `~/sh/sh-system` zawsze na `main` (`docs/serwer.md`, „Praca nad systemem”).
+- Testy startu z launchd (`env -i`, PATH=/usr/bin:/bin): `shctl/tests/launchd.bats`, `sh-start.bats`, `sh-watchdog.bats`. Atrapy herdr z argv, cwd i PID; `|| false` po `[[ ]]` w `sh-start.bats` (bash 3.2 nie oblewa na nich testu).
+
 ## 2026-11-03
 
 - `sh-start.sh`: każdy przebieg zaczyna się wpisem `start` (tryb, PID, rodzic) i kończy jednym wpisem z kodem wyjścia: `gotowe`, `UWAGA` albo `BLAD` z krokiem, linią i poleceniem; także przy `set -e`, sygnałach (143/129/130) i zawieszonym herdr (limit 30 s, kod 142). Po starcie sprawdza, czy claude działa w panelu. Serwer herdr we własnej sesji (`setsid`). Plista `sh-watchdog`: `AbandonProcessGroup`, bo launchd po przebiegu strażnika zabijał grupę procesów z serwerem herdr i orkiestratorem (2026-11-03 16:54). `obsidian-sync` bez zmian. Testy bats dla każdej ścieżki zakończenia i kluczy plist.

@@ -8,6 +8,8 @@ setup() {
   mkdir -p "$K/scripts"
   cp -R "$REPO/plugin" "$REPO/.claude-plugin" "$K/"
   cp -R "$REPO/scripts/shctl" "$K/scripts/"
+  mkdir -p "$K/scripts/server"
+  cp -R "$REPO/scripts/server/lib" "$K/scripts/server/"
   # Skill zbudowany z szablonu, jak robi to autor nowego skilla.
   S="$K/plugin/skills/sh-test"
   mkdir -p "$S"

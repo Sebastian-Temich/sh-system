@@ -9,15 +9,38 @@ setup() {
   chmod +x "$T/mock/"*
   mkdir -p "$HOME/.config/sh"
   echo temat >"$HOME/.config/sh/ntfy-topic"
-  # Orkiestrator: claude remote-control (PID 777) w $SH_DIR, PATH z $T/orch-path.
-  printf '#!/bin/sh\n[ -f "%s/orch-off" ] || echo 777\n' "$T" >"$T/mock/pgrep"
+  # Orkiestrator: panel w1:p1 „orkiestrator”, w nim claude remote-control (PID 777) z cwd $SH_DIR;
+  # $T/orch-off: w panelu sama powłoka. PATH procesu z $T/orch-path (ps eww), $T/orch-obcy: taki
+  # proces działa poza panelem (ps -ax, lsof).
+  cat >"$T/mock/herdr" <<MOCK
+#!/bin/sh
+case "\$1 \$2" in
+  "status server") echo "status: running" ;;
+  "workspace list") echo '{"result":{"workspaces":[{"workspace_id":"w1","label":"sh"}]}}' ;;
+  "pane list") echo '{"result":{"panes":[{"pane_id":"w1:p1","label":"orkiestrator"},{"pane_id":"w1:p2","label":"powloka"}]}}' ;;
+  "pane process-info")
+    if [ -f "$T/orch-off" ]; then
+      echo '{"result":{"process_info":{"foreground_processes":[{"argv":["-zsh"],"cwd":"$SH_DIR","pid":11}]}}}'
+    else
+      echo '{"result":{"process_info":{"foreground_processes":[{"argv":["claude","--print"],"cwd":"$SH_DIR","pid":778},{"argv":["claude","remote-control","--name","sh-orkiestrator"],"cwd":"$SH_DIR","pid":777}]}}}'
+    fi ;;
+  *) exit 2 ;;
+esac
+MOCK
   cat >"$T/mock/lsof" <<MOCK
 #!/bin/sh
-case "\$*" in *"-d cwd"*) echo p777; echo "n$SH_DIR" ;; *) exit 1 ;; esac
+case "\$*" in *"-d cwd"*) echo p4242; echo "n$SH_DIR" ;; *) exit 1 ;; esac
 MOCK
-  printf '#!/bin/sh\necho "claude remote-control PATH=$(cat "%s/orch-path") HOME=/x"\n' "$T" >"$T/mock/ps"
+  cat >"$T/mock/ps" <<MOCK
+#!/bin/sh
+case "\$1" in
+  eww) echo "claude remote-control PATH=\$(cat "$T/orch-path") HOME=/x" ;;
+  -axo) [ ! -f "$T/orch-obcy" ] || echo " 4242 claude remote-control --name inny" ;;
+esac
+MOCK
   echo "/usr/bin:$SH_DIR/bin:/bin" >"$T/orch-path"
   chmod +x "$T/mock/"*
+  git config --global credential.https://github.com.helper "!'$T/mock/gh' auth git-credential"
 }
 
 @test "orkiestrator dziala i ma ~/sh/bin w PATH" {
@@ -27,11 +50,42 @@ MOCK
   [ "$(jq -r '.wynik.kontrole | map(select(.nazwa == "PATH panelu herdr"))[0].stan' <<<"$output")" = ok ]
 }
 
-@test "orkiestrator nie dziala: kod 1" {
+@test "orkiestrator dziala: PID z panelu, nie pierwszy proces claude" {
+  run "$SHCTL" doctor --json
+  [ "$status" -eq 0 ]
+  jq -e '.wynik.kontrole | map(select(.nazwa == "orkiestrator"))[0].szczegoly == "działa w panelu w1:p1 (PID 777)"' <<<"$output"
+}
+
+@test "orkiestrator nie dziala: kod 1, PATH nie sprawdzany" {
   touch "$T/orch-off"
   run --separate-stderr "$SHCTL" doctor --json
   [ "$status" -eq 1 ]
   [ "$(jq -r '.wynik.kontrole | map(select(.nazwa == "orkiestrator"))[0].stan' <<<"$output")" = blad ]
+  [ "$(jq -r '.wynik.kontrole | map(select(.nazwa == "PATH panelu herdr"))[0].stan' <<<"$output")" = uwaga ]
+}
+
+@test "claude remote-control tylko poza panelem: blad z PID" {
+  touch "$T/orch-off" "$T/orch-obcy"
+  run --separate-stderr "$SHCTL" doctor --json
+  [ "$status" -eq 1 ]
+  jq -e '.wynik.kontrole | map(select(.nazwa == "orkiestrator"))[0] | .stan == "blad" and (.szczegoly | test("PID 4242.*poza panelem"))' <<<"$output"
+}
+
+# Regresja: doctor uruchomiony z sesji orkiestratora jest potomkiem claude remote-control, a pgrep
+# na macOS pomija przodków. Kontrola idzie przez herdr, więc pgrep nie ma wpływu na wynik.
+@test "pgrep nie widzi orkiestratora (przodek wywolujacego): nadal ok" {
+  printf '#!/bin/sh\nexit 1\n' >"$T/mock/pgrep"
+  chmod +x "$T/mock/pgrep"
+  run "$SHCTL" doctor --json
+  [ "$status" -eq 0 ]
+  [ "$(jq -r '.wynik.kontrole | map(select(.nazwa == "orkiestrator"))[0].stan' <<<"$output")" = ok ]
+}
+
+@test "git bez tokenu dla github.com: blad z podpowiedzia install.sh" {
+  touch "$T/gh-bez-tokenu"
+  run --separate-stderr "$SHCTL" doctor --json
+  [ "$status" -eq 1 ]
+  jq -e '.wynik.kontrole | map(select(.nazwa == "logowanie git"))[0] | .stan == "blad" and (.szczegoly | test("install.sh"))' <<<"$output"
 }
 
 @test "brak ~/sh/bin w PATH orkiestratora: kod 1" {
