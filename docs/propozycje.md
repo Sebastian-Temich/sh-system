@@ -38,3 +38,76 @@ bez dublowania.
   `herdr agent prompt`; propozycja: `shctl task nudge NR --powod kontynuuj|od-nowa`;
 - wpis „Punktu przekazania” w `status.md`; propozycja: `shctl handoff` z danymi `status show`,
   wynikiem `doctor` i wierszem autoryzacji.
+
+## sh-dryrun T-8 (2026-11-04)
+
+<!-- propozycje:sh-dryrun:T-8 -->
+- Profil workera nie pozwala na `fnm` ani `cat`/`head`; dodać `Bash(fnm list)` / `Bash(fnm current)`, żeby worker mógł sprawdzić wersję Node zgodnie z kontraktem „Node LTS przez fnm”.
+- Szablon CI mógłby od razu zawierać przypięte SHA `pnpm/action-setup` i `actions/setup-node` (zakomentowane), bo worker nie ma `gh api` i musi szukać SHA przez WebFetch.
+- Przenieść poprawkę `scripts/tests/sync-status.bats` z fixture'ami (`scripts/tests/fixtures/sync-status/`) do `sh-template-projekt`; bez niej każdy nowy projekt ma czerwony `testy-skryptow` po pierwszych wpisach orkiestratora.
+- Dodać `Bash(bats *)` do profilu workera, żeby worker mógł lokalnie uruchomić testy skryptów przed pushem.
+- Zadanie szkieletu powinno mieć w „Zakresie” `src/**` i `tsconfig.build.json` (albo ogólnie katalog kodu), skoro kryterium wymaga kodu w `src/`.
+
+## sh-dryrun T-11 (2026-11-04)
+
+<!-- propozycje:sh-dryrun:T-11 -->
+- Profil workera nie pozwala na `gh pr list` ani złożone komendy Bash (`;`), więc stan PR przy starcie sprawdziłem tylko przez `git log origin/main..HEAD`. Dodać `Bash(gh pr list *)` albo opisać w skillu, że do sprawdzenia PR służy `gh pr view`.
+- Zadania dodające nowy moduł biblioteki powinny mieć w „Zakresie” `src/index.ts`, jeśli funkcja ma trafić do publicznego API.
+
+## sh-dryrun T-13 (2026-11-04)
+
+<!-- propozycje:sh-dryrun:T-13 -->
+- Profil workera blokuje złożone polecenia powłoki (np. kilka komend przez `;`). Krok 1 Procedury
+  wygodniej byłoby opisać jako osobne polecenia albo dodać `shctl task whereami` zwracające katalog,
+  gałąź, iterację i numer PR w jednym JSON.
+
+## sh-dryrun T-9 (2026-11-04)
+
+<!-- propozycje:sh-dryrun:T-9 -->
+- Profil workera nadal blokuje złożone polecenia powłoki (`;`, `&&`) i część prostych (np.
+  `git rev-list --left-right --count`). Krok 1 i 4 Procedury wymagają kilku osobnych wywołań; przydałoby
+  się `shctl task whereami` (katalog, gałąź, iteracja, PR, liczba commitów za `main`) w jednym JSON.
+- Numer PR do raportu znany jest dopiero po `gh pr create`, więc raport wymaga drugiego commita.
+  Szablon mógłby dopuszczać `PR:` uzupełniane przez `shctl review run` albo `task close`.
+
+## sh-dryrun T-10 (2026-11-04)
+
+<!-- propozycje:sh-dryrun:T-10 -->
+- Numer PR do raportu znany jest dopiero po `gh pr create`, więc raport wymaga drugiego commita.
+  Szablon mógłby dopuszczać `PR:` uzupełniane przez `shctl review run` albo `task close`.
+- Profil workera nadal odrzuca złożone polecenia powłoki (`&&`, heredoc), więc commit, push i
+  `gh pr create` trzeba wywoływać osobno; warto to opisać w skillu albo poluzować profil.
+
+## sh-dryrun T-23 (2026-11-04)
+
+<!-- propozycje:sh-dryrun:T-23 -->
+- Profil workera: dopuścić `git ls-remote --tags https://github.com/*` (tylko odczyt), żeby zadanie szkieletu mogło przypinać akcje GitHub po SHA bez obchodzenia przez WebFetch.
+- Przenieść poprawkę `scripts/tests/sync-status.bats` (fixture'y zamiast kopii żywego `docs/`) do `sh-template-projekt`, żeby nowe projekty nie miały czerwonego CI po pierwszej decyzji orkiestratora.
+- Profil workera: dopuścić `bats scripts/tests/*`, żeby worker mógł lokalnie sprawdzić testy skryptów przed pushem.
+- Szablon CI: dać od razu przypięty `actions/setup-node` (zakomentowany), skoro większość projektów to Node.
+
+## sh-dryrun T-26 (2026-11-04)
+
+<!-- propozycje:sh-dryrun:T-26 -->
+- Profil workera odrzuca złożone komendy Bash (`&&`, `;`), więc komendy z „Komendy testów” i DoD trzeba uruchamiać pojedynczo; warto to opisać w skillu sh-worker.
+
+## sh-dryrun T-24 (2026-11-04)
+
+<!-- propozycje:sh-dryrun:T-24 -->
+- Profil workera nie pozwala na `gh pr list`; sprawdzenie istnienia PR robię przez `gh pr view task/NR-slug`, co skill już opisuje, ale warto to podkreślić. Złożone komendy Bash (`;`, `&&`) są nadal odrzucane (jak w T-26).
+
+## sh-dryrun T-25 (2026-11-04)
+
+<!-- propozycje:sh-dryrun:T-25 -->
+- Issue wskazuje specyfikację i architekturę z „Wejścia” skilla, których w projekcie typu biblioteka nie ma; warto, żeby `sh-zadania` wpisywał w issue „brak specyfikacji/architektury”, a skill nie wymagał ich czytania.
+
+## sh-dryrun T-28 (2026-11-04)
+
+<!-- propozycje:sh-dryrun:T-28 -->
+- Narzędzie Write zapisało znak U+00A0 wpisany dosłownie w kodzie jako zwykłą spację, co dało mylący błąd testu („expected … to deeply equal …” przy identycznym wyglądzie). Warto zalecić w skillu sh-worker zapis znaków niewidocznych przez escape (`" "`).
+
+## sh-dryrun T-36 (2026-11-04)
+
+<!-- propozycje:sh-dryrun:T-36 -->
+- Narzędzie Write/Edit zamieniało w teście sekwencję ` ` na literalny znak, co blokował eslint.
+  Warto w szablonie testów zalecać `\s` zamiast ` ` w wyrażeniach regularnych.
