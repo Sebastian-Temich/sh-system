@@ -53,9 +53,9 @@ deny() { jq -e --arg r "$1" '.permissions.deny | index($r) != null' "$S" >/dev/n
 
 # Dopasowanie wzorców deny jak w Claude Code: * to dowolny ciąg, reszta dosłownie.
 pasuje() {
-  jq -e --arg k "$1" '[.permissions.deny[] | select(startswith("Bash("))
-    | ltrimstr("Bash(") | rtrimstr(")") | gsub("[.+?^$()\\[\\]{}|]"; "\\\(.)") | gsub("\\*"; ".*")
-    | "^" + . + "$"] | any(. as $w | $k | test($w))' "$S" >/dev/null
+  jq -e --arg k "$1" '[.permissions.deny[] | select(startswith("Bash(")) | ltrimstr("Bash(") | rtrimstr(")")
+    | gsub("(?<z>[.+?^$()\\[\\]{}|\\\\])"; "\\\(.z)") | gsub("\\*"; ".*") | "^" + . + "$"]
+    | any(.[]; . as $w | $k | test($w))' "$S" >/dev/null
 }
 
 @test "przyklady zablokowane i dozwolone" {

@@ -904,7 +904,10 @@ explain|prompt`, `pane list|get|read|process-info|wait-output|close`, `workspace
 nie przełączamy gałęzi. Bez reguły zostają `herdr pane run|send-text|send-keys` i `herdr agent
 send-keys` (wykonują dowolny tekst w innym panelu). `deny`: `git push` z `--force`/`-f`,
 `--delete`, `:GAŁĄŹ` i na `production`, `git reset --hard`, `git clean`, `git switch|checkout`,
-usuwanie gałęzi (`git branch -d|-D|--delete`), `gh api` z `-X`,
+usuwanie gałęzi (`git branch -d|-D|--delete`), wymuszony push przez refspec z `+`
+(`git push origin +main`), `git push --mirror|--prune`, każde `git -c …` (pozwala ustawić
+`core.sshCommand`, `core.hooksPath` albo alias i uruchomić dowolny program), `--exec`,
+`--receive-pack`, `--upload-pack` w każdej komendzie git, `gh api` z `-X`,
 `--method`, `-f`, `-F`, `--field`, `--raw-field` (te cztery zmieniają metodę na POST), `--input`,
 flaga przed albo po ścieżce, `gh repo delete`, `gh secret`,
 `gh auth`, `gh workflow`.

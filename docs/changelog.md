@@ -2,7 +2,7 @@
 
 ## 2026-11-04 (lista dozwolonych orkiestratora: git -C)
 
-- `orkiestrator-settings.json`: `git -C * add|commit|push|ls-files` i `jq` w allow, bo `sh-orkiestrator` używa `git -C KATALOG` zamiast `cd KATALOG && git` (zawsze wymaga zgody). Każda reguła deny dla `git` ma odpowiednik z `-C` (force push, `--delete`, `production`, `reset --hard`, `clean`); nowe deny: `git switch|checkout` (także z `-C`) i usuwanie gałęzi. Test `orkiestrator-settings.bats`.
+- `orkiestrator-settings.json`: `git -C * add|commit|push|ls-files` i `jq` w allow, bo `sh-orkiestrator` używa `git -C KATALOG` zamiast `cd KATALOG && git` (zawsze wymaga zgody). Każda reguła deny dla `git` ma odpowiednik z `-C` (force push, `--delete`, `production`, `reset --hard`, `clean`); nowe deny: `git switch|checkout` (także z `-C`), usuwanie gałęzi, push z refspec `+…`, `--mirror`, `--prune`, `git -c …` oraz `--exec`, `--receive-pack`, `--upload-pack`. Test `orkiestrator-settings.bats`.
 
 ## 2026-11-04 (poprawki operacyjne, część 2)
 
