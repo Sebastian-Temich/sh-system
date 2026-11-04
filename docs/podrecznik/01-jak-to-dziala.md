@@ -9,9 +9,9 @@ Wróć do: [[00-start-tutaj]]
 | Serwer | iMac 2012 z macOS 14, działa cały czas | Biuro, sieć lokalna |
 | herdr | „Okno z panelami”, w którym żyją agenci | Workspace `sh` na serwerze |
 | Orkiestrator | Claude Code w panelu `orkiestrator`, połączony przez Remote Control | Rozmawiasz z nim z telefonu i laptopa |
-| Worker | Claude Code realizujący jedno zadanie | Panel `worker:PROJEKT:NR`, kopia robocza `~/sh/wt/PROJEKT/NR` |
+| Worker | Claude Code realizujący jedno zadanie | Panel `worker:PROJEKT:NR`, kopia robocza `/Users/Shared/sh/wt/PROJEKT/NR` |
 | Reviewer | Codex sprawdzający zmianę, tylko do odczytu | Panel `review:PROJEKT:NR`, zamykany po review |
-| shctl | Program z mechaniką procesu | `~/sh/bin/shctl` |
+| shctl | Program z mechaniką procesu | `/Users/Shared/sh/bin/shctl` |
 | GitHub | Źródło prawdy: kod, zadania (issue), zmiany (PR), dokumenty | Konto Sebastian-Temich, jedno repo na projekt |
 | Obsidian | Podgląd dokumentów do czytania | Vault `~/Documents/Obsidian Vault`, folder `SH/` |
 | ntfy | Powiadomienia push na telefon | Aplikacja ntfy |

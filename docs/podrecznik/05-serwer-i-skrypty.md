@@ -7,7 +7,7 @@ a usługi startują same po zalogowaniu. Pełny opis techniczny: [[serwer]].
 
 ## Skąd biorą się skrypty
 
-Źródłem wszystkich skryptów jest repo `sh-system` w `~/sh/sh-system`. Katalog `~/sh/bin` zawiera
+Źródłem wszystkich skryptów jest repo `sh-system` w `/Users/Shared/sh/sh-system`. Katalog `/Users/Shared/sh/bin` zawiera
 tylko odnośniki (symlinki) do repo, więc zmiana w repo działa od razu. Zmiany w systemie idą przez
 gałąź i PR, nigdy wprost na serwerze.
 
@@ -15,9 +15,9 @@ gałąź i PR, nigdy wprost na serwerze.
 
 | Usługa | Co robi | Kiedy | Log |
 |---|---|---|---|
-| `pl.iskt.softwarehouse.sh-start` | Uruchamia herdr i orkiestratora | Przy logowaniu | `~/sh/logs/sh-start.log` |
-| `pl.iskt.softwarehouse.sh-watchdog` | Strażnik limitów subskrypcji | Co 5 minut i przy logowaniu | `~/sh/logs/watchdog.log` |
-| `pl.iskt.softwarehouse.obsidian-sync` | Aktualizuje kopie dokumentów w Obsidianie | Co 5 minut i przy logowaniu | `~/sh/logs/obsidian-sync.log` |
+| `pl.iskt.softwarehouse.sh-start` | Uruchamia herdr i orkiestratora | Przy logowaniu | `/Users/Shared/sh/logs/sh-start.log` |
+| `pl.iskt.softwarehouse.sh-watchdog` | Strażnik limitów subskrypcji | Co 5 minut i przy logowaniu | `/Users/Shared/sh/logs/watchdog.log` |
+| `pl.iskt.softwarehouse.obsidian-sync` | Aktualizuje kopie dokumentów w Obsidianie | Co 5 minut i przy logowaniu | `/Users/Shared/sh/logs/obsidian-sync.log` |
 
 Instaluje je `install.sh`. Ręczna zmiana w `~/Library/LaunchAgents` zostanie nadpisana przy
 następnym `install.sh`.
@@ -26,8 +26,8 @@ następnym `install.sh`.
 
 | Co wyłączasz | Jak | Jak włączyć z powrotem |
 |---|---|---|
-| Autostart herdr i orkiestratora | `touch ~/sh/stan/autostart.off` i `launchctl bootout gui/$(id -u)/pl.iskt.softwarehouse.sh-start` | `rm ~/sh/stan/autostart.off` i `~/sh/sh-system/scripts/server/install.sh` |
-| Synchronizacja Obsidiana | `touch ~/sh/stan/obsidian-sync.off` (zatrzymanie od razu: `launchctl bootout gui/$(id -u)/pl.iskt.softwarehouse.obsidian-sync`) | `rm ~/sh/stan/obsidian-sync.off` i `install.sh` |
+| Autostart herdr i orkiestratora | `touch /Users/Shared/sh/stan/autostart.off` i `launchctl bootout gui/$(id -u)/pl.iskt.softwarehouse.sh-start` | `rm /Users/Shared/sh/stan/autostart.off` i `/Users/Shared/sh/sh-system/scripts/server/install.sh` |
+| Synchronizacja Obsidiana | `touch /Users/Shared/sh/stan/obsidian-sync.off` (zatrzymanie od razu: `launchctl bootout gui/$(id -u)/pl.iskt.softwarehouse.obsidian-sync`) | `rm /Users/Shared/sh/stan/obsidian-sync.off` i `install.sh` |
 | Strażnik limitów | `launchctl bootout gui/$(id -u)/pl.iskt.softwarehouse.sh-watchdog`; bez flagi, więc działa tylko do następnego `install.sh` | `install.sh` |
 
 Flagi przetrwają restart Maca i kolejne `install.sh`. Ręczne `sh-start.sh` i ręczne
@@ -42,21 +42,21 @@ sh-orkiestrator` i panel `powloka`. Uruchamia tylko to, co nie działa, więc mo
 wielokrotnie.
 
 ```sh
-~/sh/bin/sh-start.sh              # przygotowuje i podłącza terminal
-~/sh/bin/sh-start.sh --no-attach  # tylko przygotowuje
+/Users/Shared/sh/bin/sh-start.sh              # przygotowuje i podłącza terminal
+/Users/Shared/sh/bin/sh-start.sh --no-attach  # tylko przygotowuje
 ```
 
 Przy autostarcie czeka na Docker Desktop (do 5 minut) i sieć (do 2 minut). Docker Desktop ma
 wyłączony własny autostart, a skrypt tylko go otwiera.
 
-`claude remote-control` to serwer sesji: każda nowa sesja startuje w `~/sh` z jego PATH. Dlatego
-skrypt uzupełnia PATH o katalogi narzędzi (`~/.local/bin`, `~/sh/bin`, `~/.softwarehouse/bin`,
-Homebrew, `~/.docker/bin`) i podaje go jawnie w komendzie orkiestratora. Gdy `~/sh` obsługuje
-już inna instancja (proces `claude remote-control` z katalogiem `~/sh` poza panelem albo komunikat
+`claude remote-control` to serwer sesji: każda nowa sesja startuje w `/Users/Shared/sh` z jego PATH. Dlatego
+skrypt uzupełnia PATH o katalogi narzędzi (`~/.local/bin`, `/Users/Shared/sh/bin`, `~/.softwarehouse/bin`,
+Homebrew, `~/.docker/bin`) i podaje go jawnie w komendzie orkiestratora. Gdy `/Users/Shared/sh` obsługuje
+już inna instancja (proces `claude remote-control` z katalogiem `/Users/Shared/sh` poza panelem albo komunikat
 „This folder is already served by a terminal claude remote-control”), skrypt zapisuje to w logu
 i nie uruchamia drugiej.
 
-Każdy przebieg kończy się w `~/sh/logs/sh-start.log` jednym wpisem z kodem wyjścia: `gotowe (kod 0)`,
+Każdy przebieg kończy się w `/Users/Shared/sh/logs/sh-start.log` jednym wpisem z kodem wyjścia: `gotowe (kod 0)`,
 `UWAGA (kod 0)` albo `BLAD …, krok: ETAP (kod N)`. Szczegóły i znaczenie kodów:
 `docs/serwer.md`, sekcja „Uruchomienie”.
 
@@ -84,23 +84,23 @@ Test: `shctl doctor --test-notify` albo wywołanie jak wyżej.
 
 Strażnik limitów, bez AI. Co 5 minut:
 
-1. usuwa z `~/sh/limity.md` limity, których godzina minęła, i wysyła push „Limit X odnowiony”;
+1. usuwa z `/Users/Shared/sh/limity.md` limity, których godzina minęła, i wysyła push „Limit X odnowiony”;
 2. czyta ostatnie linie paneli workspace `sh` i szuka komunikatów o limicie Claude Code i Codexa;
-3. nowy limit zapisuje w `~/sh/limity.md` i wysyła push „Limit X do HH:MM”;
-4. sprawdza, czy działa orkiestrator (`claude remote-control` w `~/sh`); gdy nie, uruchamia go
+3. nowy limit zapisuje w `/Users/Shared/sh/limity.md` i wysyła push „Limit X do HH:MM”;
+4. sprawdza, czy działa orkiestrator (`claude remote-control` w `/Users/Shared/sh`); gdy nie, uruchamia go
    przez `sh-start.sh` i wysyła push „Orkiestrator uruchomiony ponownie”. Flaga
-   `~/sh/stan/autostart.off` wyłącza ten restart. Orkiestrator przeżywa koniec przebiegu
+   `/Users/Shared/sh/stan/autostart.off` wyłącza ten restart. Orkiestrator przeżywa koniec przebiegu
    strażnika (`AbandonProcessGroup` w pliście).
 
 W etapie A **nie wznawia pracy**: wznawiasz Ty, pisząc „wznów”. Automatyczne wznowienie to etap B
 (jeszcze niedostępne).
 
-Wzorce komunikatów: `~/sh/watchdog-wzorce.txt` (kopia robocza, źródło w repo). Limit Claude
+Wzorce komunikatów: `/Users/Shared/sh/watchdog-wzorce.txt` (kopia robocza, źródło w repo). Limit Claude
 wstrzymuje nowe zadania, limit Codexa tylko review: PR czekają w kolejce.
 
 ```sh
 launchctl kickstart gui/$(id -u)/pl.iskt.softwarehouse.sh-watchdog   # przebieg teraz
-tail -f ~/sh/logs/watchdog.log
+tail -f /Users/Shared/sh/logs/watchdog.log
 ```
 
 ### Synchronizacja Obsidiana
@@ -111,42 +111,42 @@ rozjechaną pomija; gdy problem
 powtórzy się w dwóch przebiegach, wysyła jeden push „Obsidian: klon bez synchronizacji”. Nigdy nie
 nadpisuje Twoich zmian.
 
-Stan: `~/sh/stan/obsidian-sync.json`, a data ostatniej udanej synchronizacji jest w `shctl doctor`.
+Stan: `/Users/Shared/sh/stan/obsidian-sync.json`, a data ostatniej udanej synchronizacji jest w `shctl doctor`.
 
 ### backup-config.sh
 
 Archiwum konfiguracji agentów: ustawienia i skille Claude Code, konfiguracja Codexa, `~/.config/sh`,
-`~/sh/bin`, `~/sh/porty.md`. Bez sesji, historii i tokenów logowania. Po spakowaniu sprawdza je
+`/Users/Shared/sh/bin`, `/Users/Shared/sh/porty.md`. Bez sesji, historii i tokenów logowania. Po spakowaniu sprawdza je
 gitleaks i kasuje archiwum przy znalezionym sekrecie.
 
 ```sh
-backup-config.sh              # do ~/sh/backups
+backup-config.sh              # do /Users/Shared/sh/backups
 backup-config.sh /Volumes/X   # na wskazany dysk
 ```
 
 Archiwum zawiera temat ntfy, więc traktuj je jak dane poufne. Skrypty nie są w archiwum: odtwarza je
 klon `sh-system` i `install.sh`. Dlatego skrypt ostrzega, gdy `sh-system` ma niezapisane w GitHubie
-zmiany (log `~/sh/logs/backup-config.log`).
+zmiany (log `/Users/Shared/sh/logs/backup-config.log`).
 
 ### install.sh
 
 Instaluje pliki serwera z repo. Bezpieczny do powtarzania.
 
 ```sh
-~/sh/sh-system/scripts/server/install.sh
+/Users/Shared/sh/sh-system/scripts/server/install.sh
 ```
 
 Robi:
 
-- symlinki skryptów do `~/sh/bin` i `~/sh/Brewfile`;
+- symlinki skryptów do `/Users/Shared/sh/bin` i `/Users/Shared/sh/Brewfile`;
 - profil reviewera Codex (`~/.codex/reviewer.config.toml`) i ustawienia sesji orkiestratora
-  (`~/sh/.claude/settings.json`);
+  (`/Users/Shared/sh/.claude/settings.json`);
 - kopię wzorców strażnika, gdy jej brak;
 - LaunchAgenty: kopiuje przy zmianie i przeładowuje, ładuje niezaładowane (z wyjątkiem wyłączonych
   flagą);
 - globalny hook git (niżej).
 
-Plik w `~/sh/bin` różny od repo kończy się błędem i niczego nie nadpisuje. Nieudane załadowanie
+Plik w `/Users/Shared/sh/bin` różny od repo kończy się błędem i niczego nie nadpisuje. Nieudane załadowanie
 usługi daje push „install.sh: agent niezaladowany” z komendą do ręcznego załadowania.
 
 **Kiedy uruchamiać:** po merge'u zmiany w skryptach lub plistach, po włączeniu flagi z powrotem.
@@ -157,7 +157,7 @@ Instaluje brakujące narzędzia serwera z przypiętymi wersjami (yq, gitleaks, u
 Node, pnpm, Playwright 1.61.1). Bez sudo, bezpieczny do powtarzania.
 
 ```sh
-~/sh/bin/setup-toolchain.sh
+/Users/Shared/sh/bin/setup-toolchain.sh
 ```
 
 Playwright jest celowo przypięty do 1.61.1: nowsze wersje nie działają z WebKit na macOS 14 Intel.
@@ -167,7 +167,7 @@ Playwright jest celowo przypięty do 1.61.1: nowsze wersje nie działają z WebK
 Test działania herdr. Uruchamiaj w panelu herdr (np. `powloka`).
 
 ```sh
-~/sh/bin/test-herdr.sh
+/Users/Shared/sh/bin/test-herdr.sh
 ```
 
 ## Hooki git
@@ -196,22 +196,22 @@ Zmiana w shctl, skillach lub skryptach serwera wymaga aktualizacji tego podręcz
 
 | Log | Co zawiera |
 |---|---|
-| `~/sh/logs/shctl.log` | Każde wywołanie shctl: czas, kod, projekt, komenda |
-| `~/sh/logs/sh-start.log` | Start herdr i orkiestratora |
-| `~/sh/logs/watchdog.log` | Przebiegi strażnika limitów (bez treści komunikatów) |
-| `~/sh/logs/obsidian-sync.log` | Synchronizacja kopii, pominięte kopie z powodem |
-| `~/sh/logs/backup-config.log` | Ostrzeżenia kopii konfiguracji |
-| `~/sh/logs/herdr-server.log` | Serwer herdr uruchomiony przez `sh-start.sh` |
-| `~/sh/stan/review/PROJEKT-NR/codex.log` | Wyjście Codexa z review |
+| `/Users/Shared/sh/logs/shctl.log` | Każde wywołanie shctl: czas, kod, projekt, komenda |
+| `/Users/Shared/sh/logs/sh-start.log` | Start herdr i orkiestratora |
+| `/Users/Shared/sh/logs/watchdog.log` | Przebiegi strażnika limitów (bez treści komunikatów) |
+| `/Users/Shared/sh/logs/obsidian-sync.log` | Synchronizacja kopii, pominięte kopie z powodem |
+| `/Users/Shared/sh/logs/backup-config.log` | Ostrzeżenia kopii konfiguracji |
+| `/Users/Shared/sh/logs/herdr-server.log` | Serwer herdr uruchomiony przez `sh-start.sh` |
+| `/Users/Shared/sh/stan/review/PROJEKT-NR/codex.log` | Wyjście Codexa z review |
 
 ## Ważne pliki stanu
 
 | Plik | Zawartość |
 |---|---|
-| `~/sh/limity.md` | Aktywne limity subskrypcji |
-| `~/sh/porty.md` | Bloki portów baz projektów |
-| `~/sh/stan/NAZWA.json` | Mapa zadań projektu na panele, stan po STOP |
-| `~/sh/stan/do-usuniecia.md` | Repo testowe do usunięcia przez Ciebie |
-| `~/sh/stan/obsidian-sync.json` | Ostatnia synchronizacja Obsidiana i problemy |
-| `~/sh/stan/checkpointy/NAZWA` | Wysłane powiadomienia „Czeka na Twoją akceptację” (cel i commit) |
-| `~/sh/stan/skrzynka/NAZWA.json` | Partia materiałów ze skrzynki czekająca na merge PR |
+| `/Users/Shared/sh/limity.md` | Aktywne limity subskrypcji |
+| `/Users/Shared/sh/porty.md` | Bloki portów baz projektów |
+| `/Users/Shared/sh/stan/NAZWA.json` | Mapa zadań projektu na panele, stan po STOP |
+| `/Users/Shared/sh/stan/do-usuniecia.md` | Repo testowe do usunięcia przez Ciebie |
+| `/Users/Shared/sh/stan/obsidian-sync.json` | Ostatnia synchronizacja Obsidiana i problemy |
+| `/Users/Shared/sh/stan/checkpointy/NAZWA` | Wysłane powiadomienia „Czeka na Twoją akceptację” (cel i commit) |
+| `/Users/Shared/sh/stan/skrzynka/NAZWA.json` | Partia materiałów ze skrzynki czekająca na merge PR |

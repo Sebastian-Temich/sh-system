@@ -1,18 +1,18 @@
 #!/bin/bash
-# ~/sh/bin/sh-watchdog.sh - strażnik limitów subskrypcji (bez AI). LaunchAgent co 5 minut.
+# /Users/Shared/sh/bin/sh-watchdog.sh - strażnik limitów subskrypcji (bez AI). LaunchAgent co 5 minut.
 #
 #   sh-watchdog.sh     jeden przebieg: odnowienia, skan paneli herdr, kontrola orkiestratora
 #
-# 1. Wiersze ~/sh/limity.md z godziną „Do” w przeszłości usuwa i wysyła „Limit X odnowiony”.
-# 2. W panelach workspace „sh” czyta ostatnie linie i szuka wzorców z ~/sh/watchdog-wzorce.txt.
+# 1. Wiersze /Users/Shared/sh/limity.md z godziną „Do” w przeszłości usuwa i wysyła „Limit X odnowiony”.
+# 2. W panelach workspace „sh” czyta ostatnie linie i szuka wzorców z /Users/Shared/sh/watchdog-wzorce.txt.
 #    Nowy komunikat: wiersz w limity.md (format: docs/shctl.md) i powiadomienie „Limit X do HH:MM”.
 # 3. Gdy w panelu orkiestratora nie działa claude remote-control z cwd $SH_DIR (lib/system.sh),
 #    uruchamia sh-start.sh --no-attach
-#    i wysyła „Orkiestrator uruchomiony ponownie” (flaga ~/sh/stan/autostart.off wyłącza restart).
+#    i wysyła „Orkiestrator uruchomiony ponownie” (flaga /Users/Shared/sh/stan/autostart.off wyłącza restart).
 # Etap A: strażnik nie wznawia pracy, robi to właściciel („wznów” do orkiestratora).
 #
 # Jedno powiadomienie na zdarzenie: aktywny wiersz wykonawcy wycisza kolejne komunikaty, a teksty
-# już obsłużone pamięta ~/sh/stan/watchdog-widziane.txt (do 12 h od zniknięcia z paneli).
+# już obsłużone pamięta /Users/Shared/sh/stan/watchdog-widziane.txt (do 12 h od zniknięcia z paneli).
 # Komunikat bez godziny dostaje szacunek teraz + 5 h.
 #
 # Zmienne (testy): SH_DIR, SH_NOTIFY_CMD, SH_WATCHDOG_WS (sh), SH_WATCHDOG_LINIE (40),
@@ -23,10 +23,10 @@
 set -o pipefail
 shopt -s nocasematch
 
-SH_DIR="${SH_DIR:-$HOME/sh}"
+SH_DIR="${SH_DIR:-/Users/Shared/sh}"
 
 # Kontrola orkiestratora i PATH: scripts/server/lib/system.sh (wspólna z sh-start.sh i doctorem).
-# ~/sh/bin/sh-watchdog.sh to dowiązanie, więc katalog repo bierzemy z celu dowiązania.
+# /Users/Shared/sh/bin/sh-watchdog.sh to dowiązanie, więc katalog repo bierzemy z celu dowiązania.
 src="${BASH_SOURCE[0]}"
 while [ -L "$src" ]; do
   dir="$(cd -P "$(dirname "$src")" && pwd)"
@@ -224,7 +224,7 @@ zapisz_limity() {
   {
     echo '# Limity'
     echo
-    echo 'Plik prowadzi ~/sh/bin/sh-watchdog.sh, format: sh-system/docs/shctl.md. Wiersz znika po'
+    echo 'Plik prowadzi /Users/Shared/sh/bin/sh-watchdog.sh, format: sh-system/docs/shctl.md. Wiersz znika po'
     echo 'odnowieniu limitu. Brak wierszy oznacza brak wstrzymań.'
     echo
     echo "$NAGLOWEK"
@@ -442,7 +442,7 @@ pilnuj_orkiestratora() {
     log "BLAD: orkiestrator nie wstał po restarcie (log: $SH_DIR/logs/sh-start.log)"
     [ -e "$blad" ] && return 0
     touch "$blad"
-    powiadom urgent "Orkiestrator" "Orkiestrator nie wstał po restarcie, sprawdź ~/sh/logs/sh-start.log"
+    powiadom urgent "Orkiestrator" "Orkiestrator nie wstał po restarcie, sprawdź /Users/Shared/sh/logs/sh-start.log"
   fi
 }
 

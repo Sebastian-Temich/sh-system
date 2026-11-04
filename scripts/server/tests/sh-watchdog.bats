@@ -64,7 +64,7 @@ wstrzymania_shctl() {
   "$@"
 }
 
-@test "plista: co 5 minut, /bin/bash, skrypt z ~/sh/bin" {
+@test "plista: co 5 minut, /bin/bash, skrypt z /Users/Shared/sh/bin" {
   local p="$REPO/scripts/server/pl.iskt.softwarehouse.sh-watchdog.plist"
   grep -A1 StartInterval "$p" | grep -q '<integer>300</integer>'
   grep -q '<string>/bin/bash</string>' "$p"

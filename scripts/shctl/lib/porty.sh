@@ -1,4 +1,4 @@
-# Operacje na rejestrze ~/sh/porty.md i supabase/config.toml.
+# Operacje na rejestrze /Users/Shared/sh/porty.md i supabase/config.toml.
 # shellcheck shell=bash
 
 # Wiersze tabeli „Projekty Supabase” bez nagłówka, z obciętymi polami, rozdzielone \t.
@@ -86,7 +86,7 @@ porty_rezerwuj() {
     etykieta="$x"
     [ "$zakres" = 55 ] || etykieta="$zakres:$x"
     if [ "$DRY" -eq 0 ]; then
-      porty_zapisz_wiersz "$etykieta" "| $etykieta | $p | \`~/sh/projekty/$p\` | ${b}21 | ${b}22 | ${b}23 | ${b}24 | ${b}27 | ${b}28 | ${b}29 | ${b}25 | zarezerwowany $(dzis) |"
+      porty_zapisz_wiersz "$etykieta" "| $etykieta | $p | \`/Users/Shared/sh/projekty/$p\` | ${b}21 | ${b}22 | ${b}23 | ${b}24 | ${b}27 | ${b}28 | ${b}29 | ${b}25 | zarezerwowany $(dzis) |"
     fi
   fi
   [ "$DRY" -eq 1 ] || odblokuj "$PORTY.lock"

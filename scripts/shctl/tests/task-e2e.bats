@@ -5,7 +5,7 @@
 # Prawdziwe: repo z szablonu, issue, milestone, PR, CI, merge i Codex (review). Atrapy: herdr (wykonuje
 # komendy od razu) i claude, a pracę workera wykonuje test. SHCTL_E2E_CODEX=atrapa zastępuje Codexa.
 # Zakłada prywatne repo sh-test-RRRRMMDD-HHMM i przed utworzeniem dopisuje je do
-# ~/sh/stan/do-usuniecia.md. Propozycje dla systemu są puste, więc test nie otwiera PR w sh-system.
+# /Users/Shared/sh/stan/do-usuniecia.md. Propozycje dla systemu są puste, więc test nie otwiera PR w sh-system.
 bats_require_minimum_version 1.5.0
 
 setup() {
@@ -13,14 +13,14 @@ setup() {
   REPO="$(cd "$BATS_TEST_DIRNAME/../../.." && pwd -P)"
   SHCTL="$REPO/scripts/shctl/shctl"
   T="$BATS_TEST_TMPDIR"
-  LISTA="$HOME/sh/stan/do-usuniecia.md"
+  LISTA="/Users/Shared/sh/stan/do-usuniecia.md"
   NAZWA="sh-test-$(date +%Y%m%d-%H%M)"
   SLUG="${SH_GH_OWNER:-Sebastian-Temich}/$NAZWA"
   export SH_DIR="$T/sh" SH_NOTIFY_CMD=/usr/bin/true SH_OBSIDIAN_DIR="$T/Obsidian" SH_SYSTEM_DIR="$T/brak-sh-system"
   export SH_CLAUDE_JSON="$T/claude.json"
   export HERDR_ATRAPA="$T/herdr" CLAUDE_ATRAPA="$T/claude" CODEX_ATRAPA="$T/codex"
   mkdir -p "$SH_DIR" "$T/bin" "$HERDR_ATRAPA" "$CLAUDE_ATRAPA" "$CODEX_ATRAPA"
-  cp "$HOME/sh/porty.md" "$SH_DIR/porty.md"
+  cp "/Users/Shared/sh/porty.md" "$SH_DIR/porty.md"
   cp "$BATS_TEST_DIRNAME/atrapy/herdr" "$BATS_TEST_DIRNAME/atrapy/claude" "$T/bin/"
   if [ "${SHCTL_E2E_CODEX:-}" = atrapa ]; then
     cp "$BATS_TEST_DIRNAME/atrapy/codex" "$T/bin/"

@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# ~/sh/bin/sh-start.sh - workspace herdr "sh": panel 1 orkiestrator, panel 2 powloka.
+# /Users/Shared/sh/bin/sh-start.sh - workspace herdr "sh": panel 1 orkiestrator, panel 2 powloka.
 #
 #   sh-start.sh               przygotowuje workspace i podlacza terminal (gdy jest TTY)
 #   sh-start.sh --no-attach   tylko przygotowuje workspace
 #   sh-start.sh --autostart   jak --no-attach, ale najpierw czeka na Docker Desktop i siec;
-#                             przy fladze ~/sh/stan/autostart.off konczy prace z kodem 0
+#                             przy fladze /Users/Shared/sh/stan/autostart.off konczy prace z kodem 0
 #
 # Idempotentny: niczego nie duplikuje. Po restarcie serwera herdr odtwarza uklad, ale nie
 # procesy, dlatego orkiestrator jest uruchamiany ponownie tylko wtedy, gdy nie dziala.
@@ -14,21 +14,21 @@
 # BLAD podaje krok, w ktorym skrypt sie zatrzymal; kod 142 to przekroczony czas herdr.
 set -Eeuo pipefail
 
-SH_DIR="$HOME/sh"
+SH_DIR="${SH_DIR:-/Users/Shared/sh}"
 LOG_DIR="$SH_DIR/logs"
 WS_LABEL=sh
 ORCH_LABEL=orkiestrator
 SHELL_LABEL=powloka
 DOCKER_TIMEOUT=300
 NETWORK_TIMEOUT=120
-# Komunikat claude remote-control, gdy ~/sh obsluguje juz inna instancja.
+# Komunikat claude remote-control, gdy /Users/Shared/sh obsluguje juz inna instancja.
 ALREADY_SERVED='This folder is already served by a terminal claude remote-control'
 SERVED_WAIT_MS="${SH_SERVED_WAIT_MS:-8000}"
 # Limit pojedynczego wywolania herdr; zawieszony serwer nie moze zatrzymac skryptu bez sladu.
 HERDR_TIMEOUT="${SH_HERDR_TIMEOUT:-30}"
 
 # Kontrola orkiestratora i PATH: scripts/server/lib/system.sh (wspolna z watchdogiem i doctorem).
-# ~/sh/bin/sh-start.sh to dowiazanie, wiec katalog repo bierzemy z celu dowiazania.
+# /Users/Shared/sh/bin/sh-start.sh to dowiazanie, wiec katalog repo bierzemy z celu dowiazania.
 src="${BASH_SOURCE[0]}"
 while [[ -L "$src" ]]; do
   dir="$(cd -P "$(dirname "$src")" && pwd)"
@@ -101,7 +101,7 @@ log "start: tryb $MODE, PID $$, rodzic: $(ps -o args= -p "$PPID" 2>/dev/null | c
 
 # claude remote-control jest serwerem sesji: kazda nowa sesja dziedziczy jego PATH. Panel
 # herdr i launchd nie gwarantuja pelnego PATH, wiec skrypt sklada go sam (bez duplikatow)
-# i przekazuje jawnie serwerowi herdr i orkiestratorowi. Kolejnosc: ~/sh/bin, ~/.local/bin,
+# i przekazuje jawnie serwerowi herdr i orkiestratorowi. Kolejnosc: /Users/Shared/sh/bin, ~/.local/bin,
 # biezacy PATH, katalogi narzedzi, na koncu ~/.softwarehouse/bin (nie przeslania naszych polecen).
 build_path() {
   local out='' dir sw="$HOME/.softwarehouse/bin"

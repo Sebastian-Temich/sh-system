@@ -1,4 +1,4 @@
-# Funkcje zadań: konfiguracja, bramki dispatchu, panele herdr, stan ~/sh/stan/NAZWA.json, worktree.
+# Funkcje zadań: konfiguracja, bramki dispatchu, panele herdr, stan /Users/Shared/sh/stan/NAZWA.json, worktree.
 # Wspólne dla task, review i reset-dryrun (proces-v1.md, „Review, QA, pętla poprawek”, „Limity”).
 # shellcheck shell=bash
 
@@ -7,7 +7,7 @@ SLUG=""
 WT=""
 MAKS_ITERACJI=3
 
-# Projekt, repo główne (także gdy shctl działa z worktree), slug GitHuba i katalog worktree ~/sh/wt/NAZWA.
+# Projekt, repo główne (także gdy shctl działa z worktree), slug GitHuba i katalog worktree /Users/Shared/sh/wt/NAZWA.
 zadania_init() {
   local wspolny
   znajdz_projekt
@@ -162,7 +162,7 @@ model_reviewera() {
 
 # --- Bramki dispatchu -------------------------------------------------------------------------
 
-# Wpisy z ~/sh/limity.md: pozycje list i wiersze tabeli bez nagłówka; „brak” nie jest wstrzymaniem.
+# Wpisy z /Users/Shared/sh/limity.md: pozycje list i wiersze tabeli bez nagłówka; „brak” nie jest wstrzymaniem.
 wstrzymania() {
   [ -f "$LIMITY" ] || return 0
   grep -E '^(- |\| )' "$LIMITY" | grep -vE '^\|[- |:]*$' | awk '!/^\| / || n++' |
@@ -300,7 +300,7 @@ zamknij_panel_etykieta() {
   herdr pane close "$p" >/dev/null || { uwaga "nie zamknięto panelu $p ($1)"; return 1; }
 }
 
-# --- Stan ~/sh/stan/NAZWA.json, klucz .zadania -----------------------------------------------
+# --- Stan /Users/Shared/sh/stan/NAZWA.json, klucz .zadania -----------------------------------------------
 
 plik_stanu() { printf '%s/%s.json' "$STAN" "$PROJEKT"; }
 
@@ -384,7 +384,7 @@ teraz_utc() { date -u +%Y-%m-%dT%H:%M:%SZ; }
 
 # Claude Code w sesji interaktywnej pyta o zaufanie folderu. W repo klucz to katalog główny repo, a
 # w worktree katalog główny głównej kopii (code.claude.com/docs/en/permissions, „Project allow rules
-# and workspace trust”), więc wpis dla ~/sh/projekty/NAZWA obejmuje też ~/sh/wt/NAZWA/NR. Ręczny
+# and workspace trust”), więc wpis dla /Users/Shared/sh/projekty/NAZWA obejmuje też /Users/Shared/sh/wt/NAZWA/NR. Ręczny
 # wpis projects["<repo>"].hasTrustDialogAccepted w ~/.claude.json opisuje ta sama strona
 # („What runs before you trust a folder”). Wypisuje true, gdy wpis dodano (lub dodałby --dry-run).
 CLAUDE_JSON="${SH_CLAUDE_JSON:-$HOME/.claude.json}"

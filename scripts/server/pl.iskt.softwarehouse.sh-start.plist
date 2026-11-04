@@ -8,7 +8,7 @@
   <array>
     <string>/bin/zsh</string>
     <string>-lic</string>
-    <string>"$HOME/sh/bin/sh-start.sh" --autostart</string>
+    <string>"/Users/Shared/sh/bin/sh-start.sh" --autostart</string>
   </array>
   <key>RunAtLoad</key>
   <true/>
@@ -17,11 +17,17 @@
   <!-- Serwer herdr ma przezyc zakonczenie sh-start.sh. -->
   <key>AbandonProcessGroup</key>
   <true/>
+  <!-- Katalog SH wprost, nie przez dowiązanie ~/sh (docs/serwer.md, „Katalog SH”). -->
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>SH_DIR</key>
+    <string>/Users/Shared/sh</string>
+  </dict>
   <key>WorkingDirectory</key>
-  <string>/Users/sebastiant./sh</string>
+  <string>/Users/Shared/sh</string>
   <key>StandardOutPath</key>
-  <string>/Users/sebastiant./sh/logs/sh-start.log</string>
+  <string>/Users/Shared/sh/logs/sh-start.log</string>
   <key>StandardErrorPath</key>
-  <string>/Users/sebastiant./sh/logs/sh-start.log</string>
+  <string>/Users/Shared/sh/logs/sh-start.log</string>
 </dict>
 </plist>

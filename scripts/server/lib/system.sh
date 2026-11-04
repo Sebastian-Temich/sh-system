@@ -18,7 +18,7 @@ ORK_ETYKIETA=orkiestrator
 # więc PATH wywołującego (np. atrapy w testach) zachowuje pierwszeństwo.
 sh_uzupelnij_path() {
   local d
-  for d in "${SH_DIR:-$HOME/sh}/bin" "$HOME/.local/bin" /opt/homebrew/bin /usr/local/bin \
+  for d in "${SH_DIR:-/Users/Shared/sh}/bin" "$HOME/.local/bin" /opt/homebrew/bin /usr/local/bin \
     "$HOME/.docker/bin" /usr/bin /bin /usr/sbin /sbin; do
     case ":${PATH:-}:" in
       *":$d:"*) ;;

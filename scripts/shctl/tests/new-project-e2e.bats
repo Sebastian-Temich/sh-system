@@ -3,19 +3,19 @@
 # (docs/serwer.md, „Praca nad systemem”). Uruchomienie:
 #   SHCTL_E2E=1 bats scripts/shctl/tests/new-project-e2e.bats
 # Zakłada prywatne repo sh-test-RRRRMMDD-HHMM i przed utworzeniem dopisuje je do
-# ~/sh/stan/do-usuniecia.md. Rejestr portów i klon są w katalogu tymczasowym.
+# /Users/Shared/sh/stan/do-usuniecia.md. Rejestr portów i klon są w katalogu tymczasowym.
 bats_require_minimum_version 1.5.0
 
 setup() {
   [ "${SHCTL_E2E:-}" = 1 ] || skip "wymaga SHCTL_E2E=1 i zgody właściciela"
   REPO="$(cd "$BATS_TEST_DIRNAME/../../.." && pwd -P)"
   T="$BATS_TEST_TMPDIR"
-  LISTA="$HOME/sh/stan/do-usuniecia.md"
+  LISTA="/Users/Shared/sh/stan/do-usuniecia.md"
   NAZWA="sh-test-$(date +%Y%m%d-%H%M)"
   SLUG="${SH_GH_OWNER:-Sebastian-Temich}/$NAZWA"
   export SH_DIR="$T/sh" SH_NOTIFY_CMD=/usr/bin/true SH_OBSIDIAN_DIR="$T/Obsidian Vault/SH/Projekty"
   mkdir -p "$SH_DIR"
-  cp "$HOME/sh/porty.md" "$SH_DIR/porty.md"
+  cp "/Users/Shared/sh/porty.md" "$SH_DIR/porty.md"
 }
 
 dopisz_do_usuniecia() {

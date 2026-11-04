@@ -118,7 +118,7 @@ SH
   printf 'kod\n' >"$d/src/app.txt"
 }
 
-# Projekt w ~/sh/projekty/demo z originem na atrapie GitHuba i poprawnym układem.
+# Projekt w /Users/Shared/sh/projekty/demo z originem na atrapie GitHuba i poprawnym układem.
 projekt_demo() {
   P="$SH_DIR/projekty/demo"
   git init -q "$P"

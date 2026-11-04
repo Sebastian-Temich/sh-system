@@ -66,15 +66,15 @@ Tryb M (gałąź `stage/00-intake`, PR do `main`):
 
 Tryb S:
 
-- `~/sh/stan/zlecenia/NAZWA-RRRRMMDD-slug.yaml`: plik zlecenia dla `shctl task create`, poza repo
+- `/Users/Shared/sh/stan/zlecenia/NAZWA-RRRRMMDD-slug.yaml`: plik zlecenia dla `shctl task create`, poza repo
 - issue z etykietą `tryb:S`, sekcjami formularza i znacznikiem `shctl:id`
 
 ## Komendy shctl
 
 ```sh
 shctl doc new 00-intake specyfikacja
-shctl task create --plik ~/sh/stan/zlecenia/NAZWA-RRRRMMDD-slug.yaml --dry-run
-shctl task create --plik ~/sh/stan/zlecenia/NAZWA-RRRRMMDD-slug.yaml
+shctl task create --plik /Users/Shared/sh/stan/zlecenia/NAZWA-RRRRMMDD-slug.yaml --dry-run
+shctl task create --plik /Users/Shared/sh/stan/zlecenia/NAZWA-RRRRMMDD-slug.yaml
 shctl escalate --dotyczy 00-intake --powod "..." --potrzebne "..." --opcje "A;B"
 ```
 
@@ -169,7 +169,7 @@ Zlecenie S to jedno issue, bez specyfikacji i bez DoD etapów (DoD to issue i ch
 
 1. Sprawdź `gh issue list`, czy podobne zadanie nie jest otwarte. Duplikat zgłoś orkiestratorowi
    zamiast zakładać nowe.
-2. Zapisz plik zlecenia według krótkiego szablonu (niżej) w `~/sh/stan/zlecenia/`.
+2. Zapisz plik zlecenia według krótkiego szablonu (niżej) w `/Users/Shared/sh/stan/zlecenia/`.
 3. Uruchom `shctl task create` z `--dry-run`, potem bez niego.
 4. Przekaż orkiestratorowi numer issue. Przy `auto_merge_S: false` odbiór robi właściciel.
 

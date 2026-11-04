@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# ~/sh/bin/test-herdr.sh - test CLI herdr. Uruchamiac z wnetrza panelu herdr.
+# /Users/Shared/sh/bin/test-herdr.sh - test CLI herdr. Uruchamiac z wnetrza panelu herdr.
 # Tworzy panel, uruchamia komende, czyta wynik, czeka na status i zamyka panel.
 set -euo pipefail
 

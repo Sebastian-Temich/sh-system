@@ -24,7 +24,7 @@ o nas, kontakt) i formularz kontaktowy, który wysyła zgłoszenie na nasz e-mai
 ```
 
 **Orkiestrator:** `shctl new-project strona-firmowa --opis "…"`: repo prywatne z szablonu, klon w
-`~/sh/projekty/strona-firmowa`, blok portów bazy, kopia `docs/` w Obsidianie i pusta skrzynka
+`/Users/Shared/sh/projekty/strona-firmowa`, blok portów bazy, kopia `docs/` w Obsidianie i pusta skrzynka
 `SH/Skrzynka/strona-firmowa/`. Odpowiada, że skrzynka czeka na materiały.
 
 **Ty:** przeciągasz do `SH/Skrzynka/strona-firmowa/` eksport `makiety.zip`, `logo.svg` i folder
@@ -184,7 +184,7 @@ Eskalacja E-001: strona-firmowa
 ```
 
 W Obsidianie: `docs/07-realizacja/escalations/E-001.md`, w dashboardzie w „Czeka na Ciebie”.
-Zakładasz konto Resend, wpisujesz klucz testowy do `~/sh/projekty/strona-firmowa/.env.local` na
+Zakładasz konto Resend, wpisujesz klucz testowy do `/Users/Shared/sh/projekty/strona-firmowa/.env.local` na
 serwerze i piszesz w czacie (bez klucza):
 
 ```text

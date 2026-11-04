@@ -7,7 +7,7 @@ setup() { wspolny_setup; }
   run "$SHCTL" ports reserve --projekt alfa --json
   [ "$status" -eq 0 ]
   [ "$(jq -r '.wynik.zakres, .wynik.shadow, .wynik.inspector, .wynik.dev' <<<"$output" | tr '\n' ' ')" = "55121-55129 55128 55125 55126 " ]
-  grep -q '^| 1 | alfa | `~/sh/projekty/alfa` | 55121 | 55122 | 55123 | 55124 | 55127 | 55128 | 55129 | 55125 |' "$SH_DIR/porty.md"
+  grep -q '^| 1 | alfa | `/Users/Shared/sh/projekty/alfa` | 55121 | 55122 | 55123 | 55124 | 55127 | 55128 | 55129 | 55125 |' "$SH_DIR/porty.md"
   ! grep -q 'wolny' "$SH_DIR/porty.md" || false
   cp "$SH_DIR/porty.md" "$T/p"
   run "$SHCTL" ports reserve --projekt alfa --json

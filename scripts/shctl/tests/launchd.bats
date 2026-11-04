@@ -1,7 +1,7 @@
 #!/usr/bin/env bats
 # Start z launchd: minimalne środowisko (env -i, PATH=/usr/bin:/bin, bez terminala), jak w
 # LaunchAgencie pl.iskt.softwarehouse.obsidian-sync. Narzędzia leżą w ~/.local/bin, konfiguracja
-# w ~/.config/sh/config i ~/.gitconfig, a ~/sh to SH_DIR testu.
+# w ~/.config/sh/config i ~/.gitconfig, a SH_DIR podaje plista (EnvironmentVariables), tu jak_launchd.
 load helper
 
 setup() {
@@ -13,7 +13,6 @@ setup() {
   mkdir -p "$HOME/.local/bin" "$HOME/.config/sh"
   cp "$T/mock/gh" "$T/mock/notify" "$HOME/.local/bin/"
   ln -s "$(command -v jq)" "$HOME/.local/bin/jq"
-  ln -s "$SH_DIR" "$HOME/sh"
   printf 'SH_OBSIDIAN_DIR="%s"\n' "$SH_OBSIDIAN_DIR" >"$HOME/.config/sh/config"
   # Bez GIT_CONFIG_GLOBAL git czyta ~/.gitconfig, jak pod launchd.
   cp "$T/gitconfig" "$HOME/.gitconfig"
@@ -22,7 +21,7 @@ setup() {
 # Środowisko LaunchAgenta, ale z PATH zawężonym do /usr/bin:/bin. GIT_CONFIG_NOSYSTEM: helper
 # osxkeychain z systemowego gitconfig nie może sięgać do prawdziwego pęku kluczy.
 jak_launchd() {
-  env -i HOME="$HOME" PATH=/usr/bin:/bin LANG=pl_PL.UTF-8 GIT_CONFIG_NOSYSTEM=1 "$@"
+  env -i HOME="$HOME" SH_DIR="$SH_DIR" PATH=/usr/bin:/bin LANG=pl_PL.UTF-8 GIT_CONFIG_NOSYSTEM=1 "$@"
 }
 
 @test "launchd: obsidian sync --agent z PATH=/usr/bin:/bin pobiera nowy commit" {

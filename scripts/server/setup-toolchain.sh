@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# ~/sh/bin/setup-toolchain.sh - idempotentna instalacja toolchainu serwera (macOS Intel).
+# /Users/Shared/sh/bin/setup-toolchain.sh - idempotentna instalacja toolchainu serwera (macOS Intel).
 #
 # Doinstalowuje tylko to, czego brakuje. Nie uzywa sudo. Nie dotyka Claude Code, Codex CLI,
 # Docker Desktop, Supabase ani nvm. Bezpieczny do wielokrotnego uruchamiania.
@@ -24,7 +24,7 @@ PLAYWRIGHT_VERSION=1.61.1  # NIE podnosic: WebKit dla mac14 jest zamrozony, >=1.
 PUPPETEER_BROWSERS_VERSION=3.2.6
 MIN_GIT=2.30.0
 
-SH_DIR="$HOME/sh"
+SH_DIR="/Users/Shared/sh"
 BIN_DIR="$HOME/.local/bin"
 BROWSERS_DIR="$SH_DIR/browsers"
 ZSHRC="$HOME/.zshrc"
@@ -161,13 +161,13 @@ check_system() {
   git_v="$(git --version | awk '{print $3}')"
   if [[ "$(printf '%s\n%s\n' "$MIN_GIT" "$git_v" | sort -V | head -1)" != "$MIN_GIT" ]]; then
     warn "git $git_v < $MIN_GIT: pomijam Homebrew (kazde polecenie brew budowaloby gita ze zrodel)."
-    warn 'Wlasciciel musi zaktualizowac CLT: patrz ~/sh/README-serwer.md.'
+    warn 'Wlasciciel musi zaktualizowac CLT: patrz /Users/Shared/sh/README-serwer.md.'
     return 0
   fi
   if command -v brew >/dev/null 2>&1; then
     log 'Sprawdzam Brewfile'
     HOMEBREW_NO_AUTO_UPDATE=1 brew bundle check --file "$SH_DIR/Brewfile" --no-upgrade ||
-      warn 'Brewfile niespelniony: brew bundle install --file ~/sh/Brewfile --no-upgrade'
+      warn 'Brewfile niespelniony: brew bundle install --file /Users/Shared/sh/Brewfile --no-upgrade'
   fi
 }
 

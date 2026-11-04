@@ -1,8 +1,8 @@
-# ~/sh/Brewfile - narzedzia zarzadzane przez Homebrew na serwerze (iMac13,2, Intel, macOS 14).
+# /Users/Shared/sh/Brewfile - narzedzia zarzadzane przez Homebrew na serwerze (iMac13,2, Intel, macOS 14).
 #
 # UWAGA: przy `git --version` < 2.30 KAZDE polecenie `brew` probuje zbudowac gita ze zrodel.
 # Dzis jest 2.39.5 z CLT 16.2, wiec brew dziala.
-# Stosuj: brew bundle check --file ~/sh/Brewfile --no-upgrade
+# Stosuj: brew bundle check --file /Users/Shared/sh/Brewfile --no-upgrade
 #
 # Zasada: na Intel + Sonoma Homebrew nie buduje juz wiekszosci butelek. Formula bez butelki
 # (`sonoma` albo `all`) kompiluje sie lokalnie, wiec tu trafiaja tylko te z butelka.

@@ -21,7 +21,7 @@ Zasada ogólna: najpierw zapytaj orkiestratora „status?”. Gdy nie odpowiada,
 3. Piszesz „wznów”. Orkiestrator sprawdza każde przerwane zadanie i decyduje, jak kontynuować.
 
 Godzina z dopiskiem „(szacunek)” znaczy, że komunikat nie podał godziny: strażnik przyjął 5 godzin.
-Aktywne limity: `~/sh/limity.md` albo „Wstrzymania” w statusie.
+Aktywne limity: `/Users/Shared/sh/limity.md` albo „Wstrzymania” w statusie.
 
 Automatyczne wznowienie po limicie to etap B (jeszcze niedostępne).
 
@@ -38,7 +38,7 @@ Automatyczne wznowienie po limicie to etap B (jeszcze niedostępne).
    - agent bezczynny bez PR: wysyła mu polecenie dokończenia.
 2. Push „Claude czeka na zgodę” oznacza pytanie o zgodę w panelu workera, a „Claude czeka na
    Ciebie” agenta bezczynnego, który czeka na wiadomość. Możesz zajrzeć do
-   panelu `worker:PROJEKT:NR` w herdr (na serwerze albo przez SSH: `~/sh/bin/sh-start.sh`) i
+   panelu `worker:PROJEKT:NR` w herdr (na serwerze albo przez SSH: `/Users/Shared/sh/bin/sh-start.sh`) i
    odpowiedzieć.
 3. Sam możesz sprawdzić blokady: `shctl task ready --projekt NAZWA`.
 
@@ -77,16 +77,16 @@ nie nadpisuje lokalnych zmian, więc pomija tę kopię. Skrzynki (`SH/Skrzynka`)
 
 **Gdy log mówi „fetch z origin nieudany”:** serwer nie może się zalogować do GitHuba. W nawiasie
 jest przyczyna z git. Sprawdź `gh auth status` i wiersz `logowanie git` w `shctl doctor`; przy
-błędzie uruchom `~/sh/sh-system/scripts/server/install.sh` (ustawia logowanie git przez gh).
+błędzie uruchom `/Users/Shared/sh/sh-system/scripts/server/install.sh` (ustawia logowanie git przez gh).
 
 **Co robisz:**
 
 1. Cofnij zmianę w Obsidianie (albo poproś orkiestratora: „uporządkuj klon Obsidiana projektu
    NAZWA”).
 2. Sprawdź: `shctl doctor` pokazuje datę ostatniej udanej synchronizacji (uwaga, gdy starsza niż 30
-   minut). Szczegóły: `~/sh/logs/obsidian-sync.log`.
+   minut). Szczegóły: `/Users/Shared/sh/logs/obsidian-sync.log`.
 3. Synchronizacja teraz, bez czekania: `shctl obsidian sync`.
-4. Czy nie jest wyłączona: plik `~/sh/stan/obsidian-sync.off`.
+4. Czy nie jest wyłączona: plik `/Users/Shared/sh/stan/obsidian-sync.off`.
 
 ## Skrzynka: plik nie trafił do repo
 
@@ -101,6 +101,21 @@ błędzie uruchom `~/sh/sh-system/scripts/server/install.sh` (ustawia logowanie 
 | PR czeka na merge | Nowe pliki poczekają, aż poprzedni PR zostanie scalony |
 
 Stan skrzynki sprawdzisz sam: `shctl skrzynka przyjmij NAZWA --dry-run` (niczego nie zmienia).
+
+## Claude pyta o zgodę przy każdej edycji
+
+**Objaw:** worker stoi na zapisie pliku albo sesja pyta przy każdej edycji z komunikatem
+„suspicious Windows path pattern that requires manual approval”.
+
+Przyczyna: plik leży pod ścieżką z segmentem zakończonym kropką, np. w katalogu domowym
+`/Users/sebastiant.`. Dlatego cały katalog SH jest w `/Users/Shared/sh`. `~/sh` to tylko dowiązanie:
+nie obchodzi blokady.
+
+**Co robisz:**
+
+1. `shctl doctor`: kontrola `katalog SH` musi być `OK`.
+2. Sprawdź, czy sesja lub panel nie startuje w `~/sh`; powinien w `/Users/Shared/sh`.
+3. Gdy coś nadal wskazuje starą ścieżkę: zgłoś orkiestratorowi albo zobacz `serwer.md`, „Katalog SH”.
 
 ## Restart Maca
 
@@ -125,14 +140,14 @@ launchctl kickstart gui/$(id -u)/pl.iskt.softwarehouse.sh-start
 
 ## Orkiestrator nie odpowiada
 
-1. Na serwerze (albo przez SSH): `~/sh/bin/sh-start.sh`. Uruchamia orkiestratora tylko wtedy, gdy
+1. Na serwerze (albo przez SSH): `/Users/Shared/sh/bin/sh-start.sh`. Uruchamia orkiestratora tylko wtedy, gdy
    nie działa, i podłącza Cię do herdr.
-2. Sprawdź `~/sh/logs/sh-start.log`. Ostatni wpis przebiegu ma kod wyjścia:
+2. Sprawdź `/Users/Shared/sh/logs/sh-start.log`. Ostatni wpis przebiegu ma kod wyjścia:
    - `gotowe (kod 0)`: skrypt uruchomił orkiestratora. Jeśli mimo to go nie ma, zginął później;
-     sprawdź `~/sh/logs/herdr-server.log` (np. `server shutdown initiated reason=SIGTERM`);
-   - `UWAGA (kod 0)`: treść mówi, co poszło nie tak, np. druga instancja w `~/sh`;
+     sprawdź `/Users/Shared/sh/logs/herdr-server.log` (np. `server shutdown initiated reason=SIGTERM`);
+   - `UWAGA (kod 0)`: treść mówi, co poszło nie tak, np. druga instancja w `/Users/Shared/sh`;
    - `BLAD …, krok: ETAP (kod N)`: miejsce zatrzymania; kod 142 to herdr bez odpowiedzi;
-   - wpis „autostart wyłączony przez właściciela” oznacza flagę `~/sh/stan/autostart.off`.
+   - wpis „autostart wyłączony przez właściciela” oznacza flagę `/Users/Shared/sh/stan/autostart.off`.
 3. W nowej sesji napisz „wznów”.
 
 Odłączenie od herdr bez zabijania sesji: `ctrl+b`, potem `q`.
@@ -148,11 +163,11 @@ Odłączenie od herdr bez zabijania sesji: `ctrl+b`, potem `q`.
   projektu).
 
 Zamknięte zostają panele workerów, reviewerów i orkiestratora. Kopie robocze i niezapisane zmiany
-zostają na dysku, a stan trafia do `~/sh/stan/NAZWA.json`. Przychodzi push „STOP”.
+zostają na dysku, a stan trafia do `/Users/Shared/sh/stan/NAZWA.json`. Przychodzi push „STOP”.
 
-**Wznowienie:** nic nie wznawia się samo. Uruchom orkiestratora (`~/sh/bin/sh-start.sh` albo
+**Wznowienie:** nic nie wznawia się samo. Uruchom orkiestratora (`/Users/Shared/sh/bin/sh-start.sh` albo
 `claude` w panelu) i napisz „wznów”. Orkiestrator odtwarza stan ze `status.md` i
-`~/sh/stan/NAZWA.json`.
+`/Users/Shared/sh/stan/NAZWA.json`.
 
 ## Brak miejsca na dysku
 
@@ -182,12 +197,12 @@ launchctl print gui/$(id -u)/pl.iskt.softwarehouse.sh-watchdog | grep -E 'state|
 
 | Problem | Gdzie patrzeć |
 |---|---|
-| Co robił shctl | `~/sh/logs/shctl.log` |
-| Start orkiestratora | `~/sh/logs/sh-start.log`, `~/sh/logs/herdr-server.log` |
-| Limity | `~/sh/logs/watchdog.log`, `~/sh/limity.md` |
-| Obsidian | `~/sh/logs/obsidian-sync.log`, `~/sh/stan/obsidian-sync.json` |
-| Review Codexa | `~/sh/stan/review/PROJEKT-NR/codex.log` |
-| Stan po STOP | `~/sh/stan/NAZWA.json` |
+| Co robił shctl | `/Users/Shared/sh/logs/shctl.log` |
+| Start orkiestratora | `/Users/Shared/sh/logs/sh-start.log`, `/Users/Shared/sh/logs/herdr-server.log` |
+| Limity | `/Users/Shared/sh/logs/watchdog.log`, `/Users/Shared/sh/limity.md` |
+| Obsidian | `/Users/Shared/sh/logs/obsidian-sync.log`, `/Users/Shared/sh/stan/obsidian-sync.json` |
+| Review Codexa | `/Users/Shared/sh/stan/review/PROJEKT-NR/codex.log` |
+| Stan po STOP | `/Users/Shared/sh/stan/NAZWA.json` |
 | Ogólne zdrowie | `shctl doctor` |
 
 Szczegóły: [[05-serwer-i-skrypty#Logi]].

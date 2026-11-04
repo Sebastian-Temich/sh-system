@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# ~/sh/bin/notify.sh - powiadomienie push przez ntfy.sh.
+# /Users/Shared/sh/bin/notify.sh - powiadomienie push przez ntfy.sh.
 #
 #   notify.sh <min|default|high|urgent> <tytul> <tresc> [url] [tagi]
 #

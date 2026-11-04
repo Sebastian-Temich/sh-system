@@ -6,6 +6,8 @@ bats_require_minimum_version 1.5.0
 setup() {
   REPO="$(cd "$BATS_TEST_DIRNAME/../../.." && pwd -P)"
   T="$BATS_TEST_TMPDIR"
+  # Testy nie mogą sięgać do prawdziwego /Users/Shared/sh.
+  export SH_DIR="$T/home/sh"
   mkdir -p "$T/home/sh/stan" "$T/mock"
   for cmd in herdr docker; do
     cat >"$T/mock/$cmd" <<MOCK
@@ -109,7 +111,7 @@ MOCK
   grep -q '^herdr pane run' "$T/calls"
 }
 
-@test "remote-control w ~/sh poza panelem: nie uruchamia drugiej instancji" {
+@test "remote-control w /Users/Shared/sh poza panelem: nie uruchamia drugiej instancji" {
   mock_herdr
   printf '#!/bin/sh\necho " 4242 claude remote-control --name sh-orkiestrator"\n' >"$T/mock/ps"
   printf '#!/bin/sh\necho p4242\necho n%s\n' "$T/home/sh" >"$T/mock/lsof"
@@ -224,7 +226,7 @@ abandon_pg() {
   mkdir -p "$T/home/.local/bin"
   cp "$T/mock/herdr" "$T/mock/ps" "$T/home/.local/bin/"
   ln -s "$(command -v jq)" "$T/home/.local/bin/jq"
-  run env -i HOME="$T/home" PATH=/usr/bin:/bin bash "$REPO/scripts/server/sh-start.sh" --no-attach
+  run env -i HOME="$T/home" SH_DIR="$SH_DIR" PATH=/usr/bin:/bin bash "$REPO/scripts/server/sh-start.sh" --no-attach
   [ "$status" -eq 0 ]
   [[ "$output" == *"orkiestrator juz dziala w w1:p1"* ]] || false
   [[ "$(last_line)" == *"sh-start: gotowe: workspace w1, orkiestrator w1:p1 (kod 0)" ]] || false

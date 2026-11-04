@@ -17,13 +17,13 @@ Centralne repozytorium software house'u prowadzonego przez agentów AI.
 | `scripts/sync-codex.sh` | Prompty Codexa ze skilli; `--check` w CI (`scripts/tests/sync-codex.bats`) |
 | `zrodla/skille-istniejace/` | Istniejące skille jako materiał źródłowy |
 
-Repo jest źródłem plików serwera. `scripts/server/install.sh` zakłada symlinki `~/sh/bin` i
-`~/sh/Brewfile`, a plisty kopiuje do `~/Library/LaunchAgents` przy różnicy i przeładowuje agenta.
+Repo jest źródłem plików serwera. `scripts/server/install.sh` zakłada symlinki `/Users/Shared/sh/bin` i
+`/Users/Shared/sh/Brewfile`, a plisty kopiuje do `~/Library/LaunchAgents` przy różnicy i przeładowuje agenta.
 
 Plugin `software-house` instaluje się z lokalnego marketplace tego repo:
 
 ```sh
-claude plugin marketplace add ~/sh/sh-system
+claude plugin marketplace add /Users/Shared/sh/sh-system
 claude plugin install software-house@sh-system --scope user
 ```
 

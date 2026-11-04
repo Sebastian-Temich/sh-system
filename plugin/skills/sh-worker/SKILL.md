@@ -1,6 +1,6 @@
 ---
 name: sh-worker
-description: Realizuje jedno zadanie (issue) w worktree ~/sh/wt/NAZWA/NR na gałęzi task/NR-slug. Pisze kod i testy, uruchamia lint, typy i testy, otwiera albo aktualizuje PR „Closes #NR” i zapisuje raport docs/07-realizacja/T-NR.md. W iteracji 2 i dalszych poprawia wyłącznie zgłoszenia z ostatniego review. Użyj, gdy orkiestrator uruchomił workera poleceniem „Zrealizuj issue #NR skillem sh-worker” albo wysłał „Iteracja N/3 zadania #NR: popraw wyłącznie zgłoszenia”, oraz gdy trzeba dokończyć przerwane zadanie po „wznów”.
+description: Realizuje jedno zadanie (issue) w worktree /Users/Shared/sh/wt/NAZWA/NR na gałęzi task/NR-slug. Pisze kod i testy, uruchamia lint, typy i testy, otwiera albo aktualizuje PR „Closes #NR” i zapisuje raport docs/07-realizacja/T-NR.md. W iteracji 2 i dalszych poprawia wyłącznie zgłoszenia z ostatniego review. Użyj, gdy orkiestrator uruchomił workera poleceniem „Zrealizuj issue #NR skillem sh-worker” albo wysłał „Iteracja N/3 zadania #NR: popraw wyłącznie zgłoszenia”, oraz gdy trzeba dokończyć przerwane zadanie po „wznów”.
 ---
 
 # sh-worker
@@ -68,7 +68,7 @@ shctl escalate --dotyczy "#NR" --powod "..." --potrzebne "..." --opcje "A;B"
 
 ## Procedura
 
-1. Sprawdź miejsce pracy: katalog `~/sh/wt/NAZWA/NR`, `git branch --show-current` daje `task/NR-*`,
+1. Sprawdź miejsce pracy: katalog `/Users/Shared/sh/wt/NAZWA/NR`, `git branch --show-current` daje `task/NR-*`,
    `git status` bez cudzych zmian. Inaczej kończysz i mówisz orkiestratorowi, co się nie zgadza.
 2. Przeczytaj issue i ustal iterację z etykiety `iter:N`. Przy `iter:2` i wyżej przejdź do
    „Iteracji 2+” (niżej). Gdy gałąź ma już commity albo PR istnieje, a review nie było, to wznowienie:
@@ -161,7 +161,7 @@ komend w „Stack (kontrakt)” w `AGENTS.md` sprawdzonymi komendami i zastępuj
 
 W etapie B worker może być Codexem (`wykonawca:codex`) albo działać w chmurze (`runner:cloud`) bez
 lokalnego Supabase i `.env.local`. W etapie A tego nie robisz: zawsze Claude, lokalnie, w
-`~/sh/wt/NAZWA/NR`.
+`/Users/Shared/sh/wt/NAZWA/NR`.
 
 ## DoD
 
@@ -229,7 +229,7 @@ commitujesz je i opisujesz brak w „Ryzykach” raportu.
 
 Polecenie w panelu `worker:sklep:14`: „Zrealizuj issue #14 skillem sh-worker.”
 
-1. `~/sh/wt/sklep/14`, gałąź `task/14-koszyk-dodawanie-i-usuwanie-pozycji`, `iter:1`.
+1. `/Users/Shared/sh/wt/sklep/14`, gałąź `task/14-koszyk-dodawanie-i-usuwanie-pozycji`, `iter:1`.
 2. Issue: 3 kryteria, pliki `src/koszyk/` i `e2e/koszyk.spec.ts`, testy
    `pnpm test src/koszyk && pnpm test:e2e e2e/koszyk.spec.ts`, bez `db:migracja`.
 3. Testy `koszyk.test.ts` i `koszyk.spec.ts`, potem kod. `pnpm lint`, `pnpm typecheck`, `pnpm test` i

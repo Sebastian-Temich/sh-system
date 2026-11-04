@@ -1,5 +1,5 @@
 # shctl ports reserve|release|list [--zakres 55|56]
-# Rejestr: tabela „Projekty Supabase” w ~/sh/porty.md. Blok ZZX21-ZZX29, ZZ to zakres.
+# Rejestr: tabela „Projekty Supabase” w /Users/Shared/sh/porty.md. Blok ZZX21-ZZX29, ZZ to zakres.
 # shellcheck shell=bash
 
 # shellcheck source=../lib/porty.sh
