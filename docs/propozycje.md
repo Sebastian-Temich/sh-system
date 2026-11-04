@@ -38,3 +38,9 @@ bez dublowania.
   `herdr agent prompt`; propozycja: `shctl task nudge NR --powod kontynuuj|od-nowa`;
 - wpis „Punktu przekazania” w `status.md`; propozycja: `shctl handoff` z danymi `status show`,
   wynikiem `doctor` i wierszem autoryzacji.
+
+## sh-dryrun T-11 (2026-11-04)
+
+<!-- propozycje:sh-dryrun:T-11 -->
+- Profil workera nie pozwala na `gh pr list` ani złożone komendy Bash (`;`), więc stan PR przy starcie sprawdziłem tylko przez `git log origin/main..HEAD`. Dodać `Bash(gh pr list *)` albo opisać w skillu, że do sprawdzenia PR służy `gh pr view`.
+- Zadania dodające nowy moduł biblioteki powinny mieć w „Zakresie” `src/index.ts`, jeśli funkcja ma trafić do publicznego API.
