@@ -118,7 +118,9 @@ PATH="$(build_path)"
 export PATH
 
 # SH_NOTIFY=1 wlacza hook Notification z ~/.claude/settings.json (push, gdy orkiestrator czeka).
-ORCH_CMD="PATH='${PATH//\'/\'\\\'\'}' SH_NOTIFY=1 claude remote-control --name sh-orkiestrator"
+# --permission-mode auto: kazda sesja tworzona przez remote-control startuje w trybie Auto
+# (bez tego sesje z aplikacji startowaly w trybie default i pytaly o zgode).
+ORCH_CMD="PATH='${PATH//\'/\'\\\'\'}' SH_NOTIFY=1 claude remote-control --name sh-orkiestrator --permission-mode auto"
 
 # Tylko start przez launchd; recznie sh-start.sh dziala zawsze.
 if [[ "$MODE" == --autostart && -e "$SH_DIR/stan/autostart.off" ]]; then

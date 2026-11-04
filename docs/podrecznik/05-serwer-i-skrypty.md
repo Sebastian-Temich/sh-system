@@ -38,7 +38,8 @@ Flagi przetrwają restart Maca i kolejne `install.sh`. Ręczne `sh-start.sh` i r
 ### sh-start.sh
 
 Przygotowuje workspace `sh` w herdr: panel `orkiestrator` z `SH_NOTIFY=1 claude remote-control --name
-sh-orkiestrator` i panel `powloka`. Uruchamia tylko to, co nie działa, więc można go wywoływać
+sh-orkiestrator --permission-mode auto` i panel `powloka`. Każda sesja, którą otwierasz przez Remote Control,
+startuje w trybie Auto. Uruchamia tylko to, co nie działa, więc można go wywoływać
 wielokrotnie.
 
 ```sh

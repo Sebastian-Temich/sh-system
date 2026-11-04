@@ -8,6 +8,7 @@
 
 ## 2026-11-04 (poprawki po teście A5.1)
 
+- `sh-start.sh`: orkiestrator startuje z `claude remote-control --permission-mode auto`, więc sesje tworzone z aplikacji i claude.ai/code są w trybie Auto, a nie `default` (`docs/serwer.md`, „Herdr”). Podręcznik (02, 05).
 Raport testu: `sh-dryrun`, `docs/metryki.md` i `docs/status.md`.
 
 - `shctl reset-dryrun`: archiwizuje znaczniki `shctl:id` we wszystkich issue, także zamkniętych (wcześniej `task create` po resecie uznawał zamknięte zadania za istniejące); usuwa lokalne gałęzie `stage/*` i `task/*`; `metryki.md` przechodzi przez reset, a każdy przebieg dostaje sekcję „Przebieg dryrun N” z własną tabelą (commit `reset-dryrun: przebieg N`); odmawia, gdy tag `baseline` ma artefakty przebiegu; po resecie zakłada od nowa klon `docs/` w vaulcie Obsidiana. `task close` dopisuje wiersz metryk do ostatniej tabeli, nie na koniec pliku.
