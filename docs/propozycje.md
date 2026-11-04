@@ -38,3 +38,8 @@ bez dublowania.
   `herdr agent prompt`; propozycja: `shctl task nudge NR --powod kontynuuj|od-nowa`;
 - wpis „Punktu przekazania” w `status.md`; propozycja: `shctl handoff` z danymi `status show`,
   wynikiem `doctor` i wierszem autoryzacji.
+
+## sh-dryrun T-28 (2026-11-04)
+
+<!-- propozycje:sh-dryrun:T-28 -->
+- Narzędzie Write zapisało znak U+00A0 wpisany dosłownie w kodzie jako zwykłą spację, co dało mylący błąd testu („expected … to deeply equal …” przy identycznym wyglądzie). Warto zalecić w skillu sh-worker zapis znaków niewidocznych przez escape (`" "`).
