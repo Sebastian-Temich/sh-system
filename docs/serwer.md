@@ -598,15 +598,35 @@ notify.sh min "Build" "Gotowy" "" white_check_mark   # tagi bez URL-a
 ### Hook Claude Code
 
 Hook `Notification` w `~/.claude/settings.json` ma dwa wpisy z `matcher`, po jednym na typ
-powiadomienia. W treści pushu jest nazwa katalogu sesji (u workera numer zadania, u orkiestratora
-`sh`):
+powiadomienia. Oba wołają `/Users/Shared/sh/bin/notify-hook.sh` (`scripts/server/notify-hook.sh`),
+który z katalogu sesji (pole `cwd`) ustala projekt i rolę i podaje je w treści pushu:
 
-| `matcher` | Kiedy | Tytuł pushu |
-|---|---|---|
-| `permission_prompt` | Claude pyta o zgodę na narzędzie | „Claude czeka na zgodę” |
-| `idle_prompt` | Claude skończył i czeka na wiadomość | „Claude czeka na Ciebie” |
+| `matcher` | Kiedy | Tytuł pushu | Kto wysyła |
+|---|---|---|---|
+| `permission_prompt` | Claude pyta o zgodę na narzędzie | „Claude czeka na zgodę” | orkiestrator i worker |
+| `idle_prompt` | Claude skończył i czeka na wiadomość | „Claude czeka na Ciebie” | tylko orkiestrator |
 
-Inne typy (`auth_success`, `elicitation_dialog` i pozostałe) nie wysyłają pushu.
+Worker kończy każdą turę i czeka; śledzi go orkiestrator przez herdr, więc „Claude czeka na
+Ciebie” od workera byłoby szumem. Inne typy (`auth_success`, `elicitation_dialog` i pozostałe) nie
+wysyłają pushu.
+
+| Katalog sesji | Treść pushu |
+|---|---|
+| `/Users/Shared/sh/wt/NAZWA/NR` | `NAZWA / worker #NR` |
+| `/Users/Shared/sh/projekty/NAZWA` | `NAZWA / orkiestrator` |
+| `/Users/Shared/sh` | `NAZWA / orkiestrator`, NAZWA z ostatniego `--projekt NAZWA` albo `projekty/NAZWA` w transkrypcie sesji; bez trafienia `SH / orkiestrator` |
+| inny | nazwa katalogu |
+
+Wpisy w `~/.claude/settings.json`:
+
+```json
+"Notification": [
+  {"matcher": "permission_prompt",
+   "hooks": [{"type": "command", "command": "/Users/Shared/sh/bin/notify-hook.sh zgoda", "async": true}]},
+  {"matcher": "idle_prompt",
+   "hooks": [{"type": "command", "command": "/Users/Shared/sh/bin/notify-hook.sh czeka", "async": true}]}
+]
+```
 
 Hook działa tylko, gdy proces Claude Code ma `SH_NOTIFY=1`:
 
@@ -620,11 +640,13 @@ startem; zmiana w działającej sesji nic nie da. Ustawiają ją `shctl task dis
 dopiero po ponownym starcie.
 
 `~/.claude/settings.json` nie jest w repo; po odtworzeniu serwera wpisy trzeba dodać ręcznie
-(kopię ma archiwum `backup-config.sh`).
+(kopię ma archiwum `backup-config.sh`). Skrypt hooka jest w repo i trafia do `bin` przez
+`install.sh`.
 
 Format hooków: <https://code.claude.com/docs/en/hooks>. Hook jest asynchroniczny (`async`),
 więc nie blokuje Claude'a, a błąd wysyłki nie pojawia się w sesji. Diagnoza:
-`claude --debug` albo ręczne uruchomienie `notify.sh`.
+`claude --debug`, ręczne uruchomienie `notify.sh` albo
+`echo '{"cwd":"/Users/Shared/sh/projekty/NAZWA"}' | SH_NOTIFY=1 notify-hook.sh czeka`.
 
 ## Synchronizacja Obsidiana
 
@@ -839,6 +861,49 @@ Ograniczenia:
 - Reguły nie dotyczą Codexa ani innych narzędzi.
 - Ochronę na poziomie systemu daje `sandbox.enabled`. Jest wyłączony, bo ogranicza też sieć i
   zapis wszystkich poleceń Bash, a izolacja ma być lekka.
+
+### Uprawnienia sesji SH
+
+| Sesja | Plik ustawień |
+|---|---|
+| Orkiestrator (`/Users/Shared/sh`) | `/Users/Shared/sh/.claude/settings.json` → `scripts/server/orkiestrator-settings.json` |
+| Worker, reviewer w Claude Code | `.claude/roles/worker/settings.json`, `.claude/roles/reviewer/settings.json` szablonu (`--settings`) |
+
+**Zakres odczytu.** Hook `PreToolUse` z `matcher` `Read|Glob|Grep` w obu plikach woła
+`/Users/Shared/sh/bin/odczyt-hook.sh` (`scripts/server/odczyt-hook.sh`). Odczyt jest dozwolony w
+katalogu projektu sesji (`CLAUDE_PROJECT_DIR`: u workera jego worktree, u orkiestratora
+`/Users/Shared/sh`), w konfiguracji Claude (`~/.claude`, skille SH w `sh-system/plugin`) i w
+katalogu tymczasowym własnej sesji (`/private/tmp/claude-UID/*/SESSION_ID`: scratchpad, wyniki
+zadań w tle). Każda inna ścieżka, także inny worktree, klon projektu, `..` i dowiązanie
+prowadzące poza zakres, kończy się odmową z powodem. Profile ról nie mają już ogólnych `Read`,
+`Glob` i `Grep` w `allow`; w trybie `dontAsk` odczyt w worktree i tak jest dozwolony.
+
+Dlaczego hook, a nie reguły `Read(...)`: test z 2026-11-04 (Claude Code 2.1.318, `claude -p`)
+pokazał, że reguły **allow** ze ścieżką, w której segment kończy się kropką
+(`/Users/sebastiant.`), nie działają, także w formie `//Users/**` i `~/...`. Reguły **deny** z
+taką ścieżką działają, więc deny z sekcji „Claude Code” wyżej obowiązują.
+
+Ograniczenia: hook nie obejmuje Basha. U workera (`dontAsk`) `cat`, `head` i `grep` na pliku poza
+worktree odrzuca sprawdzanie ścieżek Claude Code (test jw.); u orkiestratora decyduje tryb Auto.
+Brak `odczyt-hook.sh` w `bin` to błąd hooka bez blokady (odczyt wraca do zwykłych reguł).
+
+**Lista dozwolonych orkiestratora.** `orkiestrator-settings.json` zezwala bez pytania na rutynowe
+komendy: `shctl`, `notify.sh`, `herdr` do odczytu i sterowania agentami (`agent list|get|read|wait|
+explain|prompt`, `pane list|get|read|process-info|wait-output|close`, `workspace|tab list`,
+`status`), `gh pr|issue|run|repo view|label list` i `gh api repos/...`, `git` do odczytu,
+`fetch|pull|switch|add|commit|push|tag|merge` (także `git -C ŚCIEŻKA` dla odczytu i
+`fetch|pull`) oraz `ps`. Bez reguły zostają `herdr pane run|send-text|send-keys` i `herdr agent
+send-keys` (wykonują dowolny tekst w innym panelu). `deny`: `git push` z `--force`/`-f`,
+`--delete`, `:GAŁĄŹ` i na `production`, `git reset --hard`, `git clean`, `gh api` z `-X`,
+`--method`, `-f`, `-F`, `--field`, `--raw-field`, `--input`, `gh repo delete`, `gh secret`,
+`gh auth`, `gh workflow`.
+
+Czego reguły nie załatwią (test z 2026-11-04):
+
+- `cd KATALOG && git ...` w jednym poleceniu Claude Code zawsze zatrzymuje (ochrona przed
+  hookami git w obcym repo). Zamiast tego `git -C KATALOG ...`.
+- Polecenie z podstawieniem w nazwie komendy albo argumencie (`R=$(gh repo view ...); gh api
+  repos/$R/...`) Claude Code zatrzymuje, bo nie może go sprawdzić przed uruchomieniem.
 
 ### Codex
 
