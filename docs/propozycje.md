@@ -38,3 +38,8 @@ bez dublowania.
   `herdr agent prompt`; propozycja: `shctl task nudge NR --powod kontynuuj|od-nowa`;
 - wpis „Punktu przekazania” w `status.md`; propozycja: `shctl handoff` z danymi `status show`,
   wynikiem `doctor` i wierszem autoryzacji.
+
+## sh-dryrun T-26 (2026-11-04)
+
+<!-- propozycje:sh-dryrun:T-26 -->
+- Profil workera odrzuca złożone komendy Bash (`&&`, `;`), więc komendy z „Komendy testów” i DoD trzeba uruchamiać pojedynczo; warto to opisać w skillu sh-worker.
