@@ -122,3 +122,9 @@ bez dublowania.
 
 <!-- propozycje:sh-dryrun:T-41 -->
 - Lista plików w „Zakresie” issue mogłaby zawsze zawierać `docs/07-realizacja/T-NR.md`, żeby raport nie wymagał decyzji „plik spoza Zakresu”.
+
+## sh-dryrun T-43 (2026-11-04)
+
+<!-- propozycje:sh-dryrun:T-43 -->
+- Jak w T-41: lista plików w „Zakresie” issue mogłaby zawsze zawierać `docs/07-realizacja/T-NR.md`.
+- Raport wymaga numeru PR, który powstaje dopiero po `gh pr create`; worker robi drugi commit z numerem. `shctl` mógłby wpisywać `PR: #N` sam albo szablon mógłby dopuszczać jego uzupełnienie przez orkiestratora.
