@@ -89,7 +89,7 @@ MOCK
   HOME="$T/home" SH_SERVED_WAIT_MS=0 PATH="$T/home/.softwarehouse/bin:$T/mock:/usr/bin:/bin" \
     run -- bash "$REPO/scripts/server/sh-start.sh" --no-attach
   [ "$status" -eq 0 ]
-  grep -q "^PATH='$T/home/sh/bin:$T/home/.local/bin:$T/mock:[^']*:$T/home/.softwarehouse/bin' SH_NOTIFY=1 claude remote-control --name sh-orkiestrator\$" "$T/run_cmd"
+  grep -q "^PATH='$T/home/sh/bin:$T/home/.local/bin:$T/mock:[^']*:$T/home/.softwarehouse/bin' SH_NOTIFY=1 claude remote-control --name sh-orkiestrator --permission-mode auto\$" "$T/run_cmd"
   [ "$(grep -o "$T/home/.softwarehouse/bin" "$T/run_cmd" | wc -l | tr -d ' ')" -eq 1 ]
 }
 

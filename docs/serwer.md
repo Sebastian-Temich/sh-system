@@ -232,8 +232,17 @@ directory: …/_brew_services` dawało martwe dowiązanie `/usr/local/share/zsh/
 ## Herdr
 
 Herdr 0.9.5 (repo przeniesione na `herdrdev/herdr`) to dom orkiestratora. Workspace `sh`:
-panel `orkiestrator` (w1:p1) z `SH_NOTIFY=1 claude remote-control --name sh-orkiestrator` w `/Users/Shared/sh`,
+panel `orkiestrator` (w1:p1) z `SH_NOTIFY=1 claude remote-control --name sh-orkiestrator --permission-mode auto`
+w `/Users/Shared/sh`,
 panel `powloka` (w1:p2). ID mogą się zmienić, dlatego skrypty szukają paneli po etykiecie.
+
+`--permission-mode auto` (opcja `claude remote-control`, Claude Code 2.1.318: „Permission mode for
+spawned sessions”) sprawia, że każda sesja tworzona przez Remote Control, z telefonu czy z
+claude.ai/code, startuje w trybie Auto. Wcześniej startowała w trybie `default` i pytała o zgodę
+(sesja 2026-11-04 17:37 UTC). Wybrana flaga, nie `permissions.defaultMode` w
+`/Users/Shared/sh/.claude/settings.json`, bo ustawienie projektu objęłoby też sesje serwisowe
+uruchamiane ręcznie w `/Users/Shared/sh`. Działa po ponownym starcie `claude remote-control`
+(`sh-start.sh` po zamknięciu panelu albo restart przez strażnika).
 
 - Skrypt: `/Users/Shared/sh/bin/sh-start.sh`, test CLI: `/Users/Shared/sh/bin/test-herdr.sh`
 - Autostart: `~/Library/LaunchAgents/pl.iskt.softwarehouse.sh-start.plist`

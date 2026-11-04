@@ -14,6 +14,10 @@ Orkiestrator działa na serwerze w panelu herdr i jest połączony przez **Remot
 | Terminal serwera | `/Users/Shared/sh/bin/sh-start.sh` podłącza herdr; odłączenie: `ctrl+b`, potem `q` |
 | Laptop przez SSH | `ssh` na serwer, potem `/Users/Shared/sh/bin/sh-start.sh`; ścieżka jeszcze nietestowana |
 
+Każda sesja otwarta przez Remote Control startuje w trybie **Auto**: rutynowe działania idą bez
+pytania, a o zgodę orkiestrator prosi tylko przy ryzykownych (push „Claude czeka na zgodę”). Tryb
+ustawia `sh-start.sh`; zmiana tego ustawienia działa dopiero po ponownym starcie orkiestratora.
+
 To jedna rozmowa, niezależnie od urządzenia. **Jedna sesja prowadzi jeden projekt:** podaj jego
 nazwę w pierwszym poleceniu („wznów sh-dryrun”). Bez nazwy, przy kilku projektach, orkiestrator
 zapyta, który projekt prowadzi. Zapisuje to w `/Users/Shared/sh/stan/NAZWA.json` (`shctl sesja`) i
