@@ -2,16 +2,16 @@
 # scripts/server/install.sh - instaluje pliki serwera z repo sh-system (idempotentny).
 #
 # Symlinki: scripts/server/*.sh (bez install.sh) i pliki wykonywalne z scripts/shctl/ do
-# ~/sh/bin, Brewfile do ~/sh/Brewfile, codex/reviewer.config.toml do $CODEX_HOME (~/.codex) i
-# orkiestrator-settings.json do ~/sh/.claude/settings.json. Zwykly plik zastepuje tylko, gdy jest identyczny
+# /Users/Shared/sh/bin, Brewfile do /Users/Shared/sh/Brewfile, codex/reviewer.config.toml do $CODEX_HOME (~/.codex) i
+# orkiestrator-settings.json do /Users/Shared/sh/.claude/settings.json. Zwykly plik zastepuje tylko, gdy jest identyczny
 # z repo. Roznica to blad: nowsze zmiany trzeba najpierw przeniesc do repo.
-# Wzorce straznika limitow: kopia scripts/server/watchdog-wzorce.txt do ~/sh, tylko gdy jej brak.
+# Wzorce straznika limitow: kopia scripts/server/watchdog-wzorce.txt do /Users/Shared/sh, tylko gdy jej brak.
 # Plisty: scripts/server/*.plist kopiuje do ~/Library/LaunchAgents tylko przy roznicy
 # i przeladowuje agenta. Niezaladowanego agenta laduje zawsze, takze bez zmiany plisty.
 # Agent z RunAtLoad wystartuje wtedy ponownie. Nieudany bootstrap to kod bledu, komenda
-# do recznego zaladowania i notify.sh high. Flaga ~/sh/stan/autostart.off wstrzymuje
+# do recznego zaladowania i notify.sh high. Flaga /Users/Shared/sh/stan/autostart.off wstrzymuje
 # ladowanie agenta sh-start; plista jest nadal kopiowana, bez dotykania launchd.
-# Tak samo ~/sh/stan/obsidian-sync.off dla agenta obsidian-sync (shctl obsidian sync co 5 minut).
+# Tak samo /Users/Shared/sh/stan/obsidian-sync.off dla agenta obsidian-sync (shctl obsidian sync co 5 minut).
 # Git: globalny core.hooksPath na scripts/server/git-hooks. Inna wartosc to blad, nie nadpisujemy.
 # Logowanie git do github.com: helper gh auth git-credential (bezwzgledna sciezka), gdy go brak.
 # Repo z lokalnym core.hooksPath w SH_DIR i SH_DIR/projekty dostaje ostrzezenie, bo wygrywa on z globalnym.
@@ -19,7 +19,7 @@
 set -euo pipefail
 
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd -P)"
-SH_DIR="${SH_DIR:-$HOME/sh}"
+SH_DIR="${SH_DIR:-/Users/Shared/sh}"
 BIN="${SH_BIN:-$SH_DIR/bin}"
 AGENTS="${SH_AGENTS:-$HOME/Library/LaunchAgents}"
 CODEX_DIR="${CODEX_HOME:-$HOME/.codex}"
@@ -177,7 +177,7 @@ fi
 mkdir -p "$CODEX_DIR"
 link "$REPO/codex/reviewer.config.toml" "$CODEX_DIR/reviewer.config.toml"
 
-# Ustawienia sesji orkiestratora w ~/sh: stare skille zostawione dla Paperclipa ukryte i zablokowane.
+# Ustawienia sesji orkiestratora w /Users/Shared/sh: stare skille zostawione dla Paperclipa ukryte i zablokowane.
 mkdir -p "$SH_DIR/.claude"
 link "$REPO/scripts/server/orkiestrator-settings.json" "$SH_DIR/.claude/settings.json"
 

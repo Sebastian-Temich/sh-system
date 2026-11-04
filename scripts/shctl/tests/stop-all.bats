@@ -120,7 +120,7 @@ zamkniete() { grep '^pane close' "$T/herdr.calls" | awk '{print $3}' | tr '\n' '
   [ "$(zamkniete)" = "w1:p3 w1:p4 w1:p1 " ]
 }
 
-@test "agent bez etykiety w ~/sh/wt/NAZWA nalezy do projektu" {
+@test "agent bez etykiety w /Users/Shared/sh/wt/NAZWA nalezy do projektu" {
   jq --arg c "$SH_DIR/wt/demo/7" '. + [{"pane_id":"w1:p8","label":"","agent":"claude","cwd":$c}]' "$T/panele.json" >"$T/p"
   mv "$T/p" "$T/panele.json"
   run "$SHCTL" stop-all --projekt demo

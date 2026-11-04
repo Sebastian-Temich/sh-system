@@ -198,7 +198,7 @@ globalny_hooks_path() {
   [[ "$stderr" == *"watchdog-wzorce.txt rozni sie"* ]]
 }
 
-@test "ustawienia orkiestratora: symlink ~/sh/.claude/settings.json do repo" {
+@test "ustawienia orkiestratora: symlink /Users/Shared/sh/.claude/settings.json do repo" {
   install
   [ "$status" -eq 0 ]
   [ "$(readlink "$T/sh/.claude/settings.json")" = "$REPO/scripts/server/orkiestrator-settings.json" ]

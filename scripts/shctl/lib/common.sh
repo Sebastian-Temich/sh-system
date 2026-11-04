@@ -9,7 +9,7 @@ E_UZYCIE=2
 E_BRAK=3
 E_ODMOWA=4
 
-SH_DIR="${SH_DIR:-$HOME/sh}"
+SH_DIR="${SH_DIR:-/Users/Shared/sh}"
 SH_GH_OWNER="${SH_GH_OWNER:-Sebastian-Temich}"
 SH_TEMPLATE="${SH_TEMPLATE:-sh-template-projekt}"
 SH_NOTIFY_CMD="${SH_NOTIFY_CMD:-$SH_DIR/bin/notify.sh}"

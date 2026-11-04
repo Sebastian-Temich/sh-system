@@ -8,7 +8,7 @@
 # pakiety aplikacji, pliki wykonywalne (rozszerzenie albo nagłówek ELF, Mach-O, PE, #!), pliki powyżej
 # 50 MB. ZIP jest rozpakowywany tylko po kontroli: ścieżki bez „..”, bezwzględnych i „\”, bez dowiązań,
 # do 2000 plików i 500 MB; pliki wykonywalne z archiwum są pomijane. Inne archiwa trafiają do repo
-# bez rozpakowania. Stan partii: ~/sh/stan/skrzynka/NAZWA.json.
+# bez rozpakowania. Stan partii: /Users/Shared/sh/stan/skrzynka/NAZWA.json.
 # shellcheck shell=bash
 
 # shellcheck source=../lib/zadania.sh

@@ -15,7 +15,7 @@ Skille procesu AI Software House v1 (`docs/proces-v1.md`) dla Claude Code. Mecha
 Marketplace `sh-system` to plik `.claude-plugin/marketplace.json` w katalogu głównym repo:
 
 ```sh
-claude plugin marketplace add ~/sh/sh-system
+claude plugin marketplace add /Users/Shared/sh/sh-system
 claude plugin install software-house@sh-system
 ```
 

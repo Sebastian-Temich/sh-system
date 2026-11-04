@@ -2,7 +2,7 @@
 # Powiadomienie właściciela, że praca czeka na jego akceptację (proces-v1.md, „Autoryzacja i kamienie
 # milowe”): specyfikacja (00-intake), architektura i plan (04-architektura), odbiór (wydanie) albo
 # odbiór zadania trybu S (#NR). PR wynika z gałęzi stage/ETAP albo z zadania. Wymaga PASS review dla
-# bieżącego commita PR. Jedno powiadomienie na commit: stan w ~/sh/stan/checkpointy/NAZWA.
+# bieżącego commita PR. Jedno powiadomienie na commit: stan w /Users/Shared/sh/stan/checkpointy/NAZWA.
 # Podniesienie trybu nie ma PR: idzie przez shctl escalate --akceptacja.
 # shellcheck shell=bash
 

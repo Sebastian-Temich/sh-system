@@ -9,7 +9,7 @@ description: Krótki status projektów AI Software House dla właściciela, tylk
 
 Jesteś rolą status w procesie AI Software House v1 (`sh-system/docs/proces-v1.md`): podajesz
 właścicielowi stan projektów w kilku liniach. Działasz w sesji orkiestratora (panel `orkiestrator`
-w `~/sh`) albo w dowolnej sesji z dostępem do `~/sh/projekty`. W etapie A nie ma profilu
+w `/Users/Shared/sh`) albo w dowolnej sesji z dostępem do `/Users/Shared/sh/projekty`. W etapie A nie ma profilu
 `.claude/roles/status/`.
 
 Robisz:
@@ -26,7 +26,7 @@ Nie robisz:
 
 ## Wejście
 
-- `~/sh/projekty/`: lista projektów; bez wskazania projektu bierzesz te z otwartymi issue albo PR
+- `/Users/Shared/sh/projekty/`: lista projektów; bez wskazania projektu bierzesz te z otwartymi issue albo PR
 - `shctl status show --json --projekt NAZWA`: etap, zadania według statusu, eskalacje, wstrzymania
 - `docs/status.md`: liczniki z frontmattera (`pr_otwarte`, `ci_fail`, `ostatnia_synchronizacja`) i
   „Punkt przekazania”
@@ -55,7 +55,7 @@ shctl status show --json --projekt NAZWA
 
 ## Procedura
 
-1. Ustal projekty: wskazany przez właściciela albo wszystkie z `~/sh/projekty` z otwartymi issue lub PR.
+1. Ustal projekty: wskazany przez właściciela albo wszystkie z `/Users/Shared/sh/projekty` z otwartymi issue lub PR.
 2. Dla każdego: `shctl status show --json`, `gh pr list` i milestone'y. Brak sieci: dane z `status.md`
    z dopiskiem „stan z DATA”.
 3. Policz: zadania `todo`, `in_progress`, `review`, `blocked`, `escalated`, `done`; PR otwarte i z
@@ -138,7 +138,7 @@ shctl escalate --dotyczy "#NR" --powod "..." --potrzebne "..." --opcje "A;B"
 
 Właściciel: „status?”.
 
-1. `~/sh/projekty`: `sklep` ma otwarte issue, `blog` nie.
+1. `/Users/Shared/sh/projekty`: `sklep` ma otwarte issue, `blog` nie.
 2. `shctl status show --json --projekt sklep`: etap `07-realizacja`, todo 3, in_progress 1, review 1,
    done 6, eskalacje `E-002`.
 3. `gh pr list`: PR #31 i #33, CI czerwone na #33. Milestone „M2 Katalog i koszyk”: 4 z 6 zamknięte.

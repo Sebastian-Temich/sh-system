@@ -32,7 +32,7 @@ sekcje `## ` są niedozwolone; podział wewnątrz sekcji robimy nagłówkami `##
 ```yaml
 ---
 name: sh-worker
-description: Realizuje jedno zadanie (issue) w worktree ~/sh/wt/NAZWA/NR, kończy PR-em i raportem T-NR.md. Użyj, gdy orkiestrator uruchomił workera poleceniem „zrealizuj issue #NR skillem sh-worker” albo gdy trzeba poprawić zgłoszenia z review w iteracji.
+description: Realizuje jedno zadanie (issue) w worktree /Users/Shared/sh/wt/NAZWA/NR, kończy PR-em i raportem T-NR.md. Użyj, gdy orkiestrator uruchomił workera poleceniem „zrealizuj issue #NR skillem sh-worker” albo gdy trzeba poprawić zgłoszenia z review w iteracji.
 ---
 ```
 

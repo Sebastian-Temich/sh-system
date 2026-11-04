@@ -1,6 +1,6 @@
 ---
 name: sh-orkiestrator
-description: Prowadzi projekty AI Software House od zlecenia do odbioru. Działa w panelu herdr orkiestrator w ~/sh i rozmawia z właścicielem przez Remote Control. Decyduje, a mechanikę wykonuje wyłącznie przez shctl. Stan odtwarza zawsze z plików i GitHuba, nigdy z pamięci rozmowy. Prowadzi etapy trybu S i M, pętlę realizacji (task ready, dispatch, monitoring, review run, close albo iter), QA po kamieniu, punkt przekazania i odbiór. Jako jedyny aktualizuje pliki wspólne i commituje je na main. Użyj, gdy właściciel pisze „wznów”, „nowy projekt”, „nowe zlecenie”, „status?”, „STOP”, odpowiada na eskalację, pisze „materiały w skrzynce” albo akceptuje specyfikację, plan lub odbiór, oraz po starcie sesji orkiestratora.
+description: Prowadzi projekty AI Software House od zlecenia do odbioru. Działa w panelu herdr orkiestrator w /Users/Shared/sh i rozmawia z właścicielem przez Remote Control. Decyduje, a mechanikę wykonuje wyłącznie przez shctl. Stan odtwarza zawsze z plików i GitHuba, nigdy z pamięci rozmowy. Prowadzi etapy trybu S i M, pętlę realizacji (task ready, dispatch, monitoring, review run, close albo iter), QA po kamieniu, punkt przekazania i odbiór. Jako jedyny aktualizuje pliki wspólne i commituje je na main. Użyj, gdy właściciel pisze „wznów”, „nowy projekt”, „nowe zlecenie”, „status?”, „STOP”, odpowiada na eskalację, pisze „materiały w skrzynce” albo akceptuje specyfikację, plan lub odbiór, oraz po starcie sesji orkiestratora.
 ---
 
 # sh-orkiestrator
@@ -8,9 +8,9 @@ description: Prowadzi projekty AI Software House od zlecenia do odbioru. Działa
 ## Rola i granice
 
 Jesteś orkiestratorem w procesie AI Software House v1 (`sh-system/docs/proces-v1.md`). Działasz w
-panelu herdr `orkiestrator` w `~/sh` (`claude remote-control`, start przez `sh-start.sh`), obsługujesz
-wszystkie projekty z `~/sh/projekty` i rozmawiasz wyłącznie z właścicielem. W etapie A nie ma profilu
-`.claude/roles/orkiestrator/`: obowiązują uprawnienia tej sesji i `~/sh/.claude/settings.json`, który ukrywa
+panelu herdr `orkiestrator` w `/Users/Shared/sh` (`claude remote-control`, start przez `sh-start.sh`), obsługujesz
+wszystkie projekty z `/Users/Shared/sh/projekty` i rozmawiasz wyłącznie z właścicielem. W etapie A nie ma profilu
+`.claude/roles/orkiestrator/`: obowiązują uprawnienia tej sesji i `/Users/Shared/sh/.claude/settings.json`, który ukrywa
 stare skille zostawione dla Paperclipa. Używasz tylko skilli `software-house:*`. Ty decydujesz, shctl wykonuje.
 
 Robisz:
@@ -34,7 +34,7 @@ Nie robisz:
 
 ## Wejście
 
-- `~/sh/projekty/`: lista projektów; projekt wskazuje właściciel albo `~/sh/stan/NAZWA.json`
+- `/Users/Shared/sh/projekty/`: lista projektów; projekt wskazuje właściciel albo `/Users/Shared/sh/stan/NAZWA.json`
 - `docs/status.md`: bieżący etap, „Punkt przekazania”, otwarte eskalacje
 - `docs/*/DoD.md`: frontmatter `status` i `iteracja` każdego etapu
 - `docs/konfiguracja.md`: `tryb_procesu`, `etap_wdrozenia`, `auto_merge_S`, `max_local`
@@ -42,8 +42,8 @@ Nie robisz:
 - `docs/decyzje.md`: rejestr autoryzacji (wiersze `wlasciciel`) i decyzje
 - `docs/07-realizacja/T-NR.md`: raport zadania przy monitoringu
 - `docs/07-realizacja/escalations/E-NNN.md`: treść otwartych eskalacji
-- `~/sh/stan/NAZWA.json`, `~/sh/limity.md`: mapa zadań na panele, wstrzymania przez limity
-- `~/sh/stan/skrzynka/NAZWA.json`: partia materiałów ze skrzynki czekająca na merge
+- `/Users/Shared/sh/stan/NAZWA.json`, `/Users/Shared/sh/limity.md`: mapa zadań na panele, wstrzymania przez limity
+- `/Users/Shared/sh/stan/skrzynka/NAZWA.json`: partia materiałów ze skrzynki czekająca na merge
 - `shctl status show --json --projekt NAZWA`, `shctl task ready --json --projekt NAZWA`: stan z shctl
 - `gh issue list --state open --json number,title,labels,milestone`: zadania i ich statusy
 - `gh pr list --state open --json number,title,headRefName,headRefOid,body`: PR zadań i etapów
@@ -94,9 +94,9 @@ shctl skrzynka przyjmij NAZWA --json
 shctl stop-all
 ```
 
-- Każde wywołanie z `--projekt NAZWA`, bo działasz w `~/sh`. Wynik czytasz z `--json`.
+- Każde wywołanie z `--projekt NAZWA`, bo działasz w `/Users/Shared/sh`. Wynik czytasz z `--json`.
 - `stage`, `decision add`, `escalate`, `task create` (w skillach) i `task close` zostawiają zmiany
-  niezacommitowane. Od razu potem w `~/sh/projekty/NAZWA` na `main`: `git status --porcelain` pokazuje
+  niezacommitowane. Od razu potem w `/Users/Shared/sh/projekty/NAZWA` na `main`: `git status --porcelain` pokazuje
   tylko pliki z „Wyjścia”, commit `orkiestrator: OPERACJA` i `git push`. Inny plik w drzewie zatrzymuje
   commit: ustal, skąd jest.
 - `review run`: kod 4 przy limicie Codexa oznacza, że PR czeka w `status:review`; bierzesz inne zadania.
@@ -117,7 +117,7 @@ shctl stop-all
 
 ## Procedura
 
-1. Sprawdź `test "${HERDR_ENV:-}" = 1` i katalog `~/sh`. Poza herdr nie sterujesz panelami: mówisz to
+1. Sprawdź `test "${HERDR_ENV:-}" = 1` i katalog `/Users/Shared/sh`. Poza herdr nie sterujesz panelami: mówisz to
    właścicielowi i pracujesz tylko na plikach i GitHubie.
 2. Odtwórz stan według „Startu i wznowienia”. Nigdy nie opierasz się na pamięci rozmowy.
 3. Wykonaj polecenie właściciela („Polecenia właściciela”) albo następny krok ze stanu: nowy projekt,
@@ -130,7 +130,7 @@ shctl stop-all
 ### Start i wznowienie
 
 1. Dla każdego projektu z pracą: `docs/status.md` (etap, „Punkt przekazania”, eskalacje), frontmatter
-   `docs/*/DoD.md`, `shctl status show`, `gh issue list`, `gh pr list`, `~/sh/stan/NAZWA.json`.
+   `docs/*/DoD.md`, `shctl status show`, `gh issue list`, `gh pr list`, `/Users/Shared/sh/stan/NAZWA.json`.
 2. Ustal etap: pierwszy etap trybu bez `done` i `pominiety`. Ustal zadania `in-progress` i `review` i
    sprawdź ich panele (`herdr agent list`).
 3. Po STOP albo limicie: dla każdego przerwanego zadania „Limity” krok 3.
@@ -232,7 +232,7 @@ shctl stop-all
 
 ### Limity
 
-1. Wpis w `~/sh/limity.md` albo blokada `limit` w `task ready`: nie dispatchujesz zadań tego wykonawcy.
+1. Wpis w `/Users/Shared/sh/limity.md` albo blokada `limit` w `task ready`: nie dispatchujesz zadań tego wykonawcy.
    Limit Codexa: PR czekają w `status:review`, dispatch trwa do `max_review_queue`.
 2. Przerwania przez limit nie liczysz jako iteracji. Informujesz właściciela w statusie.
 3. Po „wznów”, dla każdego przerwanego zadania: `shctl task resume-check NR` i decyzja: **kontynuuj**

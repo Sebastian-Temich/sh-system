@@ -1,4 +1,4 @@
-# Wzorce strażnika limitów (sh-watchdog.sh). Kopia robocza: ~/sh/watchdog-wzorce.txt.
+# Wzorce strażnika limitów (sh-watchdog.sh). Kopia robocza: /Users/Shared/sh/watchdog-wzorce.txt.
 #
 # Jedna linia: WYKONAWCA, odstęp, wyrażenie regularne ERE (bash =~, bez rozróżniania wielkości
 # liter). Wygrywa pierwszy pasujący wzorzec w kolejności pliku, dlatego Codex stoi przed Claude:

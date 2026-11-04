@@ -9,15 +9,15 @@ Pełny opis techniczny: [[shctl|docs/shctl.md]]. Lista komend: `shctl --help`.
 ## Jak uruchamiać
 
 Na serwerze, w panelu `powloka` w herdr albo w zwykłym terminalu. Komendy dotyczące projektu
-wymagają nazwy: `--projekt NAZWA` albo uruchomienia w katalogu projektu (`~/sh/projekty/NAZWA`).
+wymagają nazwy: `--projekt NAZWA` albo uruchomienia w katalogu projektu (`/Users/Shared/sh/projekty/NAZWA`).
 
 | Opcja | Działanie |
 |---|---|
-| `--projekt NAZWA` | Wybiera projekt z `~/sh/projekty/NAZWA` |
+| `--projekt NAZWA` | Wybiera projekt z `/Users/Shared/sh/projekty/NAZWA` |
 | `--dry-run` | Pokazuje, co by się stało, niczego nie zmienia |
 | `--json` | Wynik jako JSON (dla agentów) |
 
-Każde wywołanie trafia do logu `~/sh/logs/shctl.log`. Komenda powtórzona z tymi samymi argumentami
+Każde wywołanie trafia do logu `/Users/Shared/sh/logs/shctl.log`. Komenda powtórzona z tymi samymi argumentami
 niczego nie dubluje.
 
 **Zasada bezpieczeństwa:** komendy zmieniające pliki projektu zostawiają zmiany do commitu przez
@@ -50,7 +50,7 @@ shctl status show --projekt strona-firmowa
 **Czyta** (jedyny zapis: zdejmuje z listy do usunięcia repo testowe, których już nie ma). Sprawdza
 zdrowie serwera: narzędzia, logowania gh, codex i claude, logowanie git do GitHuba, Docker, herdr,
 czy w panelu `orkiestrator` działa orkiestrator (ta sama kontrola co przy starcie i w strażniku)
-i czy ma `~/sh/bin` w PATH, powiadomienia, hook git,
+i czy ma `/Users/Shared/sh/bin` w PATH, powiadomienia, hook git,
 wolne miejsce, porty, kopie w Obsidianie i datę ostatniej synchronizacji, repo testowe do usunięcia.
 Stany: `ok`, `uwaga`, `blad`.
 
@@ -89,7 +89,7 @@ shctl task resume-check 12 --bez-testow --projekt strona-firmowa
 
 ### new-project
 
-Zakłada projekt: repo z szablonu (domyślnie prywatne), klon w `~/sh/projekty/NAZWA`, etykiety, blok
+Zakłada projekt: repo z szablonu (domyślnie prywatne), klon w `/Users/Shared/sh/projekty/NAZWA`, etykiety, blok
 portów bazy, konfigurację, kopię `docs/` w Obsidianie, skrzynkę na materiały
 `SH/Skrzynka/NAZWA`, commit i push.
 
@@ -108,7 +108,7 @@ intake.
 
 ### ports
 
-Rejestr portów lokalnych baz Supabase w `~/sh/porty.md`. Każdy projekt ma własny blok.
+Rejestr portów lokalnych baz Supabase w `/Users/Shared/sh/porty.md`. Każdy projekt ma własny blok.
 
 ```sh
 shctl ports list                              # czyta
@@ -264,7 +264,7 @@ odmawia bez zielonego CI i bez PASS dla bieżącego commita.
 ### stop-all
 
 Zatrzymuje workerów, reviewerów i orkiestratora (zamyka ich panele), zachowuje kopie robocze, zapisuje
-stan w `~/sh/stan/NAZWA.json` i wysyła push „STOP”. Panel `powloka` zostaje.
+stan w `/Users/Shared/sh/stan/NAZWA.json` i wysyła push „STOP”. Panel `powloka` zostaje.
 
 ```sh
 shctl stop-all                            # wszystko

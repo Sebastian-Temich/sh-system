@@ -177,7 +177,7 @@ od niego zależą. Kryteria, z wartościami wpisanymi wprost:
 - `.github/workflows/ci.yml` ma prawdziwe komendy lint, typów, testów i E2E zamiast placeholderów;
   zadania `gitleaks`, `check-dod` i `testy-skryptow` zostają;
 - Supabase local: `supabase init`, potem `supabase/config.toml` z portami bloku `blok_portow` (np. 55121–55129), wszystkie
-  porty z tabeli `~/sh/porty.md`, także `shadow_port` i `inspector_port`; `supabase start` i
+  porty z tabeli `/Users/Shared/sh/porty.md`, także `shadow_port` i `inspector_port`; `supabase start` i
   `supabase db reset` przechodzą;
 - Sentry SDK zainicjowany z DSN ze zmiennej środowiskowej, bez DSN wyłączony; bez danych osobowych w
   zdarzeniach;
@@ -195,7 +195,7 @@ Pliki szkieletu: katalog główny projektu, `.github/workflows/ci.yml`, `supabas
 
 ### Tryb S
 
-Nie działa w trybie S. Zlecenie S zakłada `sh-intake` jednym plikiem w `~/sh/stan/zlecenia/`.
+Nie działa w trybie S. Zlecenie S zakłada `sh-intake` jednym plikiem w `/Users/Shared/sh/stan/zlecenia/`.
 
 ### Tryb M
 

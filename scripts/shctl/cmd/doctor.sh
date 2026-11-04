@@ -1,5 +1,5 @@
 # shctl doctor [--test-notify]: stan narzędzi i logowań; blad daje kod 1. Sprawdza odczytem. Zapisuje
-# tylko jedno: usuwa z ~/sh/stan/do-usuniecia.md repo, których już nie ma (nie przy --dry-run).
+# tylko jedno: usuwa z /Users/Shared/sh/stan/do-usuniecia.md repo, których już nie ma (nie przy --dry-run).
 # --test-notify wysyła prawdziwe powiadomienie.
 # shellcheck shell=bash
 
@@ -113,6 +113,44 @@ sprawdz_notify() {
   fi
 }
 
+# Pierwszy segment ścieżki zakończony kropką (bez „.” i „..”); kod 1, gdy brak.
+segment_z_kropka() {
+  local s
+  local -a segmenty
+  IFS=/ read -ra segmenty <<<"$1"
+  for s in "${segmenty[@]}"; do
+    case "$s" in . | ..) ;; *.) printf '%s' "$s"; return 0 ;; esac
+  done
+  return 1
+}
+
+# Claude Code odrzuca Write/Edit pod ścieżką z segmentem zakończonym kropką („suspicious Windows path
+# pattern”, np. katalog domowy /Users/sebastiant.), więc SH_DIR nie może pod taką leżeć ani w podanej,
+# ani w fizycznej postaci. Dowiązanie i uprawnienia inne niż 700 to tylko uwaga (docs/serwer.md, „Katalog SH”).
+sprawdz_katalog_sh() {
+  local fizyczny seg prawa
+  if [ ! -d "$SH_DIR" ]; then
+    wpis "katalog SH" blad "brak katalogu $SH_DIR"
+    return 0
+  fi
+  fizyczny="$(cd "$SH_DIR" && pwd -P)"
+  if seg="$(segment_z_kropka "$SH_DIR")" || seg="$(segment_z_kropka "$fizyczny")"; then
+    wpis "katalog SH" blad "$fizyczny: segment „${seg}” kończy się kropką, Claude Code blokuje tam zapis; przenieś SH (domyślnie /Users/Shared/sh)"
+    return 0
+  fi
+  if [ "$fizyczny" != "$SH_DIR" ]; then
+    wpis "katalog SH" uwaga "$SH_DIR prowadzi przez dowiązanie do $fizyczny; skrypty i konfiguracje powinny używać ścieżki fizycznej"
+    return 0
+  fi
+  # Najpierw GNU (CI): jego stat -f to stan systemu plików, nie format.
+  prawa="$(stat -c '%a' "$SH_DIR" 2>/dev/null || stat -f '%Lp' "$SH_DIR" 2>/dev/null || true)"
+  if [ -n "$prawa" ] && [ "$prawa" != 700 ]; then
+    wpis "katalog SH" uwaga "$SH_DIR ma uprawnienia $prawa, oczekiwane 700 (chmod 700 \"$SH_DIR\")"
+  else
+    wpis "katalog SH" ok "$SH_DIR"
+  fi
+}
+
 sprawdz_srodowisko() {
   local repo lokalny wolne min=15 globalny
   globalny="$(git config --global --get core.hooksPath 2>/dev/null || true)"
@@ -151,7 +189,7 @@ sprawdz_obsidian() {
   [ "$ile" -gt 0 ] || wpis "Obsidian" ok "brak klonów w $SH_OBSIDIAN_DIR"
 }
 
-# Data ostatniej udanej synchronizacji (wszystkie klony aktualne) z ~/sh/stan/obsidian-sync.json.
+# Data ostatniej udanej synchronizacji (wszystkie klony aktualne) z /Users/Shared/sh/stan/obsidian-sync.json.
 sprawdz_obsidian_sync() {
   local plik="$STAN/obsidian-sync.json" udana przebieg prob wiek
   [ -n "${SH_OBSIDIAN_DIR:-}" ] || return 0
@@ -224,6 +262,7 @@ komenda_main() {
   done
   [ "$JSON" -eq 0 ] || wymagaj jq
   : >"$SHCTL_TMP/doctor"
+  sprawdz_katalog_sh
   sprawdz_narzedzia
   sprawdz_logowania
   sprawdz_logowanie_git

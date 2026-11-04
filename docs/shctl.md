@@ -5,7 +5,7 @@ a shctl wykonuje operacje na plikach, GitHubie i panelach herdr. Część 1: kom
 część 2: `task`, `review run` i `reset-dryrun` (sekcja „Zadania”).
 
 Źródło: `scripts/shctl/` (`shctl`, `cmd/` z podkomendami, `lib/`, `tests/`). `install.sh` zakłada
-symlink `~/sh/bin/shctl`. Zależności: bash 3.2+, gh, jq, yq (mikefarah), git, herdr.
+symlink `/Users/Shared/sh/bin/shctl`. Zależności: bash 3.2+, gh, jq, yq (mikefarah), git, herdr.
 
 ## Zasady wspólne
 
@@ -13,7 +13,7 @@ symlink `~/sh/bin/shctl`. Zależności: bash 3.2+, gh, jq, yq (mikefarah), git, 
 |---|---|
 | `--dry-run` | Pokazuje, co by się stało. Nie zapisuje plików, nie zmienia GitHuba, nie zamyka paneli, nie powiadamia |
 | `--json` | Na stdout dokładnie jeden dokument JSON, także przy błędzie |
-| `--projekt NAZWA` | Projekt z `~/sh/projekty/NAZWA`; bez opcji projekt z bieżącego katalogu, także z worktree |
+| `--projekt NAZWA` | Projekt z `/Users/Shared/sh/projekty/NAZWA`; bez opcji projekt z bieżącego katalogu, także z worktree |
 
 Opcje wolno podać w dowolnym miejscu po nazwie komendy. Nazwa projektu to litery, cyfry, `-` i `_`.
 
@@ -36,7 +36,7 @@ Format `--json`:
 ```
 
 Komunikaty błędów i ostrzeżenia idą na stderr. Każde wywołanie dopisuje linię do
-`~/sh/logs/shctl.log` (czas, kod, `dry`, projekt, komenda i argumenty ucięte do 400 znaków).
+`/Users/Shared/sh/logs/shctl.log` (czas, kod, `dry`, projekt, komenda i argumenty ucięte do 400 znaków).
 
 shctl commituje w projekcie tylko w `new-project`. Pozostałe komendy zostawiają zmiany w drzewie
 roboczym, a commit na main robi orkiestrator. Wyjątki poza plikami projektu: `task close` commituje
@@ -47,7 +47,7 @@ Zmienne środowiska (dla testów i innego układu):
 
 | Zmienna | Domyślnie |
 |---|---|
-| `SH_DIR` | `~/sh` |
+| `SH_DIR` | `/Users/Shared/sh` |
 | `SH_GH_OWNER` | `Sebastian-Temich` |
 | `SH_TEMPLATE` | `sh-template-projekt` |
 | `SH_NOTIFY_CMD` | `$SH_DIR/bin/notify.sh` |
@@ -70,7 +70,7 @@ Plik `~/.config/sh/config` jest poza repo. shctl czyta z niego linię
 shctl new-project NAZWA [--tryb S|M] [--public] [--opis "..."]
 ```
 
-Kolejno: repo `SH_GH_OWNER/NAZWA` z szablonu (domyślnie prywatne), klon do `~/sh/projekty/NAZWA`,
+Kolejno: repo `SH_GH_OWNER/NAZWA` z szablonu (domyślnie prywatne), klon do `/Users/Shared/sh/projekty/NAZWA`,
 usuwanie gałęzi po merge'u (`gh repo edit --delete-branch-on-merge`), `setup-labels.sh`,
 frontmatter `konfiguracja.md` (`tryb_procesu`, `etap_wdrozenia: A`, `data`,
 `blok_portow`), blok portów, `supabase/config.toml`, jeśli istnieje, `pominiety` dla etapów spoza
@@ -241,7 +241,7 @@ PR wynika z celu: dla etapu najnowszy otwarty PR z gałęzi `stage/ETAP`, dla `#
    kod 4: właściciel akceptuje pracę po review;
 3. `notify.sh high "Czeka na Twoją akceptację: NAZWA / CEL" "OPIS, PR #N[. --opis]" URL_PR`; adres PR
    trafia do nagłówka `Click`;
-4. wpis `CEL HEAD` w `~/sh/stan/checkpointy/NAZWA`.
+4. wpis `CEL HEAD` w `/Users/Shared/sh/stan/checkpointy/NAZWA`.
 
 Powtórka dla tego samego commita nic nie wysyła (`"ponownie":true`). Nowy commit w PR, np. po
 poprawkach z akceptacji, i nowy PASS dają nowe powiadomienie. Nieudane powiadomienie to kod 1 bez wpisu
@@ -264,7 +264,7 @@ shctl checkpoint 04-architektura --opis "4 kamienie, Resend darmowy" --json
 shctl ports reserve|release|list [--zakres 55|56]
 ```
 
-Rejestr to tabela „Projekty Supabase” w `~/sh/porty.md`. `reserve` i `release` działają na projekcie
+Rejestr to tabela „Projekty Supabase” w `/Users/Shared/sh/porty.md`. `reserve` i `release` działają na projekcie
 z `--projekt` albo z bieżącego katalogu, a zapis chroni blokada `porty.md.lock`.
 
 - `reserve` bierze pierwszy wolny blok bez zajętych portów (`lsof`). Istniejącą rezerwację zwraca bez
@@ -279,7 +279,7 @@ shctl ports list --json
 
 ```json
 {"ok":true,"komenda":"ports","dry_run":false,"wynik":[
-  {"x":"1","projekt":"sklep","katalog":"`~/sh/projekty/sklep`","api":"55121","db":"55122","studio":"55123",
+  {"x":"1","projekt":"sklep","katalog":"`/Users/Shared/sh/projekty/sklep`","api":"55121","db":"55122","studio":"55123",
    "mail":"55124","analytics":"55127","shadow":"55128","pooler":"55129","inspector":"55125","stan":"zarezerwowany 2026-11-01"}]}
 ```
 
@@ -292,7 +292,7 @@ shctl status show
 ```
 
 Krótkie podsumowanie dla właściciela: etap, zadania według statusu, otwarte eskalacje, wstrzymania z
-`~/sh/limity.md`. Zadania pochodzą z GitHuba, a gdy jest niedostępny, z liczników `status.md`
+`/Users/Shared/sh/limity.md`. Zadania pochodzą z GitHuba, a gdy jest niedostępny, z liczników `status.md`
 (`zrodlo_zadan`). Z `limity.md` bierze pozycje list i wiersze tabeli bez nagłówka; format ustali
 strażnik limitów. Komenda tylko czyta.
 
@@ -309,13 +309,13 @@ strażnik limitów. Komenda tylko czyta.
 shctl stop-all [--projekt NAZWA]
 ```
 
-Zamyka panele herdr, zachowuje worktree, zapisuje `~/sh/stan/NAZWA.json` i wysyła `notify.sh high`.
+Zamyka panele herdr, zachowuje worktree, zapisuje `/Users/Shared/sh/stan/NAZWA.json` i wysyła `notify.sh high`.
 shctl nie wznawia pracy sam (`proces-v1.md`, „Awaryjny stop”).
 
 | Panel | Bez `--projekt` | Z `--projekt NAZWA` |
 |---|---|---|
 | `worker:NAZWA:NR`, `review:NAZWA:NR`, `qa:NAZWA:NR` | zamykany | tylko tego projektu |
-| Agent z katalogiem w `~/sh/projekty/NAZWA` | zamykany | tylko tego projektu |
+| Agent z katalogiem w `/Users/Shared/sh/projekty/NAZWA` | zamykany | tylko tego projektu |
 | `orkiestrator:NAZWA` | zamykany | tylko tego projektu |
 | `orkiestrator` (wspólny) | zamykany | zostaje, bo obsługuje inne projekty |
 | `powloka`, panele bez agenta | zostają | zostają |
@@ -344,7 +344,7 @@ shctl obsidian sync [--agent]
 
 Obsidian działa na tym samym Macu i służy **głównie do czytania** dokumentacji. Odpowiedzi na
 eskalacje idą przez czat z orkiestratorem i `shctl escalate close`, a nie przez edycję plików w
-vaulcie. Źródłem prawdy pozostaje repo w `~/sh/projekty`.
+vaulcie. Źródłem prawdy pozostaje repo w `/Users/Shared/sh/projekty`.
 
 `link` zakłada dla projektu założonego wcześniej to samo, co `new-project`: klon
 `git clone --filter=blob:none --sparse` i `git sparse-checkout set --no-cone /docs/`. Klon ma tylko
@@ -389,13 +389,13 @@ klonie: `git fetch`, potem `git pull --ff-only`. Nigdy nie robi merge'a, resetu 
 | Rozjechany z origin (commity po obu stronach) | pominięty |
 | Odłączony HEAD, nieudany fetch albo pull | pominięty |
 
-Pominięcie trafia do `~/sh/logs/obsidian-sync.log` (`POMINIĘTY KATALOG: powód`), a przy ręcznym
+Pominięcie trafia do `/Users/Shared/sh/logs/obsidian-sync.log` (`POMINIĘTY KATALOG: powód`), a przy ręcznym
 uruchomieniu także na stderr. Ten sam klon pominięty w dwóch kolejnych przebiegach daje jedno
 powiadomienie `notify.sh default` „Obsidian: klon bez synchronizacji”. Kolejne powiadomienie dla tego
 klonu przychodzi dopiero wtedy, gdy problem ustąpi i wróci. Klon z problemem naprawia właściciel
 albo orkiestrator (np. `git -C KLON stash` albo usunięcie i `shctl obsidian link`), nie `sync`.
 
-Stan zapisuje w `~/sh/stan/obsidian-sync.json`:
+Stan zapisuje w `/Users/Shared/sh/stan/obsidian-sync.json`:
 
 ```json
 {"ostatni_przebieg":"2026-11-02T23:50:06+0100","ostatnia_udana":"2026-11-02T23:50:06+0100",
@@ -404,9 +404,9 @@ Stan zapisuje w `~/sh/stan/obsidian-sync.json`:
 ```
 
 Udana synchronizacja to przebieg, w którym wszystkie klony są `ok`. Jej datę pokazuje `doctor`.
-Z `--agent` flaga `~/sh/stan/obsidian-sync.off` wyłącza przebieg (wynik `{"wylaczona":true}`).
+Z `--agent` flaga `/Users/Shared/sh/stan/obsidian-sync.off` wyłącza przebieg (wynik `{"wylaczona":true}`).
 Ręczne `shctl obsidian sync` działa także z flagą. Dwa przebiegi naraz wyklucza blokada
-`~/sh/stan/obsidian-sync.lock`. Kod wyjścia to 0 także przy pominięciach. `--dry-run` tylko wypisuje
+`/Users/Shared/sh/stan/obsidian-sync.lock`. Kod wyjścia to 0 także przy pominięciach. `--dry-run` tylko wypisuje
 klony.
 
 ```json
@@ -430,11 +430,11 @@ Design, logo, teksty. Nie jest repo git i `obsidian sync` go nie dotyka. Zakład
 1. **Partia.** Pliki ze skrzynki (bez `_przeniesione/`, plików i katalogów ukrytych oraz `__MACOSX`)
    przechodzą kontrolę i trafiają do `docs/ETAP/KATALOG` (domyślnie `docs/02-design/zrodla`) z
    zachowaniem podkatalogów i prawami 644. Commit `ETAP: materiały ze skrzynki (N)` powstaje w
-   odłączonym worktree `~/sh/wt/NAZWA/skrzynka-ETAP` na bazie `origin/stage/ETAP`, a bez takiej gałęzi
+   odłączonym worktree `/Users/Shared/sh/wt/NAZWA/skrzynka-ETAP` na bazie `origin/stage/ETAP`, a bez takiej gałęzi
    na `origin/main`, i idzie pushem na `stage/ETAP`. Lokalne gałęzie repo głównego zostają nietknięte.
    Potem PR do `main` (istniejący otwarty PR z tej gałęzi jest używany ponownie) z listą przyjętych i
    odrzuconych plików. Stan partii (PR i skrót `git hash-object` każdego pliku) trafia do
-   `~/sh/stan/skrzynka/NAZWA.json`. Pliki zostają w skrzynce.
+   `/Users/Shared/sh/stan/skrzynka/NAZWA.json`. Pliki zostają w skrzynce.
 2. **Po merge'u.** Kolejne wywołanie widzi scalony PR i przenosi przyjęte pliki do
    `_przeniesione/RRRRMMDD/` w skrzynce, z zachowaniem ścieżek; puste katalogi usuwa. Plik zmieniony
    po przyjęciu zostaje (`pozostawione`) i wchodzi do następnej partii w tym samym wywołaniu.
@@ -493,16 +493,16 @@ shctl doctor [--test-notify]
 
 Sprawdza narzędzia, logowania gh, codex i claude, Docker, serwer herdr, orkiestratora
 (`orkiestrator`: w panelu `orkiestrator` workspace `sh` działa proces `claude remote-control` z
-katalogiem roboczym `~/sh`, ta sama kontrola co `sh-start.sh` i strażnik, `scripts/server/lib/system.sh`;
-`blad`, gdy go nie ma, z PID, gdy taki proces działa poza panelem; `PATH panelu herdr`: `~/sh/bin` w
+katalogiem roboczym `/Users/Shared/sh`, ta sama kontrola co `sh-start.sh` i strażnik, `scripts/server/lib/system.sh`;
+`blad`, gdy go nie ma, z PID, gdy taki proces działa poza panelem; `PATH panelu herdr`: `/Users/Shared/sh/bin` w
 PATH procesu orkiestratora, brak to `blad`, a gdy orkiestrator nie działa, `uwaga` bez sprawdzenia),
 `logowanie git` (git dostaje token dla github.com bez pytania, helper z `install.sh`; brak to `blad`),
 `notify.sh` i temat ntfy,
-globalny `core.hooksPath`, lokalny `core.hooksPath` w repo z `~/sh/projekty`, wolne miejsce,
+globalny `core.hooksPath`, lokalny `core.hooksPath` w repo z `/Users/Shared/sh/projekty`, wolne miejsce,
 `porty.md`, klony w `SH_OBSIDIAN_DIR` (czy są czyste i zgodne z origin, przez `git ls-remote`, bez
 pobierania; różnica to `uwaga`), datę ostatniej udanej synchronizacji Obsidiana z
-`~/sh/stan/obsidian-sync.json` (`uwaga`, gdy przebiegu nie było, jest starsza niż 30 minut, klon ma
-problem albo flaga `obsidian-sync.off` wyłącza agenta) oraz repo z `~/sh/stan/do-usuniecia.md`
+`/Users/Shared/sh/stan/obsidian-sync.json` (`uwaga`, gdy przebiegu nie było, jest starsza niż 30 minut, klon ma
+problem albo flaga `obsidian-sync.off` wyłącza agenta) oraz repo z `/Users/Shared/sh/stan/do-usuniecia.md`
 (`uwaga`, gdy są).
 
 Repo z listy `doctor` sprawdza przez `gh repo view` i zdejmuje wiersze tych, których już nie ma. To
@@ -526,17 +526,17 @@ i `wykonawca:claude`, a review robi Codex. Po przerwie: `task resume-check`.
 
 | Rzecz | Miejsce |
 |---|---|
-| Worktree workera | `~/sh/wt/NAZWA/NR`, gałąź `task/NR-slug` |
-| Worktree review | `~/sh/wt/NAZWA/review-NR`, odłączony HEAD na commicie PR, bez plików env |
-| Worktree propozycji | `~/sh/wt/NAZWA/sys-propozycje-NR`, gałąź w `sh-system`, usuwany po PR |
+| Worktree workera | `/Users/Shared/sh/wt/NAZWA/NR`, gałąź `task/NR-slug` |
+| Worktree review | `/Users/Shared/sh/wt/NAZWA/review-NR`, odłączony HEAD na commicie PR, bez plików env |
+| Worktree propozycji | `/Users/Shared/sh/wt/NAZWA/sys-propozycje-NR`, gałąź w `sh-system`, usuwany po PR |
 | Panel workera | Karta herdr w workspace `sh` z panelem `worker:NAZWA:NR` |
 | Panel review | Karta z panelem `review:NAZWA:NR`, zamykana po review |
-| Mapa NR → panel | `~/sh/stan/NAZWA.json`, klucz `zadania` (`stop-all` go zachowuje) |
+| Mapa NR → panel | `/Users/Shared/sh/stan/NAZWA.json`, klucz `zadania` (`stop-all` go zachowuje) |
 | Wynik review | Komentarz w PR ze znacznikiem `<!-- shctl:review head=SHA werdykt=... -->` |
 
-Każdy projekt ma własny katalog `~/sh/wt/NAZWA`, więc te same numery issue w różnych projektach się
+Każdy projekt ma własny katalog `/Users/Shared/sh/wt/NAZWA`, więc te same numery issue w różnych projektach się
 nie zderzają. Gdy katalog worktree istnieje, ale nie jest worktree tego repo, komenda odmawia (kod 4) i
-niczego nie nadpisuje. `stop-all` traktuje agenta z katalogiem w `~/sh/wt/NAZWA` jak workera projektu
+niczego nie nadpisuje. `stop-all` traktuje agenta z katalogiem w `/Users/Shared/sh/wt/NAZWA` jak workera projektu
 `NAZWA`, także bez etykiety.
 
 Slug gałęzi to tytuł issue z transliteracją polskich znaków, małe litery, do 40 znaków:
@@ -609,12 +609,12 @@ Tylko czyta. `kandydaci` to otwarte issue `status:todo`, których wszystkie zale
 projekcie trwa już takie zadanie (status inny niż `todo`).
 
 Blokady całego dispatchu (`blokady`): brak wolnego slotu `max_local`, wolne miejsce poniżej
-`min_wolne_gb`, kolejka review pełna (`max_review_queue`), wstrzymanie Claude w `~/sh/limity.md`.
+`min_wolne_gb`, kolejka review pełna (`max_review_queue`), wstrzymanie Claude w `/Users/Shared/sh/limity.md`.
 `gotowe` to kandydaci, gdy blokad nie ma, inaczej pusta lista.
 
 Z `limity.md` liczą się pozycje list i wiersze tabel (bez nagłówka); wpis „brak” nie jest
 wstrzymaniem. Wpis ze słowem „codex” wstrzymuje tylko review, każdy inny wstrzymuje workerów Claude.
-Brak miejsca wysyła `notify.sh high` raz dziennie (znacznik `~/sh/stan/dysk-alarm`, kasowany, gdy
+Brak miejsca wysyła `notify.sh high` raz dziennie (znacznik `/Users/Shared/sh/stan/dysk-alarm`, kasowany, gdy
 miejsce wróci).
 
 ```json
@@ -634,7 +634,7 @@ shctl task dispatch NR
 Przy `status:todo` sprawdza te same warunki co `ready` (własny panel nie zajmuje slotu) i przy
 niespełnionym odmawia kodem 4 z powodem. Potem:
 
-1. worktree `~/sh/wt/NAZWA/NR` na gałęzi `task/NR-slug`: istniejąca gałąź lokalna, zdalna albo nowa od
+1. worktree `/Users/Shared/sh/wt/NAZWA/NR` na gałęzi `task/NR-slug`: istniejąca gałąź lokalna, zdalna albo nowa od
    `origin/main`;
 2. kopia `.env.local` i `env_files` z repo głównego do worktree (prawa `go-rwx`); brak pliku to
    ostrzeżenie;
@@ -642,7 +642,7 @@ niespełnionym odmawia kodem 4 z powodem. Potem:
 4. karta herdr z panelem `worker:NAZWA:NR` i w nim
    `SH_NOTIFY=1 claude --settings .claude/roles/worker/settings.json --model MODEL 'Zrealizuj issue #NR skillem sh-worker.'`;
 5. etykiety `status:in-progress` i `iter:1`;
-6. wpis w `~/sh/stan/NAZWA.json`: panel, etykieta, worktree, gałąź, start, iteracja.
+6. wpis w `/Users/Shared/sh/stan/NAZWA.json`: panel, etykieta, worktree, gałąź, start, iteracja.
 
 Przy `status:in-progress` dokańcza brakujące kroki bez bramek; agenta, który już działa w panelu, nie
 uruchamia drugi raz. Inny status to kod 4. Brak `.claude/roles/worker/settings.json` to kod 3.
@@ -663,21 +663,21 @@ and workspace trust” i „What runs before you trust a folder”) mówi, że:
 - w repo zaufanie dotyczy katalogu głównego repo, a w worktree katalogu głównego głównej kopii;
 - zaufanie można nadać ręcznie: `projects["<katalog główny repo>"].hasTrustDialogAccepted = true` w
   `~/.claude.json`;
-- zaufanie samego katalogu nadrzędnego (np. `~/sh/wt`) nie wystarcza dla repo w środku.
+- zaufanie samego katalogu nadrzędnego (np. `/Users/Shared/sh/wt`) nie wystarcza dla repo w środku.
 
 Dlatego `task dispatch` (i `task iter`, gdy otwiera nowy panel) dopisuje ten wpis dla
-`~/sh/projekty/NAZWA`, jeśli go nie ma. Pozostałe pola pliku zostają, zapis jest atomowy z prawami
+`/Users/Shared/sh/projekty/NAZWA`, jeśli go nie ma. Pozostałe pola pliku zostają, zapis jest atomowy z prawami
 600, a plik, który nie jest poprawnym JSON, daje kod 1 bez zmian. Pole wyniku `zaufanie_dopisane` mówi,
 czy wpis powstał.
 
-Do sprawdzenia w pierwszym prawdziwym dispatchu: czy worker w `~/sh/wt/NAZWA/NR` startuje bez pytania.
+Do sprawdzenia w pierwszym prawdziwym dispatchu: czy worker w `/Users/Shared/sh/wt/NAZWA/NR` startuje bez pytania.
 Dokumentacja nazywa `~/.claude.json` plikiem, który Claude Code zapisuje sam, więc działająca sesja może
 nadpisać wpis starszą kopią; kolejny dispatch dopisze go ponownie. Zaufanie włącza też ustawienia z
 repo (hooki, `env`, pomocnicze komendy), a repo projektów powstają z naszego szablonu.
 
-### Format ~/sh/limity.md
+### Format /Users/Shared/sh/limity.md
 
-Plik prowadzi strażnik limitów `~/sh/bin/sh-watchdog.sh` (A3.7, `docs/serwer.md`, „Strażnik limitów”), a `task ready`, `task dispatch` i `review run` go czytają. Jedna
+Plik prowadzi strażnik limitów `/Users/Shared/sh/bin/sh-watchdog.sh` (A3.7, `docs/serwer.md`, „Strażnik limitów”), a `task ready`, `task dispatch` i `review run` go czytają. Jedna
 aktywna blokada to jedna pozycja listy albo jeden wiersz tabeli; nagłówek tabeli i jej separator się
 nie liczą. Inne linie (tytuł, akapity, komentarze) są ignorowane.
 
@@ -716,7 +716,7 @@ pliki robocze mają w nazwie `ETAP` zamiast `NR`. Kolejno:
 
 1. etykieta `status:review` na issue (tylko review PR), na czas oczekiwania;
 2. przy wstrzymaniu Codexa w `limity.md` koniec z kodem 4: PR czeka w kolejce;
-3. czysty worktree `~/sh/wt/NAZWA/review-NR` na commicie PR (`git fetch origin pull/PR/head`), bez plików
+3. czysty worktree `/Users/Shared/sh/wt/NAZWA/review-NR` na commicie PR (`git fetch origin pull/PR/head`), bez plików
    env; plik `.env*` (poza `.env.example`) w samym PR daje kod 4;
 4. karta z panelem `review:NAZWA:NR` i w nim
    `codex exec -p reviewer -s read-only -m MODEL --output-schema codex/sh-review.schema.json -o ... - < prompt`;
@@ -744,7 +744,7 @@ wymaga nowego review.
 W review etapu `nr` jest `null`, a `etap` to nazwa folderu. `task iter` i `task close` dotyczą tylko
 zadań: iterację etapu podbija orkiestrator w `DoD.md`, a status zmienia `shctl stage`.
 
-Pliki robocze: `~/sh/stan/review/NAZWA-NR/` (prompt, wynik, `codex.log` z wyjściem panelu). Błąd
+Pliki robocze: `/Users/Shared/sh/stan/review/NAZWA-NR/` (prompt, wynik, `codex.log` z wyjściem panelu). Błąd
 Codexa (np. limit) daje kod 1, a issue zostaje w `status:review`.
 
 ```json
@@ -763,10 +763,10 @@ shctl task iter NR
 Tylko po FAIL review dla bieżącego commita otwartego PR; bez takiego wyniku albo przy PASS kod 4.
 Podbija `iter:N` na `iter:N+1`, ustawia `status:in-progress` i wysyła do panelu `worker:NAZWA:NR`
 polecenie: popraw wyłącznie zgłoszenia 🔴 i 🟡 z ostatniego review. Bez panelu otwiera go w
-`~/sh/wt/NAZWA/NR` i uruchamia claude z tym poleceniem.
+`/Users/Shared/sh/wt/NAZWA/NR` i uruchamia claude z tym poleceniem.
 
 Powtórka dla tego samego review nie podbija licznika i nie wysyła polecenia drugi raz (stan w
-`~/sh/stan/NAZWA.json`). FAIL w iteracji 3 wywołuje `shctl escalate --dotyczy "#NR" --powod "3 iteracje
+`/Users/Shared/sh/stan/NAZWA.json`). FAIL w iteracji 3 wywołuje `shctl escalate --dotyczy "#NR" --powod "3 iteracje
 bez PASS"`: wynik ma `"eskalowano":true` i numer eskalacji, a etykieta `iter:3` zostaje.
 
 ### task close
@@ -777,7 +777,7 @@ shctl task close NR
 
 Działa w repo głównym na `main` (inaczej kod 4). Przy otwartym PR merguje (squash,
 `--match-head-commit`) wyłącznie, gdy CI jest zielone (`pass`; `pending`, `fail` i brak kontroli to
-kod 4) i komentarz review dla bieżącego commita ma PASS. Odmawia też, gdy `~/sh/wt/NAZWA/NR` ma
+kod 4) i komentarz review dla bieżącego commita ma PASS. Odmawia też, gdy `/Users/Shared/sh/wt/NAZWA/NR` ma
 niezacommitowane zmiany albo commity spoza PR. Potem, na main po `git pull --ff-only`:
 
 | Źródło | Cel |
@@ -804,7 +804,7 @@ shctl task resume-check NR [--testy "..."] [--bez-testow]
 ```
 
 Stan po przerwie, do decyzji orkiestratora (kontynuuj, rebase i kontynuuj, iteracja od nowa).
-Zwraca: status i iterację z etykiet, panel, a dla `~/sh/wt/NAZWA/NR` gałąź, HEAD, listę niezacommitowanych
+Zwraca: status i iterację z etykiet, panel, a dla `/Users/Shared/sh/wt/NAZWA/NR` gałąź, HEAD, listę niezacommitowanych
 plików, liczbę commitów za i przed `origin/main`, niewypchnięte commity i wynik testów. Komenda testów
 pochodzi z sekcji „Komenda testów” issue albo z `--testy`; uruchamia się w worktree z limitem
 `SHCTL_TEST_TIMEOUT`. Pole `sugestia` to tylko podpowiedź.
@@ -862,5 +862,5 @@ workera wykonuje sam (commit, push, PR), czeka na CI, uruchamia `review run` z p
 `task close`. herdr i claude są atrapami; `SHCTL_E2E_CODEX=atrapa` zastępuje też Codexa.
 
 Każdy test zakłada prywatne repo `sh-test-RRRRMMDD-HHMM` i przed utworzeniem dopisuje je do
-`~/sh/stan/do-usuniecia.md`. Repo usuwa właściciel (`gh repo delete` wymaga zakresu `delete_repo`), a
+`/Users/Shared/sh/stan/do-usuniecia.md`. Repo usuwa właściciel (`gh repo delete` wymaga zakresu `delete_repo`), a
 wiersz z listy zdejmuje kolejny `shctl doctor`.

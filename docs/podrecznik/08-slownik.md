@@ -45,5 +45,5 @@ Wróć do: [[00-start-tutaj]]
 | **Tryb S / M / L** | Skala procesu: S szybki (1–3 zadania), M średni (4–15 zadań), L pełny (etap B, jeszcze niedostępne) |
 | **W-n** | Numer wymagania w specyfikacji, np. `W-3` |
 | **Worker** | Agent realizujący jedno zadanie w osobnej kopii roboczej |
-| **Worktree (kopia robocza)** | Osobny katalog z kopią repo na jednej gałęzi, np. `~/sh/wt/PROJEKT/12`. Dzięki temu workerzy sobie nie przeszkadzają |
+| **Worktree (kopia robocza)** | Osobny katalog z kopią repo na jednej gałęzi, np. `/Users/Shared/sh/wt/PROJEKT/12`. Dzięki temu workerzy sobie nie przeszkadzają |
 | **Zadanie właściciela** | Krok ręczny z planu dla Ciebie: konto, domena, klucz, płatna usługa |

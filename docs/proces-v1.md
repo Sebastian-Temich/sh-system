@@ -75,11 +75,11 @@ Wszystko inne w tym dokumencie to model docelowy, wdrażany w etapie B.
   tylko dla usług (Supabase). Testy E2E: Playwright z własnymi przeglądarkami (chromium + webkit,
   headless).
 - **Polityka instalacji:** zależności projektowe agenci instalują sami; narzędzia z brew też sami,
-  z dopisaniem do `~/sh/Brewfile` (symlink do repo `sh-system`); sudo, ustawienia systemu i Docker Desktop zmienia wyłącznie
+  z dopisaniem do `/Users/Shared/sh/Brewfile` (symlink do repo `sh-system`); sudo, ustawienia systemu i Docker Desktop zmienia wyłącznie
   właściciel.
 - **Hosting produkcji:** domyślnie Vercel + Supabase Cloud (region UE) na kontach klienta. Hosting
   proponuje intake, a właściciel akceptuje.
-- **Supabase local:** jedna instancja na projekt, blok portów z `~/sh/porty.md`. Po wyczerpaniu
+- **Supabase local:** jedna instancja na projekt, blok portów z `/Users/Shared/sh/porty.md`. Po wyczerpaniu
   puli najpierw zwalniamy bloki projektów archiwalnych (`shctl ports release`), a dopiero potem
   sięgamy po kolejny zakres 56X21–56X29. Zadania z migracjami lub resetem bazy mają etykietę
   `db:migracja` i idą pojedynczo w projekcie.
@@ -92,19 +92,19 @@ Wszystko inne w tym dokumencie to model docelowy, wdrażany w etapie B.
   przypięty do wersji z `konfiguracja.md` (1.61.1, ostatnia z działającym WebKit na macOS 14 Intel)
   i działa z `workers: 1`. Narzędzia bez gotowych paczek brew instalujemy jako oficjalne binarki do
   `~/.local/bin` z przypiętą wersją i sumą SHA-256.
-- **Powiadomienia:** `~/sh/bin/notify.sh` (ntfy).
+- **Powiadomienia:** `/Users/Shared/sh/bin/notify.sh` (ntfy).
 
 ## Automatyzacja: CLI shctl
 
-Agent decyduje i pisze treść, a mechanikę wykonuje `~/sh/bin/shctl`. Źródłem skryptów jest repo
-`sh-system`: `~/sh/bin` zawiera tylko symlinki do `scripts/server/` i `scripts/shctl/`, zakładane
+Agent decyduje i pisze treść, a mechanikę wykonuje `/Users/Shared/sh/bin/shctl`. Źródłem skryptów jest repo
+`sh-system`: `/Users/Shared/sh/bin` zawiera tylko symlinki do `scripts/server/` i `scripts/shctl/`, zakładane
 przez `scripts/server/install.sh` (`docs/serwer.md`). shctl odpowiada za:
 zakładanie projektu, dokumenty z szablonów, statusy etapów, issue, worktree, panele herdr, review,
 iteracje, eskalacje, decyzje, porty, status, awaryjny stop.
 
 Wymagania dla komend shctl:
 
-- `shctl doctor` ostrzega o każdym repo w `~/sh/projekty` z lokalnym `core.hooksPath`, bo taki wpis
+- `shctl doctor` ostrzega o każdym repo w `/Users/Shared/sh/projekty` z lokalnym `core.hooksPath`, bo taki wpis
   wyłącza w nim globalny hook `pre-push`.
 
 Projekty SH nie używają hooków git, a lint, formatowanie i testy sprawdza CI. shctl nie instaluje
@@ -322,8 +322,8 @@ wybór jest w docs/konfiguracja.md. Ustawienia per rola w `docs/konfiguracja.md`
 ## Limity subskrypcji
 
 Po wyczerpaniu limitu praca danego wykonawcy jest WSTRZYMANA do odnowienia, bez przenoszenia na inny
-model. Strażnik `~/sh/bin/sh-watchdog.sh` (launchd, bez AI) wykrywa komunikat o limicie, zapisuje
-`~/sh/limity.md` i wysyła powiadomienie.
+model. Strażnik `/Users/Shared/sh/bin/sh-watchdog.sh` (launchd, bez AI) wykrywa komunikat o limicie, zapisuje
+`/Users/Shared/sh/limity.md` i wysyła powiadomienie.
 
 - **Etap A:** wznowienie wywołuje właściciel poleceniem „wznów”.
 - **Etap B:** strażnik wznawia sam.
@@ -355,10 +355,10 @@ staje, gdy na review czeka `max_review_queue` PR (domyślnie 3, w `konfiguracja.
 ## Awaryjny stop
 
 Polecenie właściciela „STOP” (albo `shctl stop-all`) zatrzymuje wszystkich workerów i orkiestratora,
-zachowuje worktree i zapisuje stan w `~/sh/stan/NAZWA.json`.
+zachowuje worktree i zapisuje stan w `/Users/Shared/sh/stan/NAZWA.json`.
 
 Wznowienie: właściciel uruchamia nową sesję orkiestratora (`sh-start.sh` albo `claude` w panelu) i
-pisze „wznów”. Orkiestrator odtwarza stan ze `status.md` i `~/sh/stan/NAZWA.json`. shctl nie wznawia
+pisze „wznów”. Orkiestrator odtwarza stan ze `status.md` i `/Users/Shared/sh/stan/NAZWA.json`. shctl nie wznawia
 sam.
 
 ## Dostępy i środowiska

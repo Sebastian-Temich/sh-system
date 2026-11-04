@@ -11,8 +11,8 @@ Orkiestrator działa na serwerze w panelu herdr i jest połączony przez **Remot
 |---|---|
 | Telefon | Aplikacja Claude → zakładka Code → sesja `sh-orkiestrator` |
 | Laptop | Ta sama sesja na liście sesji Claude Code w przeglądarce (claude.ai/code) |
-| Terminal serwera | `~/sh/bin/sh-start.sh` podłącza herdr; odłączenie: `ctrl+b`, potem `q` |
-| Laptop przez SSH | `ssh` na serwer, potem `~/sh/bin/sh-start.sh`; ścieżka jeszcze nietestowana |
+| Terminal serwera | `/Users/Shared/sh/bin/sh-start.sh` podłącza herdr; odłączenie: `ctrl+b`, potem `q` |
+| Laptop przez SSH | `ssh` na serwer, potem `/Users/Shared/sh/bin/sh-start.sh`; ścieżka jeszcze nietestowana |
 
 To jedna rozmowa, niezależnie od urządzenia. Orkiestrator obsługuje wszystkie projekty naraz, więc
 w poleceniu warto podać nazwę projektu.
@@ -88,7 +88,7 @@ Orkiestrator zapisuje odpowiedź w pliku eskalacji, przywraca poprzedni status z
 dalej. Zgodę na dostęp, koszt albo zakres zapisuje też w `docs/decyzje.md`.
 
 **Sekretów nie wpisuj do czatu.** Klucz testowy wpisujesz sam do `.env.local` w repo projektu na
-serwerze (`~/sh/projekty/NAZWA/.env.local`), a w czacie piszesz tylko „klucz jest w .env.local”.
+serwerze (`/Users/Shared/sh/projekty/NAZWA/.env.local`), a w czacie piszesz tylko „klucz jest w .env.local”.
 
 ## Skrzynka na materiały
 

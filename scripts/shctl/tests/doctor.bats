@@ -43,7 +43,7 @@ MOCK
   git config --global credential.https://github.com.helper "!'$T/mock/gh' auth git-credential"
 }
 
-@test "orkiestrator dziala i ma ~/sh/bin w PATH" {
+@test "orkiestrator dziala i ma /Users/Shared/sh/bin w PATH" {
   run "$SHCTL" doctor --json
   [ "$status" -eq 0 ]
   [ "$(jq -r '.wynik.kontrole | map(select(.nazwa == "orkiestrator"))[0].stan' <<<"$output")" = ok ]
@@ -88,7 +88,7 @@ MOCK
   jq -e '.wynik.kontrole | map(select(.nazwa == "logowanie git"))[0] | .stan == "blad" and (.szczegoly | test("install.sh"))' <<<"$output"
 }
 
-@test "brak ~/sh/bin w PATH orkiestratora: kod 1" {
+@test "brak /Users/Shared/sh/bin w PATH orkiestratora: kod 1" {
   echo "/usr/bin:/bin" >"$T/orch-path"
   run --separate-stderr "$SHCTL" doctor --json
   [ "$status" -eq 1 ]
@@ -250,4 +250,35 @@ MOCK
   touch "$SH_DIR/stan/obsidian-sync.off"
   run --separate-stderr "$SHCTL" doctor
   [[ "$output" == *"wyłączona flagą"* ]] || false
+}
+
+# Claude Code blokuje Write/Edit pod segmentem zakończonym kropką (katalog domowy /Users/sebastiant.).
+# Zmiana SH_DIR psuje atrapę orkiestratora, więc testy patrzą tylko na wpis „katalog SH”.
+@test "katalog SH pod segmentem z kropka na koncu: blad" {
+  mkdir -p "$T/dom./sh"
+  cp -R "$SH_DIR/." "$T/dom./sh/"
+  SH_DIR="$T/dom./sh" run --separate-stderr "$SHCTL" doctor --json
+  jq -e '.wynik.kontrole | map(select(.nazwa == "katalog SH"))[0] | .stan == "blad" and (.szczegoly | test("segment „dom\\.”"))' <<<"$output"
+}
+
+@test "katalog SH przez dowiazanie do sciezki z kropka: blad" {
+  mkdir -p "$T/dom."
+  mv "$SH_DIR" "$T/dom./sh"
+  ln -s "$T/dom./sh" "$SH_DIR"
+  run --separate-stderr "$SHCTL" doctor --json
+  [ "$(jq -r '.wynik.kontrole | map(select(.nazwa == "katalog SH"))[0].stan' <<<"$output")" = blad ]
+}
+
+@test "katalog SH fizyczny z uprawnieniami 700: ok" {
+  fiz="$(cd "$SH_DIR" && pwd -P)"
+  chmod 700 "$fiz"
+  SH_DIR="$fiz" run "$SHCTL" doctor --json
+  jq -e --arg d "$fiz" '.wynik.kontrole | map(select(.nazwa == "katalog SH"))[0] | .stan == "ok" and .szczegoly == $d' <<<"$output"
+}
+
+@test "katalog SH z uprawnieniami 755: uwaga, bez bledu" {
+  fiz="$(cd "$SH_DIR" && pwd -P)"
+  chmod 755 "$fiz"
+  SH_DIR="$fiz" run "$SHCTL" doctor --json
+  jq -e '.wynik.kontrole | map(select(.nazwa == "katalog SH"))[0] | .stan == "uwaga" and (.szczegoly | test("755"))' <<<"$output"
 }

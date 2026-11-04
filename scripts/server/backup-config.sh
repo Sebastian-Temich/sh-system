@@ -1,17 +1,17 @@
 #!/usr/bin/env bash
-# ~/sh/bin/backup-config.sh - archiwum konfiguracji agentow, bez sesji, cache i tokenow.
+# /Users/Shared/sh/bin/backup-config.sh - archiwum konfiguracji agentow, bez sesji, cache i tokenow.
 #
-#   backup-config.sh [katalog_docelowy]     domyslnie ~/sh/backups
+#   backup-config.sh [katalog_docelowy]     domyslnie /Users/Shared/sh/backups
 #
 # Zawiera: ~/.claude (ustawienia, skille, lista pluginow, pamiec projektow),
-# ~/.codex/config.toml, ~/.config/sh, ~/sh/bin, ~/sh/porty.md.
+# ~/.codex/config.toml, ~/.config/sh, /Users/Shared/sh/bin, /Users/Shared/sh/porty.md.
 # Pomija: auth.json, .credentials.json, ~/.claude.json i jego kopie (backups/), historie,
 # sesje, cache. Gdy gitleaks znajdzie sekret, archiwum jest kasowane (kod wyjscia 1).
-# ~/sh/bin to symlinki, wiec tresc skryptow zyje w repo sh-system: niezacommitowane lub
-# niewypchniete zmiany daja ostrzezenie i wpis w ~/sh/logs/backup-config.log.
+# /Users/Shared/sh/bin to symlinki, wiec tresc skryptow zyje w repo sh-system: niezacommitowane lub
+# niewypchniete zmiany daja ostrzezenie i wpis w /Users/Shared/sh/logs/backup-config.log.
 set -euo pipefail
 
-DEST=${1:-$HOME/sh/backups}
+DEST=${1:-${SH_DIR:-/Users/Shared/sh}/backups}
 STAMP=$(date +%Y%m%d-%H%M%S)
 ARCHIVE="$DEST/config-$STAMP.tar.gz"
 
@@ -39,8 +39,9 @@ check_repo() {
 
 # Archiwum zawiera m.in. temat ntfy, wiec tylko dla wlasciciela.
 umask 077
-REPO=${SH_REPO:-$HOME/sh/sh-system}
-LOG=${SH_LOG:-$HOME/sh/logs/backup-config.log}
+SH_DIR=${SH_DIR:-/Users/Shared/sh}
+REPO=${SH_REPO:-$SH_DIR/sh-system}
+LOG=${SH_LOG:-$SH_DIR/logs/backup-config.log}
 mkdir -p "$(dirname "$LOG")"
 check_repo
 command -v gitleaks >/dev/null || die 'brak gitleaks w PATH (nie da sie sprawdzic archiwum)'
@@ -66,9 +67,17 @@ find .claude \( \
 # Z projektow tylko pamiec, bez transkryptow sesji.
 find .claude/projects -type f -path '*/memory/*' -print >>"$LIST" 2>/dev/null || true
 
-for path in .codex/config.toml .config/sh sh/bin sh/porty.md; do
+for path in .codex/config.toml .config/sh; do
   [ -e "$path" ] || { log "UWAGA: brak $path, pomijam"; continue; }
   find "$path" \( -type f -o -type l \) ! -name .DS_Store -print >>"$LIST"
+done
+
+# Katalog SH wprost, nie przez dowiązanie ~/sh: wiersz „-C” w liście zmienia katalog tar (bsdtar i
+# GNU tar), więc w archiwum zostają nazwy NAZWA_SH/bin i NAZWA_SH/porty.md.
+printf -- '-C\n%s\n' "$(dirname "$SH_DIR")" >>"$LIST"
+for path in "$(basename "$SH_DIR")/bin" "$(basename "$SH_DIR")/porty.md"; do
+  [ -e "$(dirname "$SH_DIR")/$path" ] || { log "UWAGA: brak $(dirname "$SH_DIR")/$path, pomijam"; continue; }
+  (cd "$(dirname "$SH_DIR")" && find "$path" \( -type f -o -type l \) ! -name .DS_Store -print) >>"$LIST"
 done
 
 # Bezpiecznik na pliki z poswiadczeniami, takze gdyby pojawily sie w nowych miejscach.
