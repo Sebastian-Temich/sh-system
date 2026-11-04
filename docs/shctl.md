@@ -40,7 +40,8 @@ Komunikaty błędów i ostrzeżenia idą na stderr. Każde wywołanie dopisuje l
 
 shctl commituje w projekcie tylko w `new-project`. Pozostałe komendy zostawiają zmiany w drzewie
 roboczym, a commit na main robi orkiestrator. Wyjątki poza plikami projektu: `task close` commituje
-propozycje w osobnej gałęzi `sh-system` i otwiera PR, a `reset-dryrun` przestawia main `sh-dryrun` na
+propozycje w gałęzi miesiąca `propozycje-RRRR-MM` w `sh-system` (jeden otwarty PR, do którego
+dopisuje), a `reset-dryrun` przestawia main `sh-dryrun` na
 tag (force push). Komendy zmieniające pliki wspólne ostrzegają poza gałęzią `main`.
 
 Zmienne środowiska (dla testów i innego układu):
@@ -510,6 +511,29 @@ shctl skrzynka przyjmij sklep --json
   "przeniesione":[],"pozostawione":[]}}
 ```
 
+## sesja
+
+```sh
+shctl sesja start|stan|koniec [--przejmij] --projekt NAZWA
+```
+
+Jedna sesja orkiestratora prowadzi jeden projekt. Wpis `.sesja` w `/Users/Shared/sh/stan/NAZWA.json`:
+`id` (`CLAUDE_CODE_SESSION_ID`), `pid` (`CLAUDE_PID`), `panel` (`HERDR_PANE_ID`), `od`, `ostatnio`.
+Ta sama sesja to to samo `id` albo ten sam `pid` (sesja po `/clear`), chyba że `pid` to serwer
+`claude remote-control`, wspólny dla jego sesji. Inna sesja jest aktywna, gdy jej proces żyje, a
+`ostatnio` jest młodsze niż `SHCTL_SESJA_MIN` minut (30).
+
+`start` zapisuje wpis; przy innej aktywnej sesji kończy się kodem 4, a z `--przejmij` nadpisuje wpis
+(pole `przejeta_od`). Poza sesją Claude Code (bez `CLAUDE_CODE_SESSION_ID`) to kod 2. `stan` tylko
+czyta, `koniec` usuwa wpis własnej sesji. Komendy orkiestratora (`task`, `review run`, `pr check`,
+`stage`, `reset-dryrun`) odświeżają `ostatnio` własnej sesji, zajmują wolny projekt, a przy innej
+aktywnej sesji wypisują ostrzeżenie i niczego nie przejmują.
+
+```json
+{"ok":true,"komenda":"sesja","dry_run":false,"wynik":{"projekt":"sklep","stan":"wolna","sesja":{
+  "id":"61b0a97e-...","pid":"4827","panel":"w1:p1","od":"2026-11-04T21:30:00Z","ostatnio":"2026-11-04T21:30:00Z"},"zmiana":true}}
+```
+
 ## doctor
 
 ```sh
@@ -554,7 +578,7 @@ do PR z raportem) → `pr check --czekaj` → `review run` → przy FAIL `task i
 |---|---|
 | Worktree workera | `/Users/Shared/sh/wt/NAZWA/NR`, gałąź `task/NR-slug` |
 | Worktree review | `/Users/Shared/sh/wt/NAZWA/review-NR`, odłączony HEAD na commicie PR, bez plików env |
-| Worktree propozycji | `/Users/Shared/sh/wt/NAZWA/sys-propozycje-NR`, gałąź w `sh-system`, usuwany po PR |
+| Worktree propozycji | `/Users/Shared/sh/wt/NAZWA/sys-propozycje-NR`, gałąź `propozycje-RRRR-MM` w `sh-system`, usuwany po pushu |
 | Panel workera | Karta herdr w workspace `sh` z panelem `worker:NAZWA:NR`; po eskalacji `eskalacja:NAZWA:NR` |
 | Panel review | Karta z panelem `review:NAZWA:NR`, zamykana po review |
 | Mapa NR → panel | `/Users/Shared/sh/stan/NAZWA.json`, klucz `zadania` (`stop-all` go zachowuje) |
@@ -865,7 +889,7 @@ niezacommitowane zmiany albo commity spoza PR. Potem, na main po `git pull --ff-
 | Zgłoszenia ⚪ z ostatniego review (komentarz w PR) | `docs/backlog-drobne.md`, źródło `review PR #N` |
 | Czas od dispatchu, iteracje, eskalacje | Wiersz `| #NR tytuł | tryb | czas | 1 | iteracje | eskalacje | PR #N |` na końcu ostatniej tabeli `docs/metryki.md` (w `sh-dryrun`: tabela bieżącego przebiegu) |
 | Tytuł i PR | `- #NR: tytuł (PR #N)` w sekcji „Niewydane” `CHANGELOG.md` |
-| „Propozycje dla systemu” | PR do `sh-system`: gałąź `propozycje/NAZWA-T-NR`, wpis w `docs/propozycje.md` |
+| „Propozycje dla systemu” | Wpis w `docs/propozycje.md` w jednym otwartym PR miesiąca do `sh-system` (gałąź `propozycje-RRRR-MM`, tytuł „Propozycje RRRR-MM”); brak otwartego PR: nowy od `main` |
 
 Pozycje sekcji to punkty listy (z kontynuacją) albo akapity; „brak” jest pomijane. Na końcu usuwa
 worktree, gałąź `task/NR-*` i panel (także `eskalacja:NAZWA:NR`), zamyka issue, zdejmuje etykiety `status:*`, uruchamia

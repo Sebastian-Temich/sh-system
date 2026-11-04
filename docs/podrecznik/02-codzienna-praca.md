@@ -14,8 +14,12 @@ Orkiestrator działa na serwerze w panelu herdr i jest połączony przez **Remot
 | Terminal serwera | `/Users/Shared/sh/bin/sh-start.sh` podłącza herdr; odłączenie: `ctrl+b`, potem `q` |
 | Laptop przez SSH | `ssh` na serwer, potem `/Users/Shared/sh/bin/sh-start.sh`; ścieżka jeszcze nietestowana |
 
-To jedna rozmowa, niezależnie od urządzenia. Orkiestrator obsługuje wszystkie projekty naraz, więc
-w poleceniu warto podać nazwę projektu.
+To jedna rozmowa, niezależnie od urządzenia. **Jedna sesja prowadzi jeden projekt:** podaj jego
+nazwę w pierwszym poleceniu („wznów sh-dryrun”). Bez nazwy, przy kilku projektach, orkiestrator
+zapyta, który projekt prowadzi. Zapisuje to w `/Users/Shared/sh/stan/NAZWA.json` (`shctl sesja`) i
+ostrzega, gdy ten sam projekt prowadzi inna sesja aktywna w ostatnich 30 minutach: wtedy zamknij
+jedną z nich albo napisz „przejmij projekt”. Drugi projekt to osobna sesja Remote Control. „status?”
+bez nazwy nadal pokazuje wszystkie projekty.
 
 W panelu orkiestratora nie wpisuj `exit`. Zamyka sesję i trzeba ją uruchomić ponownie
 ([[07-gdy-cos-nie-dziala#Orkiestrator nie odpowiada]]).

@@ -251,7 +251,8 @@ zamiast czekać na CI. Konflikt rozwiązuje autor gałęzi: `git merge origin/ma
 Worker pisze tylko własne pliki: kod, testy, docs obszaru swojego zadania i raport
 `docs/07-realizacja/T-NR.md` z sekcjami „Decyzje”, „Drobne uwagi” i „Propozycje dla systemu”.
 Orkiestrator przenosi dwie pierwsze do plików wspólnych, a propozycje zbiera do
-`sh-system/docs/propozycje.md` przez PR do `sh-system`. Decyzję o nich podejmuje retro: w etapie A
+`sh-system/docs/propozycje.md` przez jeden otwarty PR miesiąca do `sh-system` (`propozycje-RRRR-MM`;
+`shctl task close` dopisuje do niego kolejne wpisy). Decyzję o nich podejmuje retro: w etapie A
 właściciel przegląda je w retro pilota (prompt ręczny), a od etapu B robi to skill `sh-retro`.
 
 ## Definition of Done
@@ -380,6 +381,11 @@ staje, gdy na review czeka `max_review_queue` PR (domyślnie 3, w `konfiguracja.
   Claude.
 - Orkiestrator po każdym kamieniu milowym zapisuje w `status.md` punkt przekazania i proponuje
   właścicielowi restart sesji (`/clear` + „wznów”). Stan jest w plikach, więc nic nie ginie.
+
+- **Jedna sesja = jeden projekt.** Sesja orkiestratora prowadzi jeden projekt, zapisany przez
+  `shctl sesja start` w `/Users/Shared/sh/stan/NAZWA.json`. Druga aktywna sesja tego projektu (komenda
+  w ostatnich 30 minutach) dostaje odmowę albo ostrzeżenie; przejęcie tylko na polecenie właściciela.
+  Polecenie bez projektu przy kilku projektach: orkiestrator pyta o projekt.
 
 ## Awaryjny stop
 

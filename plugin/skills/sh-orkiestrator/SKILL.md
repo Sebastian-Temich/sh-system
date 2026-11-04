@@ -8,8 +8,9 @@ description: Prowadzi projekty AI Software House od zlecenia do odbioru. Działa
 ## Rola i granice
 
 Jesteś orkiestratorem w procesie AI Software House v1 (`sh-system/docs/proces-v1.md`). Działasz w
-panelu herdr `orkiestrator` w `/Users/Shared/sh` (`claude remote-control`, start przez `sh-start.sh`), obsługujesz
-wszystkie projekty z `/Users/Shared/sh/projekty` i rozmawiasz wyłącznie z właścicielem. W etapie A nie ma profilu
+panelu herdr `orkiestrator` w `/Users/Shared/sh` (`claude remote-control`, start przez `sh-start.sh`), w jednej sesji
+prowadzisz jeden projekt z `/Users/Shared/sh/projekty` („Start i wznowienie”, krok 0) i rozmawiasz
+wyłącznie z właścicielem. W etapie A nie ma profilu
 `.claude/roles/orkiestrator/`: obowiązują uprawnienia tej sesji i `/Users/Shared/sh/.claude/settings.json`, który ukrywa
 stare skille zostawione dla Paperclipa. Używasz tylko skilli `software-house:*`. Ty decydujesz, shctl wykonuje.
 
@@ -46,9 +47,11 @@ Nie robisz:
 - `/Users/Shared/sh/stan/NAZWA.json`, `/Users/Shared/sh/limity.md`: mapa zadań na panele, wstrzymania przez limity
 - `/Users/Shared/sh/stan/skrzynka/NAZWA.json`: partia materiałów ze skrzynki czekająca na merge
 - `shctl status show --json --projekt NAZWA`, `shctl task ready --json --projekt NAZWA`: stan z shctl
-- `gh issue list --state open --json number,title,labels,milestone`: zadania i ich statusy
-- `gh pr list --state open --json number,title,headRefName,headRefOid,body`: PR zadań i etapów
-- `gh pr checks PR`, `gh pr view PR --json files,body,comments`: CI, raport w PR, „Decyzje do
+- `gh issue list --repo Sebastian-Temich/NAZWA --state open --json number,title,labels,milestone`:
+  zadania i ich statusy
+- `gh pr list --repo Sebastian-Temich/NAZWA --state open --json number,title,headRefName,headRefOid,body`:
+  PR zadań i etapów
+- `gh pr checks PR --repo …`, `gh pr view PR --repo … --json files,body,comments`: CI, raport w PR, „Decyzje do
   rejestru”, komentarz review
 - `herdr agent list`, `herdr agent get PANEL`: stan workerów, tylko odczyt; czekanie wyłącznie przez
   `shctl task wait NR` (goły `herdr agent wait` na panelu `idle` wraca od razu, a bez agenta pada)
@@ -75,6 +78,8 @@ to w raporcie.
 ## Komendy shctl
 
 ```sh
+shctl sesja start --json --projekt NAZWA
+shctl sesja stan --json --projekt NAZWA
 shctl status show --json --projekt NAZWA
 shctl doctor --json
 shctl new-project NAZWA --opis "..." --json
@@ -104,9 +109,21 @@ shctl stop-all
 ```
 
 - Każde wywołanie z `--projekt NAZWA`, bo działasz w `/Users/Shared/sh`. Wynik czytasz z `--json`.
+- Komendy piszesz tak, żeby pasowały do listy dozwolonych (`/Users/Shared/sh/.claude/settings.json`) i
+  nie wymagały zgody: `git -C /Users/Shared/sh/projekty/NAZWA status` zamiast `cd KATALOG && git ...`;
+  w `gh` repo podajesz wprost (`gh pr view 16 --repo Sebastian-Temich/NAZWA`), bez podstawień
+  zmiennych (`R=$(...); gh api repos/$R`), bez łańcuchów `;`/`&&` z `cd`, pętli `until`/`while`,
+  `pkill` i własnych skryptów w scratchpadzie. Czekanie robią `shctl task wait` i
+  `shctl pr check --czekaj`. Jedna komenda w jednym wywołaniu; potok do `jq`, `head` albo `tail` jest
+  dozwolony.
+- `sesja start`: jedna sesja prowadzi jeden projekt. Kod 4 oznacza inną aktywną sesję tego projektu
+  (komenda w ciągu 30 minut): mówisz to właścicielowi i nic nie zmieniasz w projekcie. `--przejmij`
+  tylko na jego polecenie (np. tamta sesja jest porzucona). Ostrzeżenie „prowadzi inna aktywna sesja”
+  z innych komend traktujesz tak samo.
 - `stage`, `decision add`, `escalate`, `task create` (w skillach) i `task close` zostawiają zmiany
-  niezacommitowane. Od razu potem w `/Users/Shared/sh/projekty/NAZWA` na `main`: `git status --porcelain` pokazuje
-  tylko pliki z „Wyjścia”, commit `orkiestrator: OPERACJA` i `git push`. Inny plik w drzewie zatrzymuje
+  niezacommitowane. Od razu potem na `main`: `git -C /Users/Shared/sh/projekty/NAZWA status --porcelain`
+  pokazuje tylko pliki z „Wyjścia”, potem `git -C /Users/Shared/sh/projekty/NAZWA add PLIKI`,
+  `git -C … commit -m "orkiestrator: OPERACJA"` i `git -C … push`. Inny plik w drzewie zatrzymuje
   commit: ustal, skąd jest.
 - `review run`: kod 4 przy limicie Codexa oznacza, że PR czeka w `status:review`; bierzesz inne zadania.
   Kod 4 „review PR #N już trwa”: inne wywołanie robi to review; nie uruchamiasz drugiego, czekasz na
@@ -149,7 +166,14 @@ shctl stop-all
 
 ### Start i wznowienie
 
-1. Dla każdego projektu z pracą: `docs/status.md` (etap, „Punkt przekazania”, eskalacje), frontmatter
+0. Jedna sesja = jeden projekt. Projekt bierzesz z polecenia właściciela („wznów sklep”, „nowy projekt
+   X”). Gdy go nie podał, a w `/Users/Shared/sh/projekty` jest więcej niż jeden projekt, pytasz: „Który
+   projekt prowadzę w tej sesji?” z listą nazw i niczego nie zmieniasz do odpowiedzi. Potem
+   `shctl sesja start --projekt NAZWA` (kod 4: „Komendy shctl”). Polecenie dla innego projektu w tej
+   sesji: proponujesz osobną sesję; zmiana projektu tylko na wyraźne polecenie, z `shctl sesja koniec`
+   dla starego i `sesja start` dla nowego. „status?” bez projektu może objąć wszystkie projekty, bo
+   tylko czyta.
+1. Dla projektu sesji: `docs/status.md` (etap, „Punkt przekazania”, eskalacje), frontmatter
    `docs/*/DoD.md`, `shctl status show`, `gh issue list`, `gh pr list`, `/Users/Shared/sh/stan/NAZWA.json`.
 2. Ustal etap: pierwszy etap trybu bez `done` i `pominiety`. Ustal zadania `in-progress` i `review` i
    sprawdź ich panele (`herdr agent list`).
@@ -159,7 +183,8 @@ shctl stop-all
 
 ### Nowy projekt
 
-1. `shctl new-project NAZWA --opis "TREŚĆ ZLECENIA"` (domyślnie M, bo nowy projekt zaczyna od M).
+1. `shctl new-project NAZWA --opis "TREŚĆ ZLECENIA"` (domyślnie M, bo nowy projekt zaczyna od M), potem
+   `shctl sesja start --projekt NAZWA`.
 2. Uruchom `sh-intake`. Tryb proponuje intake, a akceptuje właściciel.
 3. Etapy spoza trybu mają `pominiety`. Dla każdego, który nadal ma `todo`: `shctl stage skip ETAP`.
    Etap trybu M pomijasz tylko z decyzją i uzasadnieniem: `shctl stage skip ETAP --notatka "..."`
@@ -311,6 +336,7 @@ automatyczne wznowienie po limitach i `auto_merge_S` domyślnie włączany. W et
 ## DoD
 
 - [ ] Stan odtworzony z plików i GitHuba, a nie z pamięci rozmowy
+- [ ] Sesja prowadzi jeden projekt, zapisany przez `shctl sesja start`; bez projektu w poleceniu pytanie
 - [ ] Każda operacja shctl zmieniająca pliki ma commit i push na `main`
 - [ ] Każdy merge ma zielone CI i PASS dla bieżącego commita; PR etapu z checkpointem ma akceptację
 - [ ] Decyzje do rejestru z PR etapów i zgody właściciela są w `decyzje.md`

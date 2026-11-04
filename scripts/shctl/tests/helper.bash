@@ -11,7 +11,8 @@ wspolny_setup() {
   mkdir -p "$T"
   export SH_DIR="$T/sh" SH_NOTIFY_CMD="$T/mock/notify" SH_GH_OWNER=test-owner
   export SH_OBSIDIAN_DIR="$T/Obsidian Vault/SH/Projekty"
-  unset SH_CONFIG HERDR_PANE_ID
+  # Testy nie dziedziczą sesji Claude Code, która je uruchamia (shctl sesja).
+  unset SH_CONFIG HERDR_PANE_ID CLAUDE_CODE_SESSION_ID CLAUDE_PID
   export GIT_CONFIG_NOSYSTEM=1 GIT_CONFIG_GLOBAL="$T/gitconfig" HOME="$T/home"
   mkdir -p "$SH_DIR/projekty" "$SH_DIR/logs" "$T/mock" "$T/home"
   git config --global user.name test

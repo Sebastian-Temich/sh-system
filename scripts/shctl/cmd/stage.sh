@@ -125,6 +125,7 @@ komenda_main() {
   NOTATKA="$notatka"
   znajdz_projekt
   sprawdz_etap "$etap"
+  sesja_odswiez
 
   obecny="$(fm_get "$ROOT/docs/$etap/DoD.md" status)"
   cel="$(docelowy_status "$akcja" "$obecny" "$etap")"
