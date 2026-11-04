@@ -23,6 +23,7 @@ Użycie: shctl KOMENDA [argumenty] [--dry-run] [--json] [--projekt NAZWA]
 
   new-project NAZWA [--tryb S|M] [--public] [--opis "..."]
   stage start|review|done|skip|escalate ETAP [--notatka "..."]
+  stage iter ETAP
   doc new ETAP TYP [--tytul "..."] [--rola ROLA] [--nr NR]
   decision add --co "..." --dlaczego "..." --cofniecie "..." [--rola ROLA]
   escalate --dotyczy "#NR|ETAP" --powod "..." --potrzebne "..." [--opcje "A;B"] [--priorytet high] [--akceptacja]
@@ -41,6 +42,9 @@ Użycie: shctl KOMENDA [argumenty] [--dry-run] [--json] [--projekt NAZWA]
   task iter NR
   task close NR
   task resume-check NR [--testy "..."] [--bez-testow]
+  task cancel NR [--powod "..."]
+  task wait NR [--timeout SEKUNDY]
+  pr check PR [--czekaj] [--timeout SEKUNDY]
   review run PR [--timeout SEKUNDY]
   reset-dryrun
 
@@ -55,7 +59,7 @@ shift
 case "$KOMENDA" in
   -h | --help | help) pomoc; exit 0 ;;
   new-project | stage | doc | decision | escalate | ports | status | stop-all | obsidian | doctor) ;;
-  task | review | reset-dryrun | checkpoint | skrzynka) ;;
+  task | review | reset-dryrun | checkpoint | skrzynka | pr) ;;
   *) echo "BŁĄD: nieznana komenda: $KOMENDA (shctl --help)" >&2; exit "$E_UZYCIE" ;;
 esac
 

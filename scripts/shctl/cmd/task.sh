@@ -1,4 +1,4 @@
-# shctl task create|ready|dispatch|iter|close|resume-check (docs/shctl.md, „task”).
+# shctl task create|ready|dispatch|iter|close|resume-check|cancel|wait (docs/shctl.md, „task”).
 # Etap A: każde zadanie ma runner:local i wykonawca:claude, a review robi Codex (shctl review run).
 # shellcheck shell=bash
 
@@ -334,7 +334,7 @@ kopiuj_env() {
 }
 
 task_dispatch() {
-  local nr j st label panele pane stan issues ocena powody br kat env uruchom=0 cmd start zmiana=0 iter zaufanie
+  local nr j st label panele pane stan issues ocena powody br kat env uruchom=0 cmd start zmiana=0 iter zaufanie esk
   argument_nr "$@"
   nr="$NR_ARG"
   zadania_init
@@ -359,7 +359,22 @@ task_dispatch() {
       fi
       zmiana=1
       ;;
-    in-progress) info "#$nr jest w toku: dokańczam dispatch bez ponownych bramek" ;;
+    in-progress)
+      info "#$nr jest w toku: dokańczam dispatch bez bramek zależności"
+      if [ -z "$pane" ]; then
+        # Nowy panel zajmuje slot, więc obowiązują bramki slotów, dysku i limitów (np. po eskalacji).
+        ocena="$(ocen_gotowe "$(wszystkie_issue)" "$panele" "$label")"
+        powody="$(jq -r '.blokady | map(select(.rodzaj != "kolejka_review") | .opis) | join("; ")' <<<"$ocena")"
+        [ -z "$powody" ] || die "$E_ODMOWA" "dispatch #$nr wstrzymany: $powody"
+        esk="$(panel_po_etykiecie "$panele" "$(etykieta_eskalacji "$nr")")"
+        if [ -n "$esk" ]; then
+          krok "panel $esk wraca z eskalacji jako $label"
+          zmiana=1
+          [ "$DRY" -eq 1 ] || herdr pane rename "$esk" "$label" >/dev/null || die "$E_WYKONANIE" "nie można zmienić etykiety panelu $esk"
+          pane="$esk"
+        fi
+      fi
+      ;;
     *) die "$E_ODMOWA" "#$nr ma status $st; dispatch tylko z status:todo" ;;
   esac
 
@@ -517,6 +532,27 @@ dopisz_wiersz() {
   printf '%s\n' "$2" >>"$plik"
 }
 
+# Wiersz zadania na końcu ostatniej tabeli metryk (nagłówek „| Zlecenie |”): w sh-dryrun każdy
+# przebieg ma własną tabelę, a opisy przebiegu pod nią nie przechwytują wierszy. Bez tabeli: koniec pliku.
+dopisz_metryke() {
+  local plik="$1" t
+  [ -f "$plik" ] || die "$E_BRAK" "brak $plik"
+  if ! grep -q '^| Zlecenie |' "$plik"; then
+    dopisz_wiersz "$plik" "$2"
+    return 0
+  fi
+  t="$(tmp_plik)"
+  WIERSZ="$2" awk '
+    { l[NR] = $0 }
+    /^\| Zlecenie \|/ { h = NR }
+    END {
+      k = h
+      while (k < NR && l[k + 1] ~ /^\|/) k++
+      for (i = 1; i <= NR; i++) { print l[i]; if (i == k) print ENVIRON["WIERSZ"] }
+    }' "$plik" >"$t"
+  podmien_plik "$t" "$plik"
+}
+
 przenies_decyzje() {
   local tekst="$1" zr="$2" p d l n=0
   while IFS= read -r l; do
@@ -620,6 +656,9 @@ task_close() {
   if [ "$prst" = OPEN ]; then
     ci="$(gh pr view "$prn" --repo "$SLUG" --json statusCheckRollup | jq -r "$JQ_CI"' ci')" ||
       die "$E_WYKONANIE" "nie można odczytać CI PR #$prn"
+    if [ "$ci" != pass ] && [ "$(mergeable_pr "$prn")" = CONFLICTING ]; then
+      die "$E_ODMOWA" "$(komunikat_konfliktu "$prn" "$(jq -r .headRefName <<<"$pr")")"
+    fi
     [ "$ci" = pass ] || die "$E_ODMOWA" "CI PR #$prn: $ci; merge tylko przy zielonym CI"
     rev="$(review_dla_heada "$prn" "$head")"
     st_rev="$(jq -r '.werdykt // "brak"' <<<"${rev:-null}")"
@@ -673,7 +712,7 @@ task_close() {
         [ -e "$f" ] || continue
         [ "$(fm_get "$f" dotyczy)" != "#$nr" ] || esk=$((esk + 1))
       done
-      dopisz_wiersz "$ROOT_G/docs/metryki.md" "| #$nr $(komorka "$tytul") | $tryb_z | $czas | 1 | $iter | $esk | PR #$prn |"
+      dopisz_metryke "$ROOT_G/docs/metryki.md" "| #$nr $(komorka "$tytul") | $tryb_z | $czas | 1 | $iter | $esk | PR #$prn |"
       metr=true
     fi
     ! wpis_changelog "- #$nr: $(komorka "$tytul") (PR #$prn)" "$nr" || chlog=true
@@ -690,6 +729,7 @@ task_close() {
       while IFS= read -r f; do git -C "$ROOT_G" branch -D "$f" >/dev/null; done
     if herdr workspace list >/dev/null 2>&1; then
       zamknij_panel_etykieta "$label" || bledy=$((bledy + 1))
+      zamknij_panel_etykieta "$(etykieta_eskalacji "$nr")" || bledy=$((bledy + 1))
     else
       uwaga "serwer herdr nie odpowiada; panel $label nie został zamknięty"
     fi
@@ -786,6 +826,155 @@ task_resume_check() {
       sugestia:$r, uwaga:"przerwanie przez limit nie podbija iteracji"}')"
 }
 
+# =========================================================================================
+# task cancel NR [--powod "..."]
+# =========================================================================================
+
+# Anulowanie zadania: issue „not planned”, PR zamknięty z gałęzią, worktree, gałąź lokalna, panele
+# (worker, eskalacja, review) i wpis w stanie usunięte. Scalonego PR nie da się anulować.
+task_cancel() {
+  local nr j pr prn="" prst="" powod="" kat label p panele zam_p='[]' komentarz wt_rev zmiana=0 l
+  local -a reszta=()
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --powod) powod="$(wartosc "$@")"; shift 2 ;;
+      *) reszta+=("$1"); shift ;;
+    esac
+  done
+  argument_nr ${reszta[@]+"${reszta[@]}"}
+  nr="$NR_ARG"
+  zadania_init
+  j="$(issue_json "$nr")"
+  pr="$(pr_zadania "$nr")"
+  if [ -n "$pr" ]; then
+    prn="$(jq -r .number <<<"$pr")"
+    prst="$(jq -r .state <<<"$pr")"
+    [ "$prst" != MERGED ] || die "$E_ODMOWA" "#$nr ma scalony PR #$prn; anulowanie niemożliwe (zmianę cofa nowe zadanie)"
+  fi
+  kat="$WT/$nr"
+  wt_rev="$WT/review-$nr"
+  label="$(etykieta_workera "$nr")"
+  komentarz="Anulowane przez orkiestratora${powod:+: $powod} (shctl task cancel)."
+
+  if [ "$prst" = OPEN ]; then
+    krok "zamknięcie PR #$prn z gałęzią"
+    zmiana=1
+    [ "$DRY" -eq 1 ] || gh pr close "$prn" --repo "$SLUG" --delete-branch --comment "$komentarz" >/dev/null ||
+      die "$E_WYKONANIE" "nie można zamknąć PR #$prn"
+  fi
+  if herdr workspace list >/dev/null 2>&1; then
+    panele="$(panele_herdr)"
+    for l in "$label" "$(etykieta_eskalacji "$nr")" "$(etykieta_review "$nr")"; do
+      p="$(panel_po_etykiecie "$panele" "$l")"
+      [ -n "$p" ] || continue
+      krok "zamknięcie panelu $p ($l)"
+      zmiana=1
+      zam_p="$(jq -c --arg l "$l" '. + [$l]' <<<"$zam_p")"
+      [ "$DRY" -eq 1 ] || herdr pane close "$p" >/dev/null || uwaga "nie zamknięto panelu $p ($l)"
+    done
+  else
+    uwaga "serwer herdr nie odpowiada; panele #$nr zostają"
+  fi
+  for p in "$kat" "$wt_rev"; do
+    worktree_tego_repo "$p" || continue
+    krok "usunięcie worktree $p (bez zachowania zmian)"
+    zmiana=1
+    if [ "$DRY" -eq 0 ]; then
+      git -C "$ROOT_G" worktree remove --force "$p" || die "$E_WYKONANIE" "nie można usunąć worktree $p"
+    fi
+  done
+  if [ "$DRY" -eq 0 ]; then
+    git -C "$ROOT_G" worktree prune
+    git -C "$ROOT_G" for-each-ref --format='%(refname:short)' "refs/heads/task/$nr-*" "refs/heads/task/$nr" |
+      while IFS= read -r p; do git -C "$ROOT_G" branch -D "$p" >/dev/null; done
+  fi
+  if [ "$(jq -r .state <<<"$j")" = OPEN ]; then
+    krok "zamknięcie #$nr jako not planned"
+    zmiana=1
+    if [ "$DRY" -eq 0 ]; then
+      gh issue close "$nr" --repo "$SLUG" --reason "not planned" --comment "$komentarz" >/dev/null ||
+        die "$E_WYKONANIE" "nie można zamknąć #$nr"
+    fi
+  fi
+  if [ "$DRY" -eq 0 ]; then
+    zmien_etykiety "$nr" "$(issue_json "$nr")" "" "$STATUSY"
+    [ "$(stan_zadania "$nr")" = null ] || zmiana=1
+    stan_zapisz "$nr" null
+    rm -rf "${STAN:?}/review/$PROJEKT-$nr"
+    uruchom_sync_status || true
+  fi
+  if [ "$zmiana" -eq 1 ]; then info "#$nr: anulowane"; else info "#$nr: już anulowane"; fi
+  wynik_json "$(jq -nc --argjson n "$nr" --arg p "$prn" --arg ps "$prst" --argjson z "$zmiana" --argjson pa "$zam_p" \
+    --arg o "$powod" --argjson k "$KROKI" \
+    '{nr:$n, pr:(if $p == "" then null else ($p | tonumber) end), pr_zamkniety:($ps == "OPEN"), panele:$pa,
+      powod:(if $o == "" then null else $o end), zmiana:($z == 1), kroki:$k}')"
+}
+
+# =========================================================================================
+# task wait NR [--timeout SEKUNDY]
+# =========================================================================================
+
+# Czekanie na workera z limitem czasu i sprawdzeniem stanu. herdr agent wait na panelu idle wraca
+# od razu, a na panelu bez agenta pada, więc najpierw stan, a czekamy tylko na pracującego agenta.
+# Wynik: gotowe (PR z raportem), idle, blocked, brak_agenta, brak_panelu albo pracuje (limit czasu).
+task_wait() {
+  local nr timeout=600 t=0 label pr prn="" raport=false st="" p a krok_s start_s
+  local -a reszta=()
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --timeout) timeout="$(wartosc "$@")"; shift 2 ;;
+      *) reszta+=("$1"); shift ;;
+    esac
+  done
+  argument_nr ${reszta[@]+"${reszta[@]}"}
+  nr="$NR_ARG"
+  timeout="$(numer "$timeout")"
+  zadania_init
+  herdr_dziala
+  label="$(etykieta_workera "$nr")"
+  start_s="$(date +%s)"
+  while :; do
+    pr="$(pr_zadania "$nr")"
+    prn=""
+    raport=false
+    if [ -n "$pr" ] && [ "$(jq -r .state <<<"$pr")" = OPEN ]; then
+      prn="$(jq -r .number <<<"$pr")"
+      if gh pr view "$prn" --repo "$SLUG" --json files 2>/dev/null |
+        jq -e --arg f "docs/07-realizacja/T-$nr.md" 'any((.files // [])[]; .path == $f)' >/dev/null; then
+        raport=true
+      fi
+    fi
+    if [ "$raport" = true ]; then st=gotowe; break; fi
+    p="$(jq -c --arg l "$label" '[.[] | select(.label == $l)][0] // null' <<<"$(panele_herdr)")"
+    if [ "$p" = null ]; then st=brak_panelu; break; fi
+    a="$(jq -r '.agent_status // ""' <<<"$p")"
+    case "$(jq -r '.agent // ""' <<<"$p")/$a" in
+      /*) st=brak_agenta; break ;;
+      */idle | */done) st=idle; break ;;
+      */blocked) st=blocked; break ;;
+    esac
+    t=$(($(date +%s) - start_s))
+    if [ "$t" -ge "$timeout" ]; then st=pracuje; break; fi
+    krok_s=$((timeout - t))
+    [ "$krok_s" -le "${SHCTL_WAIT_KROK:-60}" ] || krok_s="${SHCTL_WAIT_KROK:-60}"
+    # Błąd agent wait (agent zniknął) rozstrzyga następny obieg; pauza chroni przed pętlą bez czekania.
+    z_limitem $((krok_s + 10)) herdr agent wait "$(jq -r .pane_id <<<"$p")" --timeout "$((krok_s * 1000))" >/dev/null 2>&1 ||
+      sleep "${SHCTL_WAIT_PAUZA:-5}"
+  done
+  t=$(($(date +%s) - start_s))
+  case "$st" in
+    gotowe) krok_s="shctl pr check $prn --czekaj" ;;
+    idle) krok_s="agent czeka bez PR z raportem: polecenie dokończenia (herdr agent prompt)" ;;
+    blocked) krok_s="agent pyta albo czeka na zgodę: herdr agent read, pytanie do właściciela w statusie" ;;
+    brak_agenta | brak_panelu) krok_s="shctl task resume-check $nr, potem shctl task dispatch $nr" ;;
+    pracuje) krok_s="worker pracuje: ponów shctl task wait $nr" ;;
+  esac
+  info "#$nr: $st po ${t} s; dalej: $krok_s"
+  wynik_json "$(jq -nc --argjson n "$nr" --arg s "$st" --arg p "$prn" --argjson r "$raport" --argjson t "$t" --arg k "$krok_s" \
+    '{nr:$n, stan:$s, pr:(if $p == "" then null else ($p | tonumber) end), raport:$r, czekano_s:$t,
+      limit_czasu:($s == "pracuje"), nastepny_krok:$k}')"
+}
+
 komenda_main() {
   local a poprz=""
   local -a reszta=()
@@ -793,7 +982,7 @@ komenda_main() {
   SUB=""
   for a in "$@"; do
     case "$poprz" in
-      --projekt | --plik | --testy) reszta+=("$a") ;;
+      --projekt | --plik | --testy | --powod | --timeout) reszta+=("$a") ;;
       *)
         if [ -z "$SUB" ] && [ "${a#-}" = "$a" ]; then SUB="$a"; else reszta+=("$a"); fi
         ;;
@@ -808,6 +997,8 @@ komenda_main() {
     iter) task_iter "$@" ;;
     close) task_close "$@" ;;
     resume-check) task_resume_check "$@" ;;
-    *) die "$E_UZYCIE" "użycie: shctl task create|ready|dispatch|iter|close|resume-check (shctl --help)" ;;
+    cancel) task_cancel "$@" ;;
+    wait) task_wait "$@" ;;
+    *) die "$E_UZYCIE" "użycie: shctl task create|ready|dispatch|iter|close|resume-check|cancel|wait (shctl --help)" ;;
   esac
 }

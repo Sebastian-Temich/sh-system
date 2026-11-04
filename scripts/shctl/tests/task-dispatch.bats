@@ -64,12 +64,13 @@ WT() { echo "$SH_DIR/wt/demo/$1"; }
   [ ! -e "$(WT 12)" ]
 }
 
-@test "dispatch: max_local liczony z workerow wszystkich projektow" {
+@test "dispatch: globalny max_local liczony z workerow wszystkich projektow" {
   panel w1:p5 worker:inny:4 claude
+  panel w1:p6 worker:inny:5 claude
   issue 12 "Zadanie" "status:todo"
   run --separate-stderr "$SHCTL" task dispatch 12
   [ "$status" -eq 4 ]
-  [[ "$stderr" == *"max_local=1"* ]] || false
+  [[ "$stderr" == *"max_local=2"* ]] || false
   [ ! -s "$CLAUDE_ATRAPA/calls" ]
 }
 

@@ -56,7 +56,27 @@ Zadanie trzy razy nie przeszło review. Etykieta `iter:3` zostaje, a zadania nie
    - „E-004: zgłoszenie o walidacji jest słuszne, popraw tylko je”;
    - „E-004: podziel zadanie na dwa mniejsze”;
    - „E-004: wytnij funkcję eksportu z zakresu, przenieś do backlogu”.
-3. Orkiestrator zamyka eskalację Twoją odpowiedzią i działa według niej.
+3. Orkiestrator zamyka eskalację Twoją odpowiedzią i działa według niej. Odpowiedź „zadanie
+   niewykonalne” albo „rezygnujemy” kończy zadanie przez `shctl task cancel` (issue „not planned”).
+
+Eskalowane zadanie nie zajmuje miejsca workera: w tym czasie startują inne zadania. Jego panel w herdr
+ma etykietę `eskalacja:PROJEKT:NR` i możesz go przeczytać.
+
+## PR bez CI, „konflikt z main”
+
+**Objaw:** PR długo bez wyniku CI, w statusie „konflikt z main”.
+
+GitHub nie uruchamia CI dla PR z konfliktem. Orkiestrator sprawdza to przed czekaniem na CI
+(`shctl pr check`) i zleca autorowi gałęzi rozwiązanie konfliktu (`git merge origin/main`). Nic nie
+robisz, chyba że konflikt wraca: wtedy orkiestrator eskaluje.
+
+## Czerwone CI mimo poprawek
+
+**Objaw:** zadanie wraca do review z czerwonym CI albo przychodzi eskalacja „czerwone CI”.
+
+Worker naprawia czerwone CI najwyżej 2 razy. Potem orkiestrator decyduje: przyczyna w kodzie zadania
+idzie do review (i zwykłych iteracji), przyczyna poza zadaniem (środowisko, sekret, CI szablonu) do
+eskalacji. Merge nadal wymaga zielonego CI.
 
 ## Czerwone CI
 

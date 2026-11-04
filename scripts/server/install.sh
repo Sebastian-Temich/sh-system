@@ -6,6 +6,7 @@
 # orkiestrator-settings.json do /Users/Shared/sh/.claude/settings.json. Zwykly plik zastepuje tylko, gdy jest identyczny
 # z repo. Roznica to blad: nowsze zmiany trzeba najpierw przeniesc do repo.
 # Wzorce straznika limitow: kopia scripts/server/watchdog-wzorce.txt do /Users/Shared/sh, tylko gdy jej brak.
+# Konfiguracja Maca (max_local): kopia scripts/server/konfiguracja-sh.md do /Users/Shared/sh/konfiguracja.md, gdy jej brak.
 # Plisty: scripts/server/*.plist kopiuje do ~/Library/LaunchAgents tylko przy roznicy
 # i przeladowuje agenta. Niezaladowanego agenta laduje zawsze, takze bez zmiany plisty.
 # Agent z RunAtLoad wystartuje wtedy ponownie. Nieudany bootstrap to kod bledu, komenda
@@ -171,6 +172,15 @@ elif cmp -s "$wzorce" "$REPO/scripts/server/watchdog-wzorce.txt"; then
   echo "ok:      $wzorce"
 else
   echo "UWAGA:   $wzorce rozni sie od scripts/server/watchdog-wzorce.txt (poprawki warto przeniesc do repo)" >&2
+fi
+
+# Konfiguracja Maca: limit workerów wspólny dla projektów. Wartość ustawia właściciel na serwerze.
+konf_sh="$SH_DIR/konfiguracja.md"
+if [ ! -e "$konf_sh" ]; then
+  cp "$REPO/scripts/server/konfiguracja-sh.md" "$konf_sh"
+  echo "kopia:   $konf_sh"
+else
+  echo "ok:      $konf_sh"
 fi
 
 # Profil Codex dla shctl review run (codex exec -p reviewer): tylko odczyt, model reviewera.

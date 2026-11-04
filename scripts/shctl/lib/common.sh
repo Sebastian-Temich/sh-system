@@ -17,6 +17,7 @@ SH_CONFIG="${SH_CONFIG:-$HOME/.config/sh/config}"
 PROJEKTY="$SH_DIR/projekty"
 PORTY="$SH_DIR/porty.md"
 LIMITY="$SH_DIR/limity.md"
+KONFIG_SH="$SH_DIR/konfiguracja.md"
 STAN="$SH_DIR/stan"
 LOG="$SH_DIR/logs/shctl.log"
 

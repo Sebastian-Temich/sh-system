@@ -1,5 +1,5 @@
 # shctl stop-all [--projekt NAZWA]: awaryjny stop (proces-v1.md, „Awaryjny stop”).
-# Panele: worker:NAZWA:NR, review:NAZWA:NR, qa:NAZWA:NR, agent z katalogiem w projekty/NAZWA lub wt/NAZWA,
+# Panele: worker:NAZWA:NR, review:NAZWA:NR, qa:NAZWA:NR, eskalacja:NAZWA:NR, agent z katalogiem w projekty/NAZWA lub wt/NAZWA,
 # orkiestrator:NAZWA oraz wspólny „orkiestrator”. Bez --projekt zatrzymuje wszystko.
 # Z --projekt tylko ten projekt: wspólny orkiestrator obsługuje też inne projekty i zostaje.
 # Panel „powloka” i panele bez agenta nie są ruszane. Worktree zostają. shctl nie wznawia sam.
@@ -18,11 +18,11 @@ wszystkie_panele() {
       rodzaj: (
         if .l == "orkiestrator" then "orkiestrator"
         elif (.l | test("^orkiestrator:")) then "orkiestrator"
-        elif (.l | test("^(worker|review|qa):")) then "worker"
+        elif (.l | test("^(worker|review|qa|eskalacja):")) then "worker"
         elif .l != "powloka" and (.agent // "") != "" and ((.kat | startswith($r)) or (.kat | startswith($wt))) then "worker"
         else "inny" end),
       projekt: (
-        if (.l | test("^(worker|review|qa|orkiestrator):")) then (.l | split(":")[1])
+        if (.l | test("^(worker|review|qa|eskalacja|orkiestrator):")) then (.l | split(":")[1])
         elif (.kat | startswith($r)) then (.kat | ltrimstr($r) | split("/")[0])
         elif (.kat | startswith($wt)) then (.kat | ltrimstr($wt) | split("/")[0])
         else "" end)

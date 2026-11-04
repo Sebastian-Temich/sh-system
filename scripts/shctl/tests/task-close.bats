@@ -113,3 +113,15 @@ pass() {
   [ -z "$(git status --porcelain)" ]
   [ -d "$SH_DIR/wt/demo/12" ]
 }
+
+@test "close: wiersz metryk trafia do tabeli ostatniego przebiegu, nie pod jej opis" {
+  printf '\n## Przebieg dryrun 2 (2026-11-04)\n\n| Zlecenie | Tryb | Czas | Zadania | Iteracje | Eskalacje | Uwagi |\n|---|---|---|---|---|---|---|\n| #3 Stare | M | 1min | 1 | 1 | 0 | PR #4 |\n\nWnioski przebiegu.\n' >>docs/metryki.md
+  git commit -qam metryki && git push -q origin main
+  pass
+  run --separate-stderr "$SHCTL" task close 12
+  echo "$output $stderr"
+  [ "$status" -eq 0 ]
+  [[ "$(grep -A1 '^| #3 Stare' docs/metryki.md | tail -1)" == "| #12 Zadanie 12 |"* ]] || false
+  [ "$(tail -1 docs/metryki.md)" = "Wnioski przebiegu." ]
+  [ "$(grep -c '^| #12 ' docs/metryki.md)" -eq 1 ]
+}

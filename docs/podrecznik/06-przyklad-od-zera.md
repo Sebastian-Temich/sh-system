@@ -161,7 +161,7 @@ wszystkim innym). Worker w panelu `worker:strona-firmowa:5` pisze kod i testy, o
   czas do `metryki.md`;
 - **FAIL:** `shctl task iter 5`: worker poprawia wyłącznie zgłoszenia 🔴 i 🟡.
 
-W pilocie naraz pracuje jeden worker (`max_local: 1`). Nic tu od Ciebie nie zależy.
+Naraz pracują najwyżej dwaj workerzy na całym Macu (`max_local: 2` w `/Users/Shared/sh/konfiguracja.md`). Nic tu od Ciebie nie zależy.
 
 ### Powiadomienia, które mogą przyjść
 

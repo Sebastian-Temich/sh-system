@@ -92,13 +92,13 @@ to w raporcie.
 
 Brak. Reviewer nie wywołuje shctl: Codexa uruchamia orkiestrator przez `shctl review run PR`, a po
 werdykcie orkiestrator wywołuje `shctl task iter NR` albo `shctl task close NR` (review PR) lub
-`shctl stage` i podbija `iteracja` w `DoD.md` (review etapu).
+`shctl stage iter ETAP`, który podbija `iteracja` w `DoD.md` na `main` (review etapu).
 
 ## Procedura
 
 1. Ustal tryb, iterację i commit. Gałąź `stage/ETAP` bez `Closes #NR` to review etapu, inaczej review
    PR. Iteracja `N` pochodzi z kontekstu shctl albo z etykiety `iter:N` issue (review PR) lub pola
-   `iteracja` w `docs/ETAP/DoD.md` na commicie PR (review etapu); 0 traktujesz jak 1. Review dotyczy
+   `iteracja` w `docs/ETAP/DoD.md` na `main` (review etapu); 0 traktujesz jak 1. Review dotyczy
    commita `headRefOid`; w Claude Code czytasz pliki z tego commita (`git fetch origin pull/PR/head`,
    potem `git show SHA:ŚCIEŻKA` albo worktree na tym commicie).
 2. Przeczytaj źródła z „Wejścia” dla swojego trybu.
@@ -173,8 +173,11 @@ werdykcie orkiestrator wywołuje `shctl task iter NR` albo `shctl task close NR`
 
 ### Review etapu
 
-1. `docs/ETAP/DoD.md`: frontmatter (`etap` równy folderowi, `status`, `iteracja`), każde zaznaczone
-   pole naprawdę spełnione przez dokumenty, każde puste pole wyjaśnione notatką. Pola z bloku
+1. `docs/ETAP/DoD.md`: frontmatter (`etap` równy folderowi; `status` i `iteracja` zmienia tylko shctl na
+   `main`, więc zmiana frontmattera na gałęzi etapu to 🟡), każde zaznaczone pole naprawdę spełnione
+   przez dokumenty, każde puste pole wyjaśnione notatką. Pole „nie dotyczy” (`- [-] ... (nie dotyczy:
+   powód)`) przyjmujesz tylko z prawdziwym powodem (np. E2E w bibliotece bez UI); fałszywy powód to 🟡.
+   Pola z bloku
    `tylko-tryb:L` pomijasz poza trybem L. Pól Checkpointu (review, akceptacja właściciela) autor nie
    zaznacza.
 2. Dokumenty etapu: kompletne według „Kryteriów review” skilla etapu, sprawdzalne, bez placeholderów.

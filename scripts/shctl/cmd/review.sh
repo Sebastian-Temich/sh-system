@@ -30,6 +30,31 @@ sprzatanie_review() {
   REVIEW_KAT=""
 }
 
+# Jedno review naraz dla PR: drugie wywołanie (np. orkiestrator po /clear) kończy się odmową, zamiast
+# uruchamiać drugiego Codexa na tym samym commicie. Blokada z PID; martwy PID to pozostałość.
+REVIEW_BLOKADA=""
+zablokuj_review() {
+  local k="$1" pid
+  mkdir -p "$(dirname "$k")"
+  if ! mkdir "$k" 2>/dev/null; then
+    pid="$(cat "$k/pid" 2>/dev/null || true)"
+    if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
+      die "$E_ODMOWA" "review PR #$2 już trwa (shctl PID $pid, od $(cat "$k/od" 2>/dev/null || echo '?')); poczekaj na jego wynik"
+    fi
+    rm -rf "$k"
+    mkdir "$k" || die "$E_WYKONANIE" "nie można założyć blokady $k"
+  fi
+  echo "$$" >"$k/pid"
+  teraz_utc >"$k/od"
+  REVIEW_BLOKADA="$k"
+}
+
+koniec_review() {
+  sprzatanie_review
+  [ -z "$REVIEW_BLOKADA" ] || rm -rf "$REVIEW_BLOKADA"
+  REVIEW_BLOKADA=""
+}
+
 # Prompt Codexa generowany ze skilla sh-review przez scripts/sync-codex.sh.
 prompt_review() {
   local plik="$KODEKS_DIR/sh-review.md"
@@ -44,11 +69,15 @@ poprzednie_review() {
     | last // empty | gsub("\n<!-- shctl:review-dane [A-Za-z0-9+/=]+ -->\n?"; "\n")'
 }
 
-# Iteracja etapu z frontmattera docs/ETAP/DoD.md na commicie PR; 0, gdy brak.
+# Iteracja etapu: frontmatter docs/ETAP/DoD.md na main (shctl stage iter), a dla gałęzi sprzed tej
+# zmiany większa z wartości na main i na commicie PR; 0, gdy brak.
 iteracja_etapu() {
-  local v
-  v="$(git -C "$ROOT_G" show "$1:docs/$2/DoD.md" 2>/dev/null | yq --front-matter=extract '.iteracja // 0' 2>/dev/null || true)"
-  case "$v" in "" | *[!0-9]*) printf 0 ;; *) printf '%s' "$v" ;; esac
+  local a b
+  a="$(yq --front-matter=extract '.iteracja // 0' "$ROOT_G/docs/$2/DoD.md" 2>/dev/null || true)"
+  b="$(git -C "$ROOT_G" show "$1:docs/$2/DoD.md" 2>/dev/null | yq --front-matter=extract '.iteracja // 0' 2>/dev/null || true)"
+  case "$a" in "" | *[!0-9]*) a=0 ;; esac
+  case "$b" in "" | *[!0-9]*) b=0 ;; esac
+  if [ "$a" -ge "$b" ]; then printf '%s' "$a"; else printf '%s' "$b"; fi
 }
 
 # Treść promptu: szablon i kontekst PR. Issue i poprzednie review są danymi, w blokach tekstu.
@@ -163,11 +192,14 @@ review_run() {
     fi
     wymagaj codex
     herdr_dziala
+    zablokuj_review "$STAN/review/$PROJEKT-pr$prn.lock" "$prn"
+    PRZY_WYJSCIU=koniec_review
+    # Wynik mógł powstać, gdy czekaliśmy na blokadę: wtedy go nie powtarzamy.
+    [ -z "$(review_dla_heada "$prn" "$head")" ] || die "$E_ODMOWA" "review PR #$prn dla ${head:0:7} właśnie się zakończyło; ponów komendę po wynik"
     sprawdz_wolny_katalog "$kat"
     mkdir -p "$dir" "$WT"
     rm -f "$dir/rc" "$dir/rc.tmp" "$dir/wynik.json"
     REVIEW_LOG="$dir/codex.log"
-    PRZY_WYJSCIU=sprzatanie_review
 
     # Czysty worktree na commicie PR: bez plików env, bez node_modules.
     z_limitem 120 git -C "$ROOT_G" fetch -q origin "pull/$prn/head" 2>/dev/null ||
@@ -221,7 +253,7 @@ review_run() {
     wynik="$(jq -c --arg w "$werdykt" --arg h "$head" '. + {werdykt: $w, head: $h}' <<<"$wynik")"
     printf '%s\n' "$wynik" >"$dir/$head.json"
     PRZY_WYJSCIU=""
-    sprzatanie_review
+    koniec_review
   fi
 
   werdykt="$(jq -r .werdykt <<<"$wynik")"

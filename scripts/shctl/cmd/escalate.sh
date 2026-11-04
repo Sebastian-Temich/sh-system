@@ -3,7 +3,37 @@
 # „Czeka na Twoją akceptację: PROJEKT / podniesienie trybu” zamiast „Eskalacja E-NNN: PROJEKT”.
 # shctl escalate close E-NNN --odpowiedz "..."
 # Stan eskalacji jest w jej frontmatterze: status, poprzedni_status, powiadomiono.
+# Wywołanie z worktree (worker, skill etapu) zapisuje w głównej kopii projektu na main, nigdy w
+# worktree: jedna numeracja E-NNN dla projektu, commit robi orkiestrator. Eskalacja zadania zwalnia
+# slot workera (panel dostaje etykietę eskalacja:NAZWA:NR).
 # shellcheck shell=bash
+
+# shellcheck source=../lib/zadania.sh
+. "$SHCTL_DIR/lib/zadania.sh"
+
+Z_WORKTREE=""
+
+# Pliki eskalacji zawsze w głównej kopii projektu (katalog wspólnego .git), na gałęzi main.
+uzyj_glownej_kopii() {
+  local w g
+  w="$(git -C "$ROOT" rev-parse --path-format=absolute --git-common-dir 2>/dev/null || true)"
+  [ -n "$w" ] || return 0
+  w="$(dirname "$w")"
+  if [ "$w" != "$ROOT" ]; then
+    [ -f "$w/docs/konfiguracja.md" ] || die "$E_BRAK" "brak głównej kopii projektu $w"
+    Z_WORKTREE="$ROOT"
+    ROOT="$w"
+    KONFIG="$ROOT/docs/konfiguracja.md"
+    ST="$ROOT/docs/status.md"
+    g="$(git -C "$ROOT" symbolic-ref --short -q HEAD 2>/dev/null || true)"
+    [ "$g" = main ] || die "$E_ODMOWA" "główna kopia $ROOT jest na gałęzi ${g:-(odłączony HEAD)}, nie na main; eskalację zapisuje orkiestrator na main"
+  fi
+}
+
+blokada_eskalacji() {
+  [ "$DRY" -eq 0 ] || return 0
+  zablokuj "$(git -C "$ROOT" rev-parse --path-format=absolute --git-common-dir)/shctl-escalate.lock"
+}
 
 kat_esk() { echo "$ROOT/docs/07-realizacja/escalations"; }
 
@@ -110,6 +140,8 @@ otworz() {
     die "$E_UZYCIE" "wymagane: --dotyczy, --powod, --potrzebne"
   case "$priorytet" in min | default | high | urgent) ;; *) die "$E_UZYCIE" "nieznany priorytet: $priorytet" ;; esac
   znajdz_projekt
+  uzyj_glownej_kopii
+  blokada_eskalacji
   case "$dotyczy" in
     \#*)
       nr="${dotyczy#\#}"
@@ -173,10 +205,17 @@ otworz() {
       fm_set "$plik" powiadomiono tak
     fi
   fi
+  if [ -n "$nr" ]; then
+    SLOT_PANEL="$(zwolnij_slot "$nr")"
+    [ -z "$SLOT_PANEL" ] || info "panel $SLOT_PANEL: etykieta $(etykieta_eskalacji "$nr"), slot workera wolny"
+  fi
 
   if [ "$nowa" -eq 1 ]; then info "$id: eskalacja otwarta ($dotyczy)"; else info "$id: eskalacja już otwarta ($dotyczy)"; fi
+  [ -z "$Z_WORKTREE" ] || info "zapisano w $ROOT (main), nie w worktree; commit robi orkiestrator"
   wynik_json "$(jq -nc --arg i "$id" --arg d "$dotyczy" --arg p "${plik#"$ROOT"/}" --argjson n "$nowa" \
-    '{id:$i, dotyczy:$d, plik:$p, nowa:($n == 1)}')"
+    --arg k "$ROOT" --arg w "$Z_WORKTREE" --arg s "${SLOT_PANEL:-}" \
+    '{id:$i, dotyczy:$d, plik:$p, katalog:$k, z_worktree:($w != ""), nowa:($n == 1),
+      slot_zwolniony:($s != ""), panel:(if $s == "" then null else $s end)}')"
 }
 
 zamknij() {
@@ -199,6 +238,7 @@ zamknij() {
   case "${id#E-}" in *[!0-9]*) die "$E_UZYCIE" "niepoprawny numer: $id" ;; esac
   [ -n "$odp" ] || die "$E_UZYCIE" "wymagane: --odpowiedz"
   znajdz_projekt
+  uzyj_glownej_kopii
   plik="$(kat_esk)/$id.md"
   [ -f "$plik" ] || die "$E_BRAK" "brak eskalacji $id"
 

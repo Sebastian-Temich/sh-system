@@ -237,3 +237,13 @@ globalny_hooks_path() {
   [[ "$output" == *"ok:      git credential helper (gh)"* ]] || false
   [ "$(GIT_CONFIG_NOSYSTEM=1 GIT_CONFIG_GLOBAL="$T/gitconfig" git config --global --get-all credential.https://github.com.helper | wc -l | tr -d ' ')" -eq 2 ]
 }
+
+@test "konfiguracja Maca: kopia z max_local 2 gdy brak, wartosc wlasciciela zostaje" {
+  install
+  [ "$status" -eq 0 ]
+  grep -qx 'max_local: 2' "$T/sh/konfiguracja.md"
+  sed -i.bak 's/^max_local: 2$/max_local: 1/' "$T/sh/konfiguracja.md"
+  install
+  [ "$status" -eq 0 ]
+  grep -qx 'max_local: 1' "$T/sh/konfiguracja.md"
+}

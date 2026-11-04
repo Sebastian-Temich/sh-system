@@ -31,17 +31,80 @@ otwarte() { jq -r '[.[] | select(.state == "OPEN") | .number] | join(",")' "$GH_
   [ "$(jq -r '.[] | select(.number == 9) | .state' "$GH_ATRAPA/prs.json")" = CLOSED ]
   [ "$(jq -r '.[] | select(.number == 1) | .stateReason' "$GH_ATRAPA/issues.json")" = NOT_PLANNED ]
   jq -r '.[] | select(.number == 1) | .body' "$GH_ATRAPA/issues.json" | grep -q 'shctl:archiwum-id=D1'
-  [ "$(git rev-parse main)" = "$BASE" ]
-  [ "$(git -C "$T/remote.git" rev-parse main)" = "$BASE" ]
+  [ "$(git rev-parse main^)" = "$BASE" ]
+  git diff --quiet "$BASE" main -- . ':(exclude)docs/metryki.md' ':(exclude)docs/06-zadania/index.md' ':(exclude)docs/status.md'
   [ ! -e "$SH_DIR/wt/demo/1" ]
   [ -z "$(git branch --list 'task/*')" ]
   [ "$(etykiety_paneli)" = "" ]
   [ "$(otwarte)" = "10,11" ]
   [ "$(jq -r '.wynik.mapa.D1, .wynik.mapa.D2' <<<"$output" | tr '\n' ' ')" = "10 11 " ]
   [ "$(jq -r '.zadania | length' "$SH_DIR/stan/demo.json")" -eq 0 ]
-  git checkout -q -- . && git clean -fdq
+  [ -z "$(git status --porcelain)" ]
+  [ "$(git rev-parse main)" = "$(git -C "$T/remote.git" rev-parse main)" ]
+  [ "$(git log -1 --format=%s main)" = "reset-dryrun: przebieg 1 od baseline ${BASE:0:7}" ]
   run --separate-stderr "$SHCTL" reset-dryrun --json
   [ "$(jq -r .wynik.zmiana <<<"$output")" = false ]
+}
+
+@test "reset-dryrun: archiwizuje znacznik w zamknietym issue, usuwa galezie stage/* i task/*" {
+  zamknij_issue 1
+  git branch stage/08-qa && git branch task/7-stare
+  run --separate-stderr "$SHCTL" reset-dryrun --json
+  echo "$output $stderr"
+  [ "$status" -eq 0 ]
+  [ "$(jq -r '.wynik.zarchiwizowane | join(",")' <<<"$output")" = "1,2" ]
+  [ "$(jq -r '.wynik.zamkniete_issue | join(",")' <<<"$output")" = 2 ]
+  jq -r '.[] | select(.number == 1) | .body' "$GH_ATRAPA/issues.json" | grep -q 'shctl:archiwum-id=D1'
+  [ "$(jq -r '.wynik.mapa.D1, .wynik.mapa.D2' <<<"$output" | tr '\n' ' ')" = "3 4 " ]
+  [ -z "$(git branch --list 'stage/*' 'task/*')" ]
+}
+
+@test "reset-dryrun: metryki przechodza przez reset, nowy przebieg dostaje wlasna tabele" {
+  printf '\n## Przebieg dryrun 1 (2026-11-04)\n\n| Zlecenie | Tryb |\n|---|---|\n| #1 Pierwsze | M |\n\nWnioski przebiegu 1.\n' >>docs/metryki.md
+  echo zmiana >src/main.txt
+  git add -A && git commit -qm "przebieg 1" && git push -q origin main
+  run --separate-stderr "$SHCTL" reset-dryrun --json
+  echo "$output $stderr"
+  [ "$status" -eq 0 ]
+  [ "$(jq -r .wynik.przebieg <<<"$output")" = 2 ]
+  grep -q '^Wnioski przebiegu 1\.$' docs/metryki.md
+  grep -q '^## Przebieg dryrun 2 ' docs/metryki.md
+  [ "$(git -C "$T/remote.git" show main:docs/metryki.md | grep -c '^## Przebieg dryrun')" -eq 2 ]
+  [ "$(tail -1 docs/metryki.md)" = '|---|---|---|---|---|---|---|' ]
+}
+
+@test "reset-dryrun: baseline z artefaktami przebiegu to odmowa" {
+  mkdir -p docs/07-realizacja/escalations
+  echo raport >docs/07-realizacja/T-1.md
+  echo esk >docs/07-realizacja/escalations/E-001.md
+  git add -A && git commit -qm artefakty && git tag -f baseline >/dev/null && git push -q -f origin main baseline
+  run --separate-stderr "$SHCTL" reset-dryrun
+  [ "$status" -eq 4 ]
+  [[ "$stderr" == *"docs/07-realizacja/T-1.md: plik przebiegu"* ]] || false
+  [[ "$stderr" == *"E-001.md"* ]] || false
+}
+
+@test "reset-dryrun: klon w vaulcie Obsidiana odtworzony po force push" {
+  "$SHCTL" obsidian link demo >/dev/null
+  V="$SH_OBSIDIAN_DIR/demo"
+  echo zmiana >src/main.txt && git add -A && git commit -qm "po baseline" && git push -q origin main
+  git -C "$V" pull -q --ff-only
+  run --separate-stderr "$SHCTL" reset-dryrun --json
+  echo "$output $stderr"
+  [ "$status" -eq 0 ]
+  [ "$(jq -r .wynik.obsidian <<<"$output")" = odtworzony ]
+  [ "$(git -C "$V" rev-parse HEAD)" = "$(git -C "$T/remote.git" rev-parse main)" ]
+  [ -f "$V/docs/metryki.md" ]
+}
+
+@test "reset-dryrun: klon z lokalnymi zmianami zostaje, reset konczy sie sukcesem" {
+  "$SHCTL" obsidian link demo >/dev/null
+  echo notatka >>"$SH_OBSIDIAN_DIR/demo/docs/metryki.md"
+  echo zmiana >src/main.txt && git add -A && git commit -qm "po baseline" && git push -q origin main
+  run --separate-stderr "$SHCTL" reset-dryrun --json
+  [ "$status" -eq 0 ]
+  [[ "$(jq -r .wynik.obsidian <<<"$output")" == "pominiety: "*"niezacommitowane zmiany" ]] || false
+  grep -q notatka "$SH_OBSIDIAN_DIR/demo/docs/metryki.md"
 }
 
 @test "reset-dryrun: tylko projekt wzorcowy" {
