@@ -592,44 +592,61 @@ wpis_changelog() {
 }$linia"
 }
 
-# Propozycje dla systemu: PR do sh-system z wpisem w docs/propozycje.md (osobny worktree).
+# Propozycje dla systemu: jeden otwarty PR miesiąca w sh-system (gałąź propozycje-RRRR-MM), do którego
+# kolejne zadania dopisują wpis w docs/propozycje.md (osobny worktree). Znacznik wpisu chroni przed
+# dublowaniem; po merge'u PR miesiąca następne zadanie zakłada nowy od main.
 SH_SYSTEM_DIR="${SH_SYSTEM_DIR:-$SH_DIR/sh-system}"
+galaz_propozycji() { printf 'propozycje-%s' "${SHCTL_MIESIAC:-$(date +%Y-%m)}"; }
+
 pr_propozycji() {
-  local nr="$1" tekst="$2" sys="$SH_SYSTEM_DIR" sslug galaz istn kat plik znacznik url
+  local nr="$1" tekst="$2" sys="$SH_SYSTEM_DIR" sslug galaz pr baza kat plik znacznik url push_opt=""
   [ -d "$sys/.git" ] || { uwaga "brak repo sh-system w $sys; propozycje zostają w raporcie"; return 1; }
   sslug="$(git -C "$sys" config --get remote.origin.url | sed -nE 's#^(https://github\.com/|git@github\.com:)([^/]+/[^/]+)$#\2#p' | sed 's/\.git$//')"
   [ -n "$sslug" ] || { uwaga "origin sh-system nie wskazuje GitHuba"; return 1; }
-  galaz="propozycje/$PROJEKT-T-$nr"
+  galaz="$(galaz_propozycji)"
   znacznik="<!-- propozycje:$PROJEKT:T-$nr -->"
-  istn="$(gh pr list --repo "$sslug" --head "$galaz" --state all --json url --jq '.[0].url // ""' 2>/dev/null)" ||
-    { uwaga "nie można sprawdzić PR propozycji w $sslug"; return 1; }
-  if [ -n "$istn" ]; then
-    printf '%s' "$istn"
-    return 0
-  fi
-  [ "$DRY" -eq 0 ] || { printf 'do utworzenia: %s' "$galaz"; return 0; }
   z_limitem 120 git -C "$sys" fetch -q origin main || { uwaga "git fetch sh-system nie powiódł się"; return 1; }
   if git -C "$sys" show origin/main:docs/propozycje.md 2>/dev/null | grep -qF "$znacznik"; then
     printf 'już na main'
     return 0
   fi
+  pr="$(gh pr list --repo "$sslug" --head "$galaz" --state open --json url --jq '.[0].url // ""' 2>/dev/null)" ||
+    { uwaga "nie można sprawdzić PR propozycji w $sslug"; return 1; }
+  if [ -n "$pr" ]; then
+    z_limitem 120 git -C "$sys" fetch -q origin "+refs/heads/$galaz:refs/remotes/origin/$galaz" ||
+      { uwaga "git fetch $galaz nie powiódł się"; return 1; }
+    if git -C "$sys" show "origin/$galaz:docs/propozycje.md" 2>/dev/null | grep -qF "$znacznik"; then
+      printf '%s' "$pr"
+      return 0
+    fi
+    baza="origin/$galaz"
+  else
+    # Gałąź po zamkniętym albo scalonym PR zaczyna się od nowa od main.
+    baza=origin/main
+    push_opt="--force"
+  fi
+  [ "$DRY" -eq 0 ] || { printf 'do dopisania: %s' "${pr:-$galaz (nowy PR)}"; return 0; }
   kat="$WT/sys-propozycje-$nr"
   [ ! -e "$kat" ] || git -C "$sys" worktree remove --force "$kat" 2>/dev/null || rm -rf "$kat"
   git -C "$sys" worktree prune
-  git -C "$sys" worktree add -q -B "$galaz" "$kat" origin/main || { uwaga "worktree sh-system nie powstał"; return 1; }
+  git -C "$sys" worktree add -q -B "$galaz" "$kat" "$baza" || { uwaga "worktree sh-system nie powstał"; return 1; }
   plik="$kat/docs/propozycje.md"
   mkdir -p "$kat/docs"
   [ -f "$plik" ] || printf '# Propozycje dla systemu\n\nZbiera `shctl task close` z raportów zadań (sekcja „Propozycje dla systemu”). Decyzję podejmuje retro.\n' >"$plik"
   printf '\n## %s T-%s (%s)\n\n%s\n%s\n' "$PROJEKT" "$nr" "$(dzis)" "$znacznik" "$tekst" >>"$plik"
   if ! (git -C "$kat" add docs/propozycje.md && git -C "$kat" commit -qm "propozycje: $PROJEKT T-$nr" &&
-    z_limitem 120 git -C "$kat" push -q -u origin "$galaz"); then
+    z_limitem 120 git -C "$kat" push -q $push_opt -u origin "$galaz"); then
     uwaga "commit lub push propozycji nie powiódł się"
     git -C "$sys" worktree remove --force "$kat" 2>/dev/null || true
     return 1
   fi
-  url="$(gh pr create --repo "$sslug" --head "$galaz" --base main --title "Propozycje: $PROJEKT T-$nr" \
-    --body "Sekcja „Propozycje dla systemu” z raportu \`docs/07-realizacja/T-$nr.md\` projektu $PROJEKT. Decyzję podejmuje retro.")" ||
-    { uwaga "gh pr create w $sslug nie powiódł się"; return 1; }
+  if [ -n "$pr" ]; then
+    url="$pr"
+  else
+    url="$(gh pr create --repo "$sslug" --head "$galaz" --base main --title "Propozycje $(date +%Y-%m)" \
+      --body "Zbiorczy PR propozycji z raportów zadań (sekcja „Propozycje dla systemu” w \`docs/07-realizacja/T-NR.md\`). Kolejne wpisy dopisuje \`shctl task close\`. Decyzję podejmuje retro.")" ||
+      { uwaga "gh pr create w $sslug nie powiódł się"; return 1; }
+  fi
   git -C "$sys" worktree remove --force "$kat" 2>/dev/null || true
   git -C "$sys" branch -D "$galaz" >/dev/null 2>&1 || true
   printf '%s' "$url" | tail -1

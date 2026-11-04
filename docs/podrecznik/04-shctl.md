@@ -269,6 +269,21 @@ bieżącego commita. `pr check` przy konflikcie z `main` mówi to wprost: CI wte
 **Kiedy samemu:** nie uruchamiaj ich równolegle z orkiestratorem. Wyjątek to `task ready`,
 `task resume-check` i `pr check` bez `--czekaj`, bo tylko czytają.
 
+## Sesja orkiestratora
+
+### sesja
+
+Zapisuje, która sesja orkiestratora prowadzi projekt (jedna sesja = jeden projekt). `start` zajmuje
+projekt i odmawia, gdy prowadzi go inna sesja aktywna w ostatnich 30 minutach; `--przejmij` przejmuje
+go mimo to. `stan` tylko czyta, `koniec` zwalnia projekt. Wywołuje je orkiestrator.
+
+```sh
+shctl sesja stan --projekt strona-firmowa
+shctl sesja start --projekt strona-firmowa --przejmij
+```
+
+**Kiedy samemu:** `sesja stan`, gdy chcesz sprawdzić, która sesja prowadzi projekt.
+
 ## Awaryjne
 
 ### stop-all

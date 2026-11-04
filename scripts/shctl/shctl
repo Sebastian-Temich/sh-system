@@ -36,6 +36,7 @@ Użycie: shctl KOMENDA [argumenty] [--dry-run] [--json] [--projekt NAZWA]
   obsidian link|unlink NAZWA
   obsidian sync [--agent]
   doctor [--test-notify]
+  sesja start|stan|koniec [--przejmij]
   task create --plik zadania.yaml
   task ready
   task dispatch NR
@@ -60,7 +61,7 @@ shift
 case "$KOMENDA" in
   -h | --help | help) pomoc; exit 0 ;;
   new-project | stage | doc | decision | escalate | ports | status | stop-all | obsidian | doctor) ;;
-  task | review | reset-dryrun | checkpoint | skrzynka | pr | profile) ;;
+  task | review | reset-dryrun | checkpoint | skrzynka | pr | profile | sesja) ;;
   *) echo "BŁĄD: nieznana komenda: $KOMENDA (shctl --help)" >&2; exit "$E_UZYCIE" ;;
 esac
 

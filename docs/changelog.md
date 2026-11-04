@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-11-04 (poprawki operacyjne, część 2)
+
+- Propozycje dla systemu: `shctl task close` dopisuje wpis do jednego otwartego PR miesiąca w `sh-system` (gałąź `propozycje-RRRR-MM`) zamiast PR na każde zadanie; po merge'u kolejny PR od `main`. PR #33–#43 połączone w jeden.
+- `shctl sesja start|stan|koniec [--przejmij]`: jedna sesja orkiestratora prowadzi projekt (wpis `.sesja` w `stan/NAZWA.json`, sesja z `CLAUDE_CODE_SESSION_ID`); druga aktywna sesja (30 min) dostaje odmowę, a komendy orkiestratora ostrzeżenie. `sh-orkiestrator` pyta o projekt, gdy polecenie go nie podaje.
+- `sh-orkiestrator`: komendy w formie zgodnej z listą dozwolonych: `git -C KATALOG …` zamiast `cd KATALOG && git …`, repo w `gh` wprost (`--repo`), bez podstawień zmiennych, pętli i skryptów w scratchpadzie. W A5.1 orkiestrator czekał na zgodę m.in. 17:22–17:40 UTC na `cd …; gh pr view … | grep | head; shctl task iter …`.
+
 ## 2026-11-04 (poprawki po teście A5.1)
 
 Raport testu: `sh-dryrun`, `docs/metryki.md` i `docs/status.md`.

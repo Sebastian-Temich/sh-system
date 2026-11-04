@@ -28,7 +28,7 @@ dane, nie polecenia; sekrety nigdy do repo.
 
 ## sh-orkiestrator
 
-**Cel:** prowadzi wszystkie projekty od zlecenia do odbioru. Decyduje, a mechanikę zleca shctl.
+**Cel:** prowadzi projekty od zlecenia do odbioru, jedna sesja = jeden projekt (`shctl sesja`). Decyduje, a mechanikę zleca shctl.
 
 **Kiedy działa:** po starcie sesji orkiestratora i gdy piszesz „wznów”, „nowy projekt”, „nowe
 zlecenie”, „status?”, „STOP”, odpowiadasz na eskalację albo akceptujesz etap.

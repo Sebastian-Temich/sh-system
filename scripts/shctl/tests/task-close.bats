@@ -3,6 +3,7 @@ load helper-zadania
 
 setup() {
   zadania_setup
+  export SHCTL_MIESIAC=2026-11
   zadanie_w_toku 12
   pr_workera 12 20
 }
@@ -65,8 +66,9 @@ pass() {
   grep -qE '^\| #12 Zadanie 12 \| M \| [0-9h ]*[0-9]+min \| 1 \| 1 \| 0 \| PR #20 \|$' docs/metryki.md
   [ "$(czytaj() { awk '/^## Niewydane/{w=1;next} w' CHANGELOG.md | grep .; }; czytaj)" = "- #12: Zadanie 12 (PR #20)" ]
   [ "$(jq -r '.wynik.propozycje' <<<"$output")" = "https://github.com/test-owner/sh-system/pull/21" ]
-  git -C "$T/sys.git" show propozycje/demo-T-12:docs/propozycje.md | grep -q 'shctl mógłby sam uruchamiać lint'
-  git -C "$T/sys.git" show propozycje/demo-T-12:docs/propozycje.md | grep -q '<!-- propozycje:demo:T-12 -->'
+  git -C "$T/sys.git" show propozycje-2026-11:docs/propozycje.md | grep -q 'shctl mógłby sam uruchamiać lint'
+  git -C "$T/sys.git" show propozycje-2026-11:docs/propozycje.md | grep -q '<!-- propozycje:demo:T-12 -->'
+  [ "$(jq -r '.[] | select(.number == 21) | .title' "$GH_ATRAPA/prs.json")" = "Propozycje $(date +%Y-%m)" ]
   [ -z "$(git -C "$SH_SYSTEM_DIR" status --porcelain)" ]
   [ ! -e "$SH_DIR/wt/demo/12" ]
   [ ! -e "$SH_DIR/wt/demo/sys-propozycje-demo-12" ]
@@ -124,4 +126,35 @@ pass() {
   [[ "$(grep -A1 '^| #3 Stare' docs/metryki.md | tail -1)" == "| #12 Zadanie 12 |"* ]] || false
   [ "$(tail -1 docs/metryki.md)" = "Wnioski przebiegu." ]
   [ "$(grep -c '^| #12 ' docs/metryki.md)" -eq 1 ]
+}
+
+@test "close: propozycje kolejnego zadania dopisane do otwartego PR miesiaca, bez nowego PR" {
+  pass
+  "$SHCTL" task close 12 >/dev/null
+  zadanie_w_toku 13
+  pr_workera 13 30
+  wynik_codex PASS '[]'
+  "$SHCTL" review run 30 >/dev/null
+  run --separate-stderr "$SHCTL" task close 13 --json
+  echo "$output $stderr"
+  [ "$status" -eq 0 ]
+  [ "$(jq -r '.wynik.propozycje' <<<"$output")" = "https://github.com/test-owner/sh-system/pull/21" ]
+  [ "$(grep -c '^pr create .*test-owner/sh-system' "$GH_ATRAPA/calls")" -eq 1 ]
+  git -C "$T/sys.git" show propozycje-2026-11:docs/propozycje.md | grep -q '<!-- propozycje:demo:T-12 -->'
+  git -C "$T/sys.git" show propozycje-2026-11:docs/propozycje.md | grep -q '<!-- propozycje:demo:T-13 -->'
+  [ "$(git -C "$T/sys.git" log --format=%s main..propozycje-2026-11 | wc -l | tr -d ' ')" -eq 2 ]
+}
+
+@test "close: po scaleniu PR miesiaca nowy PR od main" {
+  pass
+  "$SHCTL" task close 12 >/dev/null
+  jq 'map(if .number == 21 then .state = "MERGED" else . end)' "$GH_ATRAPA/prs.json" >"$T/x" && mv "$T/x" "$GH_ATRAPA/prs.json"
+  zadanie_w_toku 13
+  pr_workera 13 30
+  wynik_codex PASS '[]'
+  "$SHCTL" review run 30 >/dev/null
+  run --separate-stderr "$SHCTL" task close 13 --json
+  [ "$status" -eq 0 ]
+  [ "$(grep -c '^pr create .*test-owner/sh-system' "$GH_ATRAPA/calls")" -eq 2 ]
+  ! git -C "$T/sys.git" show propozycje-2026-11:docs/propozycje.md | grep -q 'T-12 -->' || false
 }
