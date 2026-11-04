@@ -128,3 +128,8 @@ bez dublowania.
 <!-- propozycje:sh-dryrun:T-43 -->
 - Jak w T-41: lista plików w „Zakresie” issue mogłaby zawsze zawierać `docs/07-realizacja/T-NR.md`.
 - Raport wymaga numeru PR, który powstaje dopiero po `gh pr create`; worker robi drugi commit z numerem. `shctl` mógłby wpisywać `PR: #N` sam albo szablon mógłby dopuszczać jego uzupełnienie przez orkiestratora.
+
+## sh-dryrun T-51 (2026-11-05)
+
+<!-- propozycje:sh-dryrun:T-51 -->
+- Szablon zadań typu biblioteka: dodać do CI krok smoke importu zbudowanego pakietu (`pnpm build` + `node -e "import … from '<nazwa>'"`), żeby kryteria dotyczące punktu wejścia miały test automatyczny.
