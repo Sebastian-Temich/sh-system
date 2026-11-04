@@ -38,3 +38,12 @@ bez dublowania.
   `herdr agent prompt`; propozycja: `shctl task nudge NR --powod kontynuuj|od-nowa`;
 - wpis „Punktu przekazania” w `status.md`; propozycja: `shctl handoff` z danymi `status show`,
   wynikiem `doctor` i wierszem autoryzacji.
+
+## sh-dryrun T-9 (2026-11-04)
+
+<!-- propozycje:sh-dryrun:T-9 -->
+- Profil workera nadal blokuje złożone polecenia powłoki (`;`, `&&`) i część prostych (np.
+  `git rev-list --left-right --count`). Krok 1 i 4 Procedury wymagają kilku osobnych wywołań; przydałoby
+  się `shctl task whereami` (katalog, gałąź, iteracja, PR, liczba commitów za `main`) w jednym JSON.
+- Numer PR do raportu znany jest dopiero po `gh pr create`, więc raport wymaga drugiego commita.
+  Szablon mógłby dopuszczać `PR:` uzupełniane przez `shctl review run` albo `task close`.
