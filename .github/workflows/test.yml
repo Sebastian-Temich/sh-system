@@ -1,16 +1,53 @@
+# Oszczędność minut (docs/serwer.md, „CI i minuty GitHub Actions”): lekkie kontrole zawsze,
+# pełne bats tylko na PR ze zmianą poza dokumentacją, nocą po świeżych commitach i ręcznie.
+# Po merge'u na main tylko smoke (lekkie kontrole). Nowy job: timeout-minutes obowiązkowe.
 name: Testy
 
 on:
   pull_request:
   push:
     branches: [main]
+  schedule:
+    - cron: "37 1 * * *"
+  workflow_dispatch:
 
 permissions:
   contents: read
 
+concurrency:
+  group: testy-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
-  bats:
+  szybkie:
     runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      bats: ${{ steps.zakres.outputs.kod }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - name: Zakres zmian
+        id: zakres
+        env:
+          ZDARZENIE: ${{ github.event_name }}
+          BAZA: ${{ github.event.pull_request.base.sha }}
+          GLOWA: ${{ github.event.pull_request.head.sha }}
+          WZORCE_DOCS: "docs/* README.md plugin/README.md plugin/skills/*.md"
+        run: bash scripts/ci/zakres.sh
+      - name: Podręcznik zgodny z kodem
+        run: bash scripts/docs/sprawdz-podrecznik.sh
+      - name: Skille zgodne z kontraktem
+        run: bash scripts/plugin/sprawdz-skille.sh
+      - name: Prompty Codexa aktualne
+        run: bash scripts/sync-codex.sh --check
+
+  bats:
+    needs: szybkie
+    if: needs.szybkie.outputs.bats == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Instalacja bats

@@ -400,6 +400,52 @@ herdr --default-config
 - `pane run` tylko kolejkuje komendę; wynik potwierdza dopiero `wait-output`.
 - `pane close` nie pyta o potwierdzenie.
 
+## CI i minuty GitHub Actions
+
+Konto Sebastian-Temich ma plan Free: 2000 minut miesięcznie dla repo prywatnych, repo publiczne bez
+limitu. GitHub zaokrągla **każdy job** w górę do pełnej minuty, więc koszt to głównie liczba jobów,
+a nie ich długość.
+
+Pomiar z 2026-11-04 (7 dni, `gh api` tylko do odczytu, job zaokrąglony w górę), około 1150 minut:
+
+| Repo | Workflow i zdarzenie | Minuty | Przyczyna |
+|---|---|---|---|
+| sh-dryrun | CI, push na main | 280 | 56 pushów orkiestratora (pliki wspólne) × 5 jobów |
+| sh-system | Testy, PR i push | 348 | bats ~3 min na bieg, także po merge'u |
+| sh-dryrun | CI, PR | 210 | 5 jobów na każdy push do PR |
+| sh-template-projekt | CI, push i PR | 180 | jw. |
+| sh-dryrun, szablon | Staging, push | 74 | job przy każdym pushu, także bez sekretu |
+| repo testowe | CI | 52 | |
+
+Zasady (oba repo systemu i `ci.yml`/`staging.yml` szablonu, więc też każdy nowy projekt):
+
+- **concurrency** z `cancel-in-progress` tylko dla PR: nowy push do PR anuluje poprzedni bieg.
+  Biegi na `main` się nie anulują. Anulowany bieg dotyczy starego commita, więc nie psuje oceny CI
+  w `shctl` (liczy się `statusCheckRollup` głowy PR).
+- **zakres zmian** liczy `scripts/ci/zakres.sh` (w szablonie `scripts/ci-zakres.sh`) w pierwszym,
+  lekkim jobie. Ciężkie joby mają `needs` i `if`, więc PR z samą dokumentacją ich nie uruchamia.
+  Pominięty job ma wynik `SKIPPED`, który `shctl` i `sync-status.sh` liczą jako zaliczony.
+  **Bez filtra `paths` na poziomie workflow**: PR bez żadnego checku `shctl` uznałby za „brak CI”.
+- **po merge'u na main** tylko smoke: w `sh-system` lekkie kontrole (podręcznik, skille, prompty
+  Codexa), w projektach jeden job `check-dod` z gitleaks (commity orkiestratora na `main` też
+  przechodzą skan sekretów).
+- **nocny przebieg** (`schedule`) z pełnym zestawem, ale tylko gdy na `main` były commity w
+  ostatnich 26 godzinach; inaczej kosztuje jeden lekki job. `workflow_dispatch`: pełne testy ręcznie.
+- **timeout-minutes** w każdym jobie; pilnują tego testy struktury (`scripts/ci/tests/workflow.bats`,
+  w szablonie `scripts/tests/ci-workflow.bats`), także po zmianach zadania szkieletu.
+- **Staging** tylko przy zmianie `supabase/migrations/` (albo ręcznie).
+
+| Repo | PR z kodem | PR z samą dokumentacją | Push na main | Noc |
+|---|---|---|---|---|
+| sh-system | `szybkie` + `bats` | `szybkie` | `szybkie` | pełne po świeżych commitach |
+| projekt | `check-dod`, `gitleaks`, `lint`, `test` (+ `testy-skryptow` przy `scripts/`, `.github/`) | `check-dod`, `gitleaks` | `check-dod` z gitleaks | pełne po świeżych commitach |
+
+Wzorce „samej dokumentacji”: w projektach `docs/*` i `*.md`; w `sh-system` `docs/*`, `README.md`,
+`plugin/README.md` i `plugin/skills/*.md` (bez `templates/` i `codex/`, które są wejściem testów).
+
+Szacunek na danych z pomiaru: około 600 minut tygodniowo zamiast 1150 (pushe na main ~115 zamiast
+~510, staging ~0 zamiast 74); PR z kodem bez zmian kosztu.
+
 ## Obciążenie i dysk
 
 Diagnoza z 2026-11-01, 16:05–16:16. Niczego nie zatrzymano ani nie usunięto.
