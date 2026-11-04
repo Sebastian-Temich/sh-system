@@ -38,3 +38,8 @@ bez dublowania.
   `herdr agent prompt`; propozycja: `shctl task nudge NR --powod kontynuuj|od-nowa`;
 - wpis „Punktu przekazania” w `status.md`; propozycja: `shctl handoff` z danymi `status show`,
   wynikiem `doctor` i wierszem autoryzacji.
+
+## sh-dryrun T-25 (2026-11-04)
+
+<!-- propozycje:sh-dryrun:T-25 -->
+- Issue wskazuje specyfikację i architekturę z „Wejścia” skilla, których w projekcie typu biblioteka nie ma; warto, żeby `sh-zadania` wpisywał w issue „brak specyfikacji/architektury”, a skill nie wymagał ich czytania.
