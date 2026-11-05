@@ -210,3 +210,13 @@ bez dublowania.
   Lighthouse zwykle zależy też od fontów, nie tylko od komponentów i CSS.
 - Kryterium „wynik na stagingu po merge'u” jest niesprawdzalne przez workera; lepiej: „lokalnie na
   `astro preview` przed PR, na stagingu w QA po merge'u”.
+
+## iskt-www T-29 (2026-11-05)
+
+<!-- propozycje:iskt-www:T-29 -->
+- Kryteria wymagające pomiaru „po merge'u” (np. Lighthouse na stagingu) nie mogą być spełnione przez
+  workera przed review. Propozycja: w szablonie issue oznaczać takie kryteria jako weryfikację
+  orkiestratora/QA po merge'u albo dodać krok `shctl` do pomiaru po merge'u.
+- Profil workera nie pozwala na `gh run rerun`, więc ponowienie CI przerwanego przez infrastrukturę
+  wymaga nowego commita. Propozycja: dopuścić `gh run rerun --failed` dla gałęzi `task/*` oraz
+  cache przeglądarek Playwright w CI, żeby nie instalować zależności apt przy każdym przebiegu.
