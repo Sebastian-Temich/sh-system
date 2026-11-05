@@ -240,3 +240,10 @@ bez dublowania.
   ignorowane `.env.local` oraz `dist/`; w kroku 8 skilla sh-worker warto wskazać
   `gitleaks git` (historia) plus `git diff`, albo `gitleaks dir` z `.gitleaksignore` dla
   `.env.local` i `dist/`.
+
+## iskt-www T-12 (2026-11-05)
+
+<!-- propozycje:iskt-www:T-12 -->
+- `shctl task dispatch` mógłby przydzielać workerowi port e2e (albo `playwright.config.ts` czytać
+  `E2E_PORT`), żeby równoległe worktree nie dzieliły podglądu na 55327 przez `reuseExistingServer`.
+- Profil workera odrzuca `fnm use` w potoku z `pnpm install`; warto dopisać `fnm` do dozwolonych.
