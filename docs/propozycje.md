@@ -163,3 +163,10 @@ bez dublowania.
 - Profil workera: reguły deny z klasami `[!...]` (`Edit(.env.e[!x]*)` itd.) blokują `Edit(.env.example)`; matcher uprawnień najpewniej nie obsługuje negacji `[!x]`. Proponuję zastąpić je listą jawnych nazw albo testem bats, który sprawdza, że `.env.example` jest edytowalny.
 - Szablon `.env.example`: zmienne Supabase dopisywać tylko w projektach z bazą (projekt bez bazy musi je usuwać).
 - Zadanie szkieletu na pnpm 11+: szablon mógłby zawierać `pnpm-workspace.yaml` z `allowBuilds`, a issue szkieletu — ten plik w „Zakresie”.
+
+## iskt-www T-6 (2026-11-05)
+
+<!-- propozycje:iskt-www:T-6 -->
+- Profil workera odrzuca `curl` i polecenia w tle (`&`), więc nie da się szybko sprawdzić odpowiedzi
+  `astro preview`; przydałby się dozwolony `curl` na `localhost` albo wzmianka w skillu, że takie
+  sprawdzenia robi się testem Playwright.
