@@ -177,3 +177,10 @@ bez dublowania.
 - Kontrakt e2e ma jeden serwer z jedną konfiguracją env; dla kryteriów „dla obu wartości zmiennej”
   przydałby się w szablonie projektu drugi `webServer` (np. port produkcyjny) albo wzorzec testu z
   osobnym buildem.
+
+## iskt-www T-9 (2026-11-05)
+
+<!-- propozycje:iskt-www:T-9 -->
+- `playwright.config.ts` w szablonie projektu: `reuseExistingServer` tylko dla serwera z tego samego
+  worktree (np. wyłączone domyślnie albo port per worktree), bo równoległe worktree współdzielą port
+  `preview` i testy cicho trafiają w cudzy build.
