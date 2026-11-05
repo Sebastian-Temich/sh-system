@@ -170,3 +170,10 @@ bez dublowania.
 - Profil workera odrzuca `curl` i polecenia w tle (`&`), więc nie da się szybko sprawdzić odpowiedzi
   `astro preview`; przydałby się dozwolony `curl` na `localhost` albo wzmianka w skillu, że takie
   sprawdzenia robi się testem Playwright.
+
+## iskt-www T-7 (2026-11-05)
+
+<!-- propozycje:iskt-www:T-7 -->
+- Kontrakt e2e ma jeden serwer z jedną konfiguracją env; dla kryteriów „dla obu wartości zmiennej”
+  przydałby się w szablonie projektu drugi `webServer` (np. port produkcyjny) albo wzorzec testu z
+  osobnym buildem.
