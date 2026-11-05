@@ -202,3 +202,11 @@ bez dublowania.
 - Szablon zadań QA z kryterium „na stagingu curl …” mógłby oznaczać je jako sprawdzane po merge'u (przez orkiestratora albo QA), bo worker nie ma deployu stagingu przed merge'em, a preview PR-a jest za Vercel Deployment Protection.
 - Profil workera pozwala na `git rebase`, a nie na `git merge`, choć skill w kroku 12 każe robić `git merge origin/main`. Warto ujednolicić jedno albo drugie.
 - Szablon projektu: osobny port preview E2E na worktree albo `reuseExistingServer: false`, żeby równoległe worktree nie dzieliły serwera.
+
+## iskt-www T-22 (2026-11-05)
+
+<!-- propozycje:iskt-www:T-22 -->
+- Szablon issue QA wydajności: dopisywać do „Zakresu” `public/` (fonty, obrazy), bo wynik mobile w
+  Lighthouse zwykle zależy też od fontów, nie tylko od komponentów i CSS.
+- Kryterium „wynik na stagingu po merge'u” jest niesprawdzalne przez workera; lepiej: „lokalnie na
+  `astro preview` przed PR, na stagingu w QA po merge'u”.
