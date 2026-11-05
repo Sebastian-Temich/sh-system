@@ -220,3 +220,15 @@ bez dublowania.
 - Profil workera nie pozwala na `gh run rerun`, więc ponowienie CI przerwanego przez infrastrukturę
   wymaga nowego commita. Propozycja: dopuścić `gh run rerun --failed` dla gałęzi `task/*` oraz
   cache przeglądarek Playwright w CI, żeby nie instalować zależności apt przy każdym przebiegu.
+
+## iskt-www T-10 (2026-11-05)
+
+<!-- propozycje:iskt-www:T-10 -->
+- Profil workera nie pozwala na `git check-ignore` ani na kilka wariantów `gh` (`gh issue list`). Do
+  sprawdzenia ignorowanych plików musiałem użyć `git status --ignored`. Warto dopisać `git check-ignore`
+  do listy dozwolonych.
+- Gdy na `main` jest czerwony lint albo typecheck (jak #29), `shctl task dispatch` mógłby ostrzegać
+  workera przed startem, żeby nie diagnozował cudzego błędu.
+- Profil workera odrzuca `git merge origin/main`, choć krok 12 procedury sh-worker i polecenia
+  orkiestratora go przewidują. Warto dopisać `git merge origin/main` do listy dozwolonych albo w skillu
+  i poleceniach przyjąć `git rebase origin/main` z `--force-with-lease`.
