@@ -232,3 +232,11 @@ bez dublowania.
 - Profil workera odrzuca `git merge origin/main`, choć krok 12 procedury sh-worker i polecenia
   orkiestratora go przewidują. Warto dopisać `git merge origin/main` do listy dozwolonych albo w skillu
   i poleceniach przyjąć `git rebase origin/main` z `--force-with-lease`.
+
+## iskt-www T-13 (2026-11-05)
+
+<!-- propozycje:iskt-www:T-13 -->
+- `gitleaks dir` w profilu workera skanuje cały katalog niezależnie od ścieżek i zgłasza
+  ignorowane `.env.local` oraz `dist/`; w kroku 8 skilla sh-worker warto wskazać
+  `gitleaks git` (historia) plus `git diff`, albo `gitleaks dir` z `.gitleaksignore` dla
+  `.env.local` i `dist/`.
