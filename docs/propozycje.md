@@ -139,3 +139,20 @@ bez dublowania.
 <!-- propozycje:sh-dryrun:T-53 -->
 - Profil workera odrzuca samo `git push` (przechodzi tylko `git push -u origin task/NR-slug`).
   Skill sh-worker mówi „push go aktualizuje”; warto wprost podać pełną formę komendy.
+
+## sh-dryrun: właściciel i orkiestrator, zlecenie S #53 (2026-11-05)
+
+<!-- propozycje:sh-dryrun:wlasciciel-2026-11-05 -->
+- Właściciel (pkt 6): `shctl review run` odmawia przy czerwonym lub trwającym CI (wyjątek:
+  `limit_napraw_ci`) i zapisuje SHA commita, którego dotyczy review; `shctl task close` i merge
+  odmawiają, gdy PASS dotyczy innego commita niż aktualny HEAD PR. Powód: w #53 orkiestrator uruchomił
+  review przy czerwonym CI (PASS dla `caf973e`), a worker dopchnął potem 4 commity; dziś chroni przed
+  tym tylko dyscyplina orkiestratora.
+- Orkiestrator: `shctl task wait` po poleceniu poprawki (`herdr agent prompt`) zwraca `gotowe` od razu,
+  bo PR z raportem już istnieje, a `herdr agent wait --until done` wraca od razu przy stanie `done`
+  sprzed polecenia. Potrzebny warunek „nowa tura po poleceniu” (np. `completion_seq` większe niż przy
+  poleceniu albo nowy HEAD PR).
+- Orkiestrator: baseline `sh-dryrun` (`624bd6f`) nie ma `scripts/` z sh-template-projekt#12 i #14
+  (`sync-status.bats`, `check-dod.bats` na danych testowych, `check-dod.sh` z polami `[-]` i
+  `uzasadnienie_pominiecia`), a projekt ma `max_local: 1`. Każdy przebieg naprawia to w szkielecie;
+  baseline warto odświeżyć z szablonu.
