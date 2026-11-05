@@ -133,3 +133,9 @@ bez dublowania.
 
 <!-- propozycje:sh-dryrun:T-51 -->
 - Szablon zadań typu biblioteka: dodać do CI krok smoke importu zbudowanego pakietu (`pnpm build` + `node -e "import … from '<nazwa>'"`), żeby kryteria dotyczące punktu wejścia miały test automatyczny.
+
+## sh-dryrun T-53 (2026-11-05)
+
+<!-- propozycje:sh-dryrun:T-53 -->
+- Profil workera odrzuca samo `git push` (przechodzi tylko `git push -u origin task/NR-slug`).
+  Skill sh-worker mówi „push go aktualizuje”; warto wprost podać pełną formę komendy.
