@@ -184,3 +184,13 @@ bez dublowania.
 - `playwright.config.ts` w szablonie projektu: `reuseExistingServer` tylko dla serwera z tego samego
   worktree (np. wyłączone domyślnie albo port per worktree), bo równoległe worktree współdzielą port
   `preview` i testy cicho trafiają w cudzy build.
+
+## iskt-www T-11 (2026-11-05)
+
+<!-- propozycje:iskt-www:T-11 -->
+- Profil workera: zezwolić na Edit/Write `.env.example` (skill sh-worker wymienia go w „Wyjściu”, a
+  profil blokuje wszystkie `.env*`), zostawiając blokadę `.env`, `.env.local` i `.env.prod*`.
+- Profil workera: zezwolić na prefiks zmiennych środowiskowych (`VAR=x pnpm …`) przy `pnpm`, żeby dało
+  się uruchomić serwer podglądu z inną konfiguracją do debugowania, bez obchodzenia przez testy.
+- Szablon zadania spike'a: gdy kryterium wymaga stagingu/panelu Vercel, issue powinno podać adres
+  preview i stan reguły albo przypisać sprawdzenie do QA/właściciela.
