@@ -194,3 +194,11 @@ bez dublowania.
   się uruchomić serwer podglądu z inną konfiguracją do debugowania, bez obchodzenia przez testy.
 - Szablon zadania spike'a: gdy kryterium wymaga stagingu/panelu Vercel, issue powinno podać adres
   preview i stan reguły albo przypisać sprawdzenie do QA/właściciela.
+
+## iskt-www T-23 (2026-11-05)
+
+<!-- propozycje:iskt-www:T-23 -->
+- Szablon CI: job `e2e` instaluje zależności systemowe przeglądarek przez apt przy każdym runie, więc wolny mirror przekracza `timeout-minutes: 20`. Warto dodać cache `~/.cache/ms-playwright` albo kontener `mcr.microsoft.com/playwright` w wersji z `konfiguracja.md`. Warto też pozwolić workerowi na `gh run rerun --failed` dla awarii infrastruktury.
+- Szablon zadań QA z kryterium „na stagingu curl …” mógłby oznaczać je jako sprawdzane po merge'u (przez orkiestratora albo QA), bo worker nie ma deployu stagingu przed merge'em, a preview PR-a jest za Vercel Deployment Protection.
+- Profil workera pozwala na `git rebase`, a nie na `git merge`, choć skill w kroku 12 każe robić `git merge origin/main`. Warto ujednolicić jedno albo drugie.
+- Szablon projektu: osobny port preview E2E na worktree albo `reuseExistingServer: false`, żeby równoległe worktree nie dzieliły serwera.
