@@ -288,3 +288,10 @@ bez dublowania.
 - Profil workera blokuje prefiks zmiennych środowiskowych (`ASTRO_ADAPTER=node pnpm build`), więc lokalny
   Lighthouse wymagał ręcznego startu `node dist/server/entry.mjs` po `pnpm test:e2e`. Propozycja: skrypt
   `pnpm lh:local` (build Node + serwer + `lh:staging`) w szablonie projektu.
+
+## iskt-www T-44 (2026-11-06)
+
+<!-- propozycje:iskt-www:T-44 -->
+- Profil workera nie pozwala na `fnm use` ani `fnm exec`. Przy zmianie wersji Node worker nie może
+  sprawdzić buildu na docelowej wersji lokalnie. Propozycja: dodać `fnm exec --using=* pnpm *` do
+  dozwolonych poleceń.
