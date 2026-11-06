@@ -247,3 +247,17 @@ bez dublowania.
 - `shctl task dispatch` mógłby przydzielać workerowi port e2e (albo `playwright.config.ts` czytać
   `E2E_PORT`), żeby równoległe worktree nie dzieliły podglądu na 55327 przez `reuseExistingServer`.
 - Profil workera odrzuca `fnm use` w potoku z `pnpm install`; warto dopisać `fnm` do dozwolonych.
+
+## iskt-www T-15 (2026-11-06)
+
+<!-- propozycje:iskt-www:T-15 -->
+- Profil `.claude/roles/worker/settings.json` blokuje Edit/Write `.env.example`, a skill sh-worker
+  („Wyjście”) i AGENTS.md wymagają dopisywania tam nowych zmiennych. Propozycja: wyjątek
+  `allow` dla `.env.example` przy zachowaniu blokady pozostałych `.env*`.
+- Lighthouse wersji z PR: preview Vercel za Deployment Protection uniemożliwia pomiar przed merge'em.
+  Propozycja: bypass token preview w `.env.local` workera (tylko odczyt preview) albo stały zapis w
+  procesie, że W-10 dla PR sprawdza się na buildzie lokalnym, a na stagingu po merge'u.
+
+- Profil workera nie pozwala na prefiks zmiennej środowiskowej w poleceniu (`LH_RUNS=1 pnpm …`)
+  ani przekierowanie do pliku; skrócony przebieg Lighthouse wymagał pełnego (~10 min). Propozycja:
+  dopuścić `VAR=wartość pnpm …` dla zmiennych bez sekretów albo dodać to do opisu profilu w AGENTS.md.
