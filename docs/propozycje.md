@@ -261,3 +261,9 @@ bez dublowania.
 - Profil workera nie pozwala na prefiks zmiennej środowiskowej w poleceniu (`LH_RUNS=1 pnpm …`)
   ani przekierowanie do pliku; skrócony przebieg Lighthouse wymagał pełnego (~10 min). Propozycja:
   dopuścić `VAR=wartość pnpm …` dla zmiennych bez sekretów albo dodać to do opisu profilu w AGENTS.md.
+
+## iskt-www T-16 (2026-11-06)
+
+<!-- propozycje:iskt-www:T-16 -->
+- `deploy-prod.sh` w szablonie: tryb dla projektów bez bazy (np. `hosting.baza: brak` w `konfiguracja.md` albo flaga `--bez-bazy`), który pomija sprawdzenie `supabase`/`docker`, `PROD_DB_URL`, backup i migracje.
+- Szablon `wydanie-techniczna.md`: dodać sekcje „Środowiska” i „Kroki przejścia na domenę produkcyjną” (Branch Tracking, alias stagingu, zmienne prod), bo powtarzają się w każdym projekcie Vercel.
