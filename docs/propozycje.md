@@ -267,3 +267,17 @@ bez dublowania.
 <!-- propozycje:iskt-www:T-16 -->
 - `deploy-prod.sh` w szablonie: tryb dla projektów bez bazy (np. `hosting.baza: brak` w `konfiguracja.md` albo flaga `--bez-bazy`), który pomija sprawdzenie `supabase`/`docker`, `PROD_DB_URL`, backup i migracje.
 - Szablon `wydanie-techniczna.md`: dodać sekcje „Środowiska” i „Kroki przejścia na domenę produkcyjną” (Branch Tracking, alias stagingu, zmienne prod), bo powtarzają się w każdym projekcie Vercel.
+
+## iskt-www T-41 (2026-11-06)
+
+<!-- propozycje:iskt-www:T-41 -->
+- `astro preview` nie działa z adapterem Vercel, a profil workera blokuje polecenia z prefiksem
+  zmiennych środowiskowych (`ASTRO_ADAPTER=node pnpm preview`). Do zrzutów i Lighthouse trzeba było
+  napisać tymczasowy serwer statyczny. Propozycja: skrypt `pnpm preview:local` (adapter node, port
+  55327) w szablonie projektu Astro + Vercel.
+- Job e2e w CI może przekroczyć limit 20 min, gdy mirror apt jest wolny, bo
+  `playwright install --with-deps` instaluje zależności systemowe przy każdym runie. Propozycja:
+  cache przeglądarek Playwright (`~/.cache/ms-playwright`) albo obraz/kontener
+  `mcr.microsoft.com/playwright` w CI. To zmiana CI, poza zakresem workera.
+- Równoległe `pnpm test:e2e` i `pnpm lh:staging` kolidują, bo Playwright czyści `test-results/`,
+  a lhci trzyma tam `.lighthouseci/`. Propozycja: katalog roboczy lhci poza `test-results/`.
