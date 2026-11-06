@@ -281,3 +281,10 @@ bez dublowania.
   `mcr.microsoft.com/playwright` w CI. To zmiana CI, poza zakresem workera.
 - Równoległe `pnpm test:e2e` i `pnpm lh:staging` kolidują, bo Playwright czyści `test-results/`,
   a lhci trzyma tam `.lighthouseci/`. Propozycja: katalog roboczy lhci poza `test-results/`.
+
+## iskt-www T-43 (2026-11-06)
+
+<!-- propozycje:iskt-www:T-43 -->
+- Profil workera blokuje prefiks zmiennych środowiskowych (`ASTRO_ADAPTER=node pnpm build`), więc lokalny
+  Lighthouse wymagał ręcznego startu `node dist/server/entry.mjs` po `pnpm test:e2e`. Propozycja: skrypt
+  `pnpm lh:local` (build Node + serwer + `lh:staging`) w szablonie projektu.
