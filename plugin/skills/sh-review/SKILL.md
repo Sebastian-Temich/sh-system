@@ -60,8 +60,9 @@ W review etapu dodatkowo:
 - dokumenty poprzednich etapów: `docs/00-intake/specyfikacja.md`, `docs/04-architektura/`,
   `docs/05-plan/plan.md`, `docs/06-zadania/zadania.yaml`, `docs/08-qa/raport-MN.md`, jeśli istnieją
 - `sh-system/plugin/skills/SKILL/SKILL.md`, sekcja „Kryteria review”, dla skilla etapu: `00-intake` →
-  `sh-intake`, `04-architektura` i `05-plan` → `sh-architekt`, `06-zadania` → `sh-zadania`, `08-qa` →
-  `sh-qa`; brak pliku oznacza ocenę wyłącznie według `DoD.md`
+  `sh-intake`, `04-architektura` i `05-plan` → `sh-architekt`, `06-zadania` → `sh-zadania`; brak
+  pliku oznacza ocenę wyłącznie według `DoD.md`. Raport QA (`08-qa`) nie ma review etapu: `shctl
+  review run` odmawia dla gałęzi `stage/08-qa`
 
 Czytasz TYLKO te pliki i źródła. Inne otwierasz wyłącznie, gdy wymaga tego zakres zadania, i zapisujesz
 to w raporcie.
@@ -136,8 +137,14 @@ werdykcie orkiestrator wywołuje `shctl task iter NR` albo `shctl task close NR`
 5. Zgłoszeń ⚪ z poprzedniego review nie sprawdzasz: trafiają do `backlog-drobne.md`.
 6. Nowe zgłoszenia dotyczą zmian od poprzedniego review. Z reszty diffu zgłaszasz tylko 🔴 (np.
    przeoczony sekret), bo w iteracji autor poprawia wyłącznie zgłoszenia.
-7. Iteracja 3: nowe zgłoszenie, które byłoby 🟡, dajesz jako ⚪ z opisem zaczynającym się
-   „(iteracja 3, istotne) ”. Nowe 🔴 zostaje 🔴, a nienaprawione z iteracji 2 zachowują swoją wagę.
+7. Iteracja 3 (review PR i etapu `wydanie`): nowe zgłoszenie, które byłoby 🟡, dajesz jako ⚪ z
+   opisem zaczynającym się „(iteracja 3, istotne) ”. Nowe 🔴 zostaje 🔴, a nienaprawione z iteracji 2
+   zachowują swoją wagę.
+8. Review etapu dokumentowego (`00-intake`, `04-architektura`, `05-plan`, `06-zadania`) ma najwyżej
+   jedną iterację poprawek, więc iteracja 2 jest ostatnia. W niej każde zgłoszenie 🟡, nowe albo
+   nienaprawione z iteracji 1, dajesz jako ⚪ z opisem zaczynającym się „(do decyzje.md) ”. 🔴 zostaje
+   🔴 (FAIL w iteracji 2 otwiera eskalację). Orkiestrator przenosi te uwagi do `decyzje.md`, nie
+   uruchamia kolejnej iteracji.
 
 ### Review PR
 
@@ -174,12 +181,13 @@ werdykcie orkiestrator wywołuje `shctl task iter NR` albo `shctl task close NR`
    kamienie zgadzają się między plikami; etap nie zmienia zatwierdzonego zakresu bez rewizji i
    uzasadnienia w PR.
 4. Ryzyko: obszary ryzyka (auth i RLS, płatności, dane osobowe, AI na danych użytkowników, migracje
-   prod) mają ADR i plan sprawdzenia.
+   prod) mają od `04-architektura` ADR i plan sprawdzenia. W `00-intake` obowiązuje jedno kryterium
+   (`sh-intake`, „ADR w intake”): przy obszarze na `tak` albo `do ustalenia` specyfikacja zapowiada
+   „ADR w 04-architektura: TEMAT”. Brak pliku ADR w `00-intake` nie jest zgłoszeniem, a brak
+   zapowiedzi to 🟡.
 5. Sekrety i dane osobowe: brak w dokumentach, opisie PR i przykładach.
-6. Zakres PR: tylko pliki etapu (`docs/ETAP/` i pola DoD powiązanych etapów, w `08-qa` także testy
-   `e2e/qa/`); bez kodu aplikacji i plików wspólnych.
-7. W `08-qa`: błędy 🔴 i 🟡 są w `docs/08-qa/zadania-MN.yaml` i w „Zgłoszeniach” raportu, a ⚪
-   wyłącznie w „Drobnych uwagach” raportu, bez issue.
+6. Zakres PR: tylko pliki etapu (`docs/ETAP/` i pola DoD powiązanych etapów); bez kodu aplikacji i
+   plików wspólnych.
 
 ## Tryby
 
@@ -192,7 +200,8 @@ podejmuje orkiestrator z właścicielem. Tryb S nie ma DoD etapów, więc nie ma
 ### Tryb M
 
 Zachowanie domyślne etapu A: review PR każdego zadania przez Codex (`shctl review run`) i review
-etapów `00-intake`, `04-architektura` z `05-plan`, `06-zadania`, `08-qa` i `wydanie`. W etapie A
+etapów `00-intake`, `04-architektura` z `05-plan`, `06-zadania` (najwyżej jedna iteracja poprawek) i
+`wydanie`. Raport QA `08-qa` nie ma review etapu. W etapie A
 autorem jest Claude, więc reviewerem jest Codex.
 
 ### Tryb L i etap B
@@ -207,7 +216,8 @@ skilla. W etapie A tego nie robisz.
 - [ ] W iteracji 2+ każde zgłoszenie 🔴 i 🟡 z iteracji N-1 sprawdzone i rozliczone w podsumowaniu
 - [ ] Review PR: każde kryterium z issue ocenione; review etapu: każde pole `DoD.md` ocenione
 - [ ] Każde zgłoszenie ma wagę, miejsce (gdy dotyczy pliku) i opis poprawki, w jednej linii
-- [ ] W iteracji 3 nowe istotne zgłoszone jako ⚪ z dopiskiem „(iteracja 3, istotne)”
+- [ ] W iteracji 3 nowe istotne zgłoszone jako ⚪ z dopiskiem „(iteracja 3, istotne)”; w iteracji 2
+      etapu dokumentowego istotne jako ⚪ z dopiskiem „(do decyzje.md)”
 - [ ] Werdykt FAIL wtedy i tylko wtedy, gdy jest 🔴 albo 🟡
 - [ ] Wynik w formacie `sh-system/templates/review.md` albo JSON według `codex/sh-review.schema.json`
 - [ ] Żadnych zmian w plikach, gałęziach, etykietach i issue
@@ -222,7 +232,7 @@ Wagi zgłoszeń, których używasz (format i skutki: `sh-system/templates/review
   migracja niezgodna wstecz albo zmiana istniejącej migracji; niespełnione kryterium akceptacji;
   edycja pliku wspólnego; zmiana produkcji; hook git w repo. W review etapu: pole `DoD.md` zaznaczone
   niezgodnie z prawdą, zaznaczone pole Checkpointu, zmiana zatwierdzonego zakresu bez rewizji, obszar
-  ryzyka bez ADR.
+  ryzyka bez ADR od `04-architektura` (w `00-intake` ADR nie jest wymagany, patrz „Review etapu” pkt 4).
 - 🟡 istotne (blokuje): kryterium bez testu; błąd logiki; wyłączony test; zmiany poza „Zakresem” bez
   decyzji w raporcie; w iteracji 2+ zmiany poza zgłoszeniami; brak raportu albo jego sekcji; PR bez
   `Closes #NR`; zmienna bez wpisu w `.env.example`; zmiana portów w `supabase/config.toml` poza

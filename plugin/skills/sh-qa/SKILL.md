@@ -1,6 +1,6 @@
 ---
 name: sh-qa
-description: QA zbiorcze po kamieniu milowym trybu M. Zbiera zamknięte issue kamienia, uruchamia testy E2E Playwright (chromium i webkit), sprawdza przepływy między funkcjami, scenariusze odbioru kamienia i zgodność ze specyfikacją. Pisze raport docs/08-qa/raport-MN.md (shctl doc new) na gałęzi stage/08-qa. Błędy krytyczne i istotne zakłada jako nowe issue typ:qa z wagą przez shctl task create, a drobne wpisuje do sekcji Drobne uwagi raportu. Użyj, gdy wszystkie zadania kamienia są zamknięte, a orkiestrator poleca „QA kamienia MN”, „QA zbiorcze”, „przetestuj kamień” albo „sprawdź kamień przed kolejnym”, oraz gdy trzeba poprawić raport QA po review etapu.
+description: QA zbiorcze po kamieniu milowym trybu M. Zbiera zamknięte issue kamienia, uruchamia testy E2E Playwright (chromium i webkit), sprawdza przepływy między funkcjami, scenariusze odbioru kamienia i zgodność ze specyfikacją. Pisze raport docs/08-qa/raport-MN.md (shctl doc new) na gałęzi stage/08-qa. Błędy krytyczne i istotne zakłada jako nowe issue typ:qa z wagą przez shctl task create, a drobne wpisuje do sekcji Drobne uwagi raportu. Użyj, gdy wszystkie zadania kamienia są zamknięte, a orkiestrator poleca „QA kamienia MN”, „QA zbiorcze”, „przetestuj kamień” albo „sprawdź kamień przed kolejnym”, oraz gdy trzeba poprawić raport QA (na przykład po czerwonym CI albo uwagach orkiestratora).
 ---
 
 # sh-qa
@@ -20,7 +20,7 @@ Robisz:
 - piszesz testy E2E przepływów między funkcjami i scenariuszy odbioru kamienia w `e2e/qa/`;
 - sprawdzasz zgodność z wymaganiami `W-n` kamienia;
 - piszesz raport `docs/08-qa/raport-MN.md` i plik błędów `docs/08-qa/zadania-MN.yaml`;
-- po review i merge'u zakładasz błędy 🔴 i 🟡 jako issue `typ:qa` z wagą przez `shctl task create`;
+- po merge'u zakładasz błędy 🔴 i 🟡 jako issue `typ:qa` z wagą przez `shctl task create`;
 - zgłoszenia ⚪ wpisujesz wyłącznie do sekcji „Drobne uwagi” raportu, bez issue.
 
 Nie robisz:
@@ -43,7 +43,7 @@ Nie robisz:
 - `docs/konfiguracja.md`: `playwright_version`, `playwright_workers`, `blok_portow`, `tryb_procesu`
 - `playwright.config.ts` (albo `.js`) i katalog `e2e/`: projekty przeglądarek i istniejące testy
 - `docs/08-qa/DoD.md` i poprzednie `docs/08-qa/raport-M*.md`: checklista i wcześniejsze kamienie
-- `docs/08-qa/zadania-MN.yaml`: przy poprawkach po review, jeśli już istnieje
+- `docs/08-qa/zadania-MN.yaml`: przy poprawkach raportu, jeśli już istnieje
 - `gh issue list --state all --limit 200 --json number,title,body`: zajęte `shctl:id`, żeby nie dublować
 
 Czytasz TYLKO te pliki i źródła. Inne otwierasz wyłącznie, gdy wymaga tego zakres zadania, i zapisujesz
@@ -126,8 +126,9 @@ shctl escalate --dotyczy 08-qa --powod "..." --potrzebne "..." --opcje "A;B"
 13. Commit `08-qa: raport MN`, push i `gh pr create --base main --head stage/08-qa`. Opis PR: kamień,
     commit testowany, tabela wyników, lista błędów z wagami i „Decyzje do rejestru” w postaci
     `co / dlaczego / cofnięcie`.
-14. Przekaż orkiestratorowi numer PR: review etapu (`sh-review`), potem merge. Po FAIL review
-    poprawiasz w tym PR wyłącznie zgłoszenia z review.
+14. Przekaż orkiestratorowi numer PR. Raport QA nie ma review etapu: orkiestrator sprawdza zielone
+    CI i zgodność werdyktu z wagami, potem merge. Przed PR sprawdzasz raport sam według „Kryteriów
+    review” (niżej).
 15. Faza 2, po merge'u: na `main` `git pull --ff-only`, potem `shctl task create` bez `--dry-run`.
     Bez pliku błędów pomijasz ten krok.
 16. Sprawdź „DoD” i przekaż orkiestratorowi: werdykt, numery issue z wyniku `mapa` z wagami, commit
@@ -172,7 +173,7 @@ zadania:
     milestone: M2 Katalog i koszyk
 ```
 
-- ID `QA-MN-k`, numerowane od 1 w kamieniu; nowe błędy w poprawce po review dostają kolejne numery.
+- ID `QA-MN-k`, numerowane od 1 w kamieniu; nowe błędy w poprawce raportu dostają kolejne numery.
 - `typ: qa` i `waga` (`krytyczne` albo `istotne`) zawsze; shctl nadaje etykiety `typ:qa` i
   `sev:WAGA`, a `typ: qa` z inną wagą albo bez niej odrzuca (kod 2). Zgłoszenia ⚪ nie trafiają do
   pliku. `milestone` to kamień, w którym błąd znaleziono.
@@ -209,11 +210,14 @@ B także testy na stagingu i raport dla klienta. W etapie A tego nie robisz.
 - [ ] Testy błędów oznaczone `test.fixme`, CI na PR zielone
 - [ ] Werdykt raportu zgodny z wagami: FAIL tylko przy 🔴 lub 🟡
 - [ ] Brak sekretów i danych osobowych w raporcie, testach i PR
-- [ ] Review PASS (zaznacza reviewer, nie ten skill)
+- [-] Review PASS (nie dotyczy: raport QA nie ma review etapu, merge po zielonym CI)
 
 ## Kryteria review
 
-Review etapu `08-qa` (`sh-review`) sprawdza:
+Raport QA nie ma review etapu (`sh-review` go nie robi, `shctl review run` odmawia dla
+`stage/08-qa`; inwentaryzacja SH-lite: E-003, 3 iteracje review raportu). Tych kryteriów używasz jako
+autokontroli przed PR, a orkiestrator przed merge'em sprawdza z nich zielone CI i werdykt zgodny z
+wagami:
 
 - 🔴 krytyczne: sekret lub dane osobowe w raporcie, testach albo PR; błąd 🔴 lub 🟡 opisany w raporcie
   bez wpisu w `zadania-MN.yaml`; werdykt `PASS` mimo błędu 🔴 lub 🟡; zmiana kodu aplikacji w PR;
@@ -232,8 +236,6 @@ Review etapu `08-qa` (`sh-review`) sprawdza:
 | 🔴 `krytyczne` | Bezpieczeństwo (dostęp do cudzych danych, obejście auth), utrata danych, główna ścieżka kamienia nie działa, wymaganie `W-n` niespełnione, sekret w repo |
 | 🟡 `istotne` | Wymaganie spełnione częściowo, błąd w jednej przeglądarce, błąd przepływu między funkcjami z obejściem, test niestabilny, scenariusz odbioru wymaga obejścia |
 | ⚪ `drobne` | Kosmetyka UI, teksty, drobna niewygoda bez wpływu na wymaganie; bez issue, tylko „Drobne uwagi” |
-
-Format wyniku review: `sh-system/templates/review.md`.
 
 ## Eskalacja
 
@@ -283,7 +285,7 @@ Orkiestrator: „QA kamienia M2 skillem sh-qa.”
 5. `W-2` częściowo, reszta spełniona. `zadania-M2.yaml`: `QA-M2-1`, `waga: istotne`. `--dry-run`: kod 0.
    Literówka na przycisku „Do kasy” idzie do „Drobnych uwag”.
 6. Raport: werdykt FAIL. Commit `08-qa: raport M2`, PR #40 z `stage/08-qa`.
-7. Review etapu PASS, merge. Na `main`: `shctl task create --plik docs/08-qa/zadania-M2.yaml`: #41
+7. CI zielone, werdykt zgodny z wagami, merge. Na `main`: `shctl task create --plik docs/08-qa/zadania-M2.yaml`: #41
    z `typ:qa` i `sev:istotne` w milestone „M2 Katalog i koszyk”.
 
 Wynik: orkiestrator dopisuje literówkę do `backlog-drobne.md`, commituje `index.md`, dispatchuje #41, a kamień M3 startuje według autoryzacji.

@@ -98,6 +98,7 @@ Trzy podsekcje, zawsze wszystkie:
 - Checklista `- [ ]` dla wyniku pracy skilla. Dla workera zawiera DoD zadania z `proces-v1.md`:
   kryteria z issue spełnione, testy zielone, raport `T-NR.md`, brak sekretów, migracje zgodne wstecz.
 - Pole review zawsze w brzmieniu: „- [ ] Review PASS (zaznacza reviewer, nie ten skill)”.
+  Wyjątek: wynik bez review (raport QA `sh-qa`) ma „- [-] Review PASS (nie dotyczy: powód)”.
 
 ## 8. Kryteria review
 
