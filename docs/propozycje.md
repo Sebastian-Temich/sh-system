@@ -295,3 +295,15 @@ bez dublowania.
 - Profil workera nie pozwala na `fnm use` ani `fnm exec`. Przy zmianie wersji Node worker nie może
   sprawdzić buildu na docelowej wersji lokalnie. Propozycja: dodać `fnm exec --using=* pnpm *` do
   dozwolonych poleceń.
+
+## iskt-www T-45 (2026-11-09)
+
+<!-- propozycje:iskt-www:T-45 -->
+- Profil workera nie pozwala na prefiks zmiennej środowiskowej w poleceniu (`E2E_PORT=… pnpm
+  test:e2e`, `CI=1 …`), a `pnpm` nie jest w PATH bez `fnm env` (uruchamiałem przez `npx pnpm`).
+  Warto dopuścić `E2E_PORT=* pnpm test:e2e*` i `CI=1 pnpm test:e2e*`, a `shctl task dispatch` mógłby
+  ustawiać `E2E_PORT` na wolny port per worktree.
+- Profil workera odrzuca Edit `.env.example` („File is in a directory that is denied by your
+  permission settings”), choć ma `allow: Edit(.env.example)`, a wzorce `deny` z `[!…]` miały ten plik
+  przepuszczać. To sprzeczne z DoD („nowe zmienne w `.env.example`”). Orkiestrator zgłasza problem
+  osobno.
