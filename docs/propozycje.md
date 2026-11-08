@@ -307,3 +307,22 @@ bez dublowania.
   permission settings”), choć ma `allow: Edit(.env.example)`, a wzorce `deny` z `[!…]` miały ten plik
   przepuszczać. To sprzeczne z DoD („nowe zmienne w `.env.example`”). Orkiestrator zgłasza problem
   osobno.
+
+## iskt-www (2026-11-09): orkiestrator, zlecenie S po odbiorze
+
+- **Zmiana z odbioru właściciela po review PASS.** `shctl task iter NR` odmawia („iteracja tylko po
+  FAIL”), więc zmianę zgłoszoną przy odbiorze (#43, CTA nagłówka na mobile) orkiestrator przekazał ręcznie:
+  komentarz w issue z nowym kryterium i `herdr agent prompt`. Propozycja: `shctl task iter NR
+  --odbior "kryterium"` (lub `task change NR`), które dopisuje kryterium do issue, unieważnia PASS
+  dla następnego commita i nie podbija licznika iteracji review.
+- **Worker nie może edytować `.env.example`.** Profil `.claude/roles/worker/settings.json` ma
+  `allow: Edit(.env.example)` i wzorce deny przepuszczające ten plik, ale sesja workera dostaje „File
+  is in a directory that is denied by your permission settings” (#45). Prawdopodobnie globalna deny na
+  `.env*` albo brak obsługi klas `[!…]` we wzorcach. Wpis zrobił orkiestrator. Propozycja: sprawdzić
+  kolejność reguł i wzorce, test `bats` dla dozwolonej edycji `.env.example`.
+- **`.nvmrc` i fnm blokują panele.** Zmiana `.nvmrc` na wersję Node nieinstalowaną na Macu (#44) sprawia,
+  że fnm przy `cd` pyta „install? [y/N]” i panel review wisi bez werdyktu do limitu czasu. Propozycja:
+  `shctl doctor` sprawdza, czy wersja z `.nvmrc` jest zainstalowana, a `review run`/`dispatch` startują
+  powłokę z `FNM_RESOLVE_ENGINES=false`/`--use-on-cd` wyłączonym albo wykrywają prompt i kończą z kodem 1.
+- **`shctl task wait` zwraca od razu `gotowe`, gdy PR już istnieje,** także w trakcie iteracji, więc
+  orkiestrator nie ma czym czekać na nowy push workera. Propozycja: `task wait NR --po-commicie SHA`.
