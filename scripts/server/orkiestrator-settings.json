@@ -115,6 +115,20 @@
       "Skill(tworca-wymagan)",
       "Skill(iskt-softwarehouse-tworca-wymagan)",
       "Skill(iskt-planista-realizacji)",
+      "Read(~/Documents/**)",
+      "Edit(~/Documents/**)",
+      "Read(~/Desktop/**)",
+      "Edit(~/Desktop/**)",
+      "Read(~/Downloads/**)",
+      "Edit(~/Downloads/**)",
+      "Read(~/Library/Mobile Documents/**)",
+      "Edit(~/Library/Mobile Documents/**)",
+      "Bash(gh gist *)",
+      "Bash(gh release upload *)",
+      "Bash(git * --no-index*)",
+      "Bash(git * --exec-path*)",
+      "Bash(git --exec-path*)",
+      "Bash(git -C * --exec-path*)",
       "Bash(git push --force*)",
       "Bash(git push -f *)",
       "Bash(git push * --force*)",
@@ -123,7 +137,6 @@
       "Bash(git push * production*)",
       "Bash(git push --delete *)",
       "Bash(git push * --delete *)",
-      "Bash(git push * :*)",
       "Bash(git reset --hard*)",
       "Bash(git clean *)",
       "Bash(git -C * push --force*)",
@@ -134,7 +147,6 @@
       "Bash(git -C * push * production*)",
       "Bash(git -C * push --delete *)",
       "Bash(git -C * push * --delete *)",
-      "Bash(git -C * push * :*)",
       "Bash(git -C * reset --hard*)",
       "Bash(git -C * clean *)",
       "Bash(git push +*)",
@@ -208,5 +220,29 @@
         ]
       }
     ]
+  },
+  "sandbox": {
+    "enabled": true,
+    "allowUnsandboxedCommands": false,
+    "excludedCommands": [
+      "shctl *",
+      "/Users/Shared/sh/bin/shctl *",
+      "herdr *",
+      "gh *",
+      "git *",
+      "notify.sh *",
+      "/Users/Shared/sh/bin/notify.sh *"
+    ],
+    "network": {
+      "allowedDomains": [
+        "github.com",
+        "api.github.com",
+        "*.githubusercontent.com",
+        "ntfy.sh"
+      ],
+      "allowMachLookup": [
+        "com.apple.trustd.agent"
+      ]
+    }
   }
 }

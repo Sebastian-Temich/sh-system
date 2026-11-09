@@ -99,3 +99,15 @@ akcje() { jq -r --arg k "$1" '.wynik[$k].pliki | map("\(.plik)=\(.akcja)") | sor
   run --separate-stderr "$SHCTL" profile update
   [ "$status" -eq 2 ]
 }
+
+@test "template update --baseline: ta sama sekunda commita co stary baseline, baza to nowszy tag" {
+  export GIT_COMMITTER_DATE="$(git log -1 --format=%cI baseline)"
+  run --separate-stderr "$SHCTL" template update --baseline --json
+  [ "$status" -eq 0 ]
+  t="$(jq -r .wynik.baseline.tag <<<"$output")"
+  printf '# ADR v3\n' >"$T/tpl-src/docs/_szablony/adr.md"
+  git -C "$T/tpl-src" commit -qam v3 && git -C "$T/tpl-src" push -q "$T/tpl.git" main
+  run --separate-stderr "$SHCTL" template update --baseline --json
+  echo "$output $stderr"
+  [ "$(jq -r '.wynik.baseline.z, .wynik.baseline.tag' <<<"$output" | tr '\n' ' ')" = "$t $t-2 " ]
+}

@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-11-09 (izolacja agentów: sandbox sesji SH)
+
+- Test: Read, `cat`, `ls` i `grep` na `~/Pictures` były blokowane, ale `node -e` czytał `~/Pictures` u workera i orkiestratora (reguły deny nie obejmują interpreterów). `orkiestrator-settings.json` i profil workera w szablonie mają teraz sandbox Claude Code (`allowUnsandboxedCommands: false`); poza sandboxem tylko `shctl`, `herdr`, `gh`, `git`, `notify.sh` (orkiestrator) oraz `git`, `gh`, `shctl escalate`, `brew install` (worker). Sieć z listy domen.
+- Deny `Read`/`Edit` dla `~/Documents`, `~/Desktop`, `~/Downloads` i `~/Library/Mobile Documents` w ustawieniach SH (nie w `~/.claude/settings.json`), deny `gh gist`, `gh release upload`, `git --no-index`, `git --exec-path`. Usunięte reguły z końcowym `:*`, które Claude Code ignorował (`git push * :*`).
+- PR #26 zamknięty; stan systemu i lista kluczy z 2026-11-03 przeniesione do `docs/serwer.md`, „Izolacja agentów”.
+- Poprawka F3b: wybór najnowszego tagu baseline (`template update --baseline`, `reset-dryrun`) przy commitach z tej samej sekundy brał stary `baseline`; teraz przy remisie wygrywa nowsza nazwa (test `template.bats`, błąd widoczny w CI #56).
+
 ## 2026-11-09 (SH-lite F3b: shctl i serwer)
 
 - `shctl task wait` czeka na nową turę: `task dispatch` (start claude) i `task iter` (wysłanie poprawek) zapisują w `stan/NAZWA.json` `polecenie` (UTC) i `tura: false`; tura to przejście agenta w `working` (`tura: true`) i powrót do `idle` albo commit w PR nowszy niż polecenie (`nowy_commit`). Raport z poprzedniej iteracji ani panel `idle` przed podjęciem polecenia nie kończą czekania. `gotowe` to PR z raportem i commitem po poleceniu. Nowy stan `bez_tury` (limit czasu, agent nie podjął polecenia); JSON z `polecenie` i `nowy_commit`.

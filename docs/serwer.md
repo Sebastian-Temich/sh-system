@@ -744,18 +744,25 @@ Testy: `scripts/server/tests/sh-watchdog.bats` (atrapy herdr i notify).
 
 ## Izolacja agentów
 
-Agenci pracują autonomicznie w `/Users/Shared/sh`. Na maszynie nie ma ważnych danych, więc izolacja jest
-lekka: chroni przed pomyłką agenta, nie przed celowym obejściem.
+Agenci pracują autonomicznie w `/Users/Shared/sh`. Izolacja ma trzy warstwy: reguły uprawnień Claude Code
+(narzędzia i rozpoznawane komendy), hooki odczytu i sandbox Claude Code dla Basha w sesjach SH (poziom
+systemu, także interpretery). Chroni przed pomyłką agenta i przed obejściem reguł przez `node -e` albo
+`python`; nie chroni przed `git`, `gh` i `shctl`, które działają poza sandboxem.
 
-### Stan systemu (2026-11-01)
+### Stan systemu (2026-11-03)
+
+Przegląd bez sudo z 2026-11-03 (z zamkniętego PR #26), nie weryfikowany ponownie.
 
 | Obszar | Stan | Uwagi |
 |---|---|---|
-| FileVault | wyłączony | |
-| Firewall | włączony | bez trybu ukrycia; podpisane aplikacje przepuszczane |
-| Zdalne logowanie | włączone | hasła dozwolone, brak `authorized_keys` |
-| pmset | `sleep 0`, `disksleep 0`, `autorestart 1`, `womp 1` | ekran gaśnie po 15 min, działa `caffeinate` |
-| Docker Desktop | `AutoStart: false` | uruchamia go `sh-start.sh` |
+| FileVault | wyłączony | `fdesetup status` |
+| Firewall | włączony | bez trybu ukrycia i bez „blokuj wszystko”; podpisane aplikacje (wbudowane i pobrane) przepuszczane |
+| Zdalne logowanie | włączone | `com.openssh.sshd` włączony, port 22 słucha; hasła dozwolone (`sshd_config` bez `PasswordAuthentication`, `UsePAM yes`); `~/.ssh/authorized_keys` nie istnieje, w `~/.ssh` nie ma też kluczy `id_*` |
+| pmset | `sleep 0`, `disksleep 0`, `autorestart 1`, `womp 1`, `powernap 0` | ekran gaśnie po 3 min (`displaysleep 3`); uśpienie blokują `caffeinate`, `sharingd` i TeamViewer |
+| Docker Desktop | `AutoStart: false` | w `settings-store.json`; uruchamia go `sh-start.sh` |
+
+Przejścia na same klucze nie wykonano: w `authorized_keys` nie ma żadnego klucza właściciela, więc
+wyłączenie haseł odcięłoby SSH. Najpierw krok 1 z bloku niżej.
 
 Komendy do wykonania przez właściciela (wymagają sudo):
 
@@ -790,7 +797,8 @@ także Mac z OpenCore Legacy Patcher, więc przed włączeniem trzeba sprawdzić
 `~/.claude/settings.json` ma w `permissions.deny` reguły `Read` i `Edit` dla: `~/Pictures`
 (z biblioteką Zdjęć), `~/Movies`, `~/Music`, `~/.gnupg`, `~/.ssh/id_*` oraz katalogów
 `Keychains`, `Safari`, `Containers/com.apple.Safari*`, `Application Support/Google`, `Messages` i
-`Mail` w `~/Library`. `~/Documents`, `~/Desktop` i `~/Downloads` celowo zostają dostępne.
+`Mail` w `~/Library`. `~/Documents`, `~/Desktop`, `~/Downloads` i iCloud zostają dostępne w zwykłych
+sesjach Claude właściciela; w sesjach SH blokują je ustawienia SH (niżej, „Sandbox sesji SH”).
 
 Profile przeglądarek: w `/Applications` są tylko Chrome i Safari (stan z 2026-11-01), ale reguły
 obejmują też pozostałe katalogi w `Application Support`: `Firefox` i `Mozilla` (60 MB profili po
@@ -804,14 +812,40 @@ bezwzględną, do tego służy `//`. Format: <https://code.claude.com/docs/en/pe
 Test z 2026-11-01: `ls ~/Pictures`, `cat`, `find` i narzędzie Read są blokowane, zaś
 `~/Documents` działa. Narzędzie Read jest też blokowane w `Application Support/Firefox`.
 
-Ograniczenia:
+Ograniczenia: reguły obejmują narzędzia Claude'a i rozpoznawane polecenia powłoki, ale nie
+interpretery, które same otwierają pliki. Test z 2026-11-09 przed sandboxem: Read, `cat`, `ls` i
+`grep -r` na `~/Pictures` zablokowane, a `node -e "fs.readdirSync(~/Pictures)"` wykonany u workera i u
+orkiestratora. Lukę zamyka sandbox w sesjach SH. Reguły nie dotyczą Codexa.
 
-- Reguły obejmują narzędzia Claude'a i rozpoznawane polecenia powłoki. Według dokumentacji nie
-  obejmują podprocesów, które same otwierają pliki (np. skrypt w Pythonie), ani poleceń bez
-  nazwy pliku (`grep -r` uruchomiony w chronionym katalogu).
-- Reguły nie dotyczą Codexa ani innych narzędzi.
-- Ochronę na poziomie systemu daje `sandbox.enabled`. Jest wyłączony, bo ogranicza też sieć i
-  zapis wszystkich poleceń Bash, a izolacja ma być lekka.
+### Sandbox sesji SH
+
+Od 2026-11-09 profil workera (`.claude/roles/worker/settings.json` szablonu) i ustawienia orkiestratora
+(`scripts/server/orkiestrator-settings.json`) mają `sandbox.enabled` i `allowUnsandboxedCommands: false`
+(bez ponowienia poza sandboxem). Zwykłe sesje Claude właściciela poza SH sandboxa nie mają.
+
+| | Worker | Orkiestrator |
+|---|---|---|
+| Poza sandboxem (`excludedCommands`, zwykłe reguły uprawnień dalej obowiązują) | `git`, `gh`, `shctl escalate`, `brew install` | `shctl`, `herdr`, `gh`, `git`, `notify.sh` |
+| Zapis | worktree, `$TMPDIR`, `~/Library/pnpm`, `~/.npm`, `~/.cache`, `~/Library/Caches` | `/Users/Shared/sh`, `$TMPDIR` |
+| Sieć | GitHub, `registry.npmjs.org`, pobieranie Playwrighta; gniazdo Dockera; trustd (TLS) | GitHub, `ntfy.sh`; trustd |
+| Odczyt zablokowany | reguły `Read()` deny z `~/.claude/settings.json` i z profilu | jw. |
+
+Reguły `Read()`/`Edit()` deny dla `~/Documents/**`, `~/Desktop/**`, `~/Downloads/**` i
+`~/Library/Mobile Documents/**` są w obu plikach SH, nie w `~/.claude/settings.json`. Sandbox bierze je
+do listy zakazów odczytu. `git` i `gh` są poza sandboxem, bo z wnętrza sandboxa nie sięgają do pęku
+kluczy (token `gh`, logowanie gita); w zamian deny obejmuje `gh gist`, `gh release upload`,
+`git --no-index` i `git --exec-path`. `shctl` jest poza sandboxem, więc nadal czyta i zapisuje vault w
+`~/Documents/Obsidian Vault` (skrzynka, `obsidian link`); `obsidian-sync.sh` działa z launchd, poza Claude.
+
+Test z 2026-11-09 (Claude Code 2.1.319, `claude -p`, nowe pliki): u workera i orkiestratora Read na
+`~/Pictures` i `~/Documents` daje „File is in a directory that is denied”, `node -e` z `readdirSync`
+daje `EPERM`, `cat` istniejącego pliku w `~/Documents` u workera „Operation not permitted”, a u
+orkiestratora odmowę uprawnień. Działają: `git status`, `npm view`, `shctl skrzynka przyjmij --dry-run`
+(widzi plik w skrzynce), `shctl obsidian link --dry-run`, `herdr workspace list`, `gh pr list`,
+`git ls-remote`. Orkiestrator przejmuje sandbox po restarcie sesji Remote Control.
+
+Nie testowano w sandboxie: Playwright (przeglądarki, XPC), `supabase start` (Docker), `brew install`.
+Pierwszy przebieg `sh-dryrun` po zmianie to sprawdza.
 
 ### Uprawnienia sesji SH
 
@@ -856,7 +890,7 @@ explain|prompt`, `pane list|get|read|process-info|wait-output|close`, `workspace
 `git push --force*`. Bez `git switch` i `checkout`: w `/Users/Shared/sh/sh-system` i klonach projektów
 nie przełączamy gałęzi. Bez reguły zostają `herdr pane run|send-text|send-keys` i `herdr agent
 send-keys` (wykonują dowolny tekst w innym panelu). `deny`: `git push` z `--force`/`-f`,
-`--delete`, `:GAŁĄŹ` i na `production`, `git reset --hard`, `git clean`, `git switch|checkout`,
+`--delete` i na `production`, `git reset --hard`, `git clean`, `git switch|checkout`,
 usuwanie gałęzi (`git branch -d|-D|--delete`), wymuszony push przez refspec z `+`
 (`git push origin +main`), `git push --mirror|--prune`, każde `git -c …` (pozwala ustawić
 `core.sshCommand`, `core.hooksPath` albo alias i uruchomić dowolny program), `--exec`,
@@ -871,6 +905,33 @@ Czego reguły nie załatwią (test z 2026-11-04):
   hookami git w obcym repo). Zamiast tego `git -C KATALOG ...`.
 - Polecenie z podstawieniem w nazwie komendy albo argumencie (`R=$(gh repo view ...); gh api
   repos/$R/...`) Claude Code zatrzymuje, bo nie może go sprawdzić przed uruchomieniem.
+
+#### Klucze w zasięgu agentów (2026-11-03, z zamkniętego PR #26)
+
+Przegląd bez wypisywania wartości: nazwy zmiennych, a z wartości tylko klasyfikacja (host, długość,
+prefiks typu `sk_live_`). Objął zmienne środowiskowe sesji, `launchctl getenv`, pliki startowe
+powłoki, pliki `.env*` w `~/Projects`, `~/Documents`, `~/Desktop`, `~/Downloads`, `~/sh`,
+`~/.hermes`, `~/.paperclip` i `~/forgejo` oraz pliki konfiguracji narzędzi w `~`.
+
+Kluczy produkcyjnych aplikacji (Stripe live, Supabase service role, bazy produkcyjne, Vercel) w
+plikach nie ma. `~/Projects` nie ma plików `.env`. Dostęp produkcyjny dają za to logowania narzędzi:
+
+| Gdzie | Co | Produkcja? |
+|---|---|---|
+| `gh` (token w pęku kluczy, konto `Sebastian-Temich`) | zakresy `repo`, `workflow`, `read:org`, `gist` | **Tak.** GitHub to środowisko produkcyjne procesu; token pozwala pchać, mergować i zmieniać workflow we wszystkich repo konta. Deny w profilach ról blokuje `gh pr merge`, `gh api`, `gh secret`, `gh workflow`, ale orkiestrator i sesje bez profilu go używają |
+| Konektory claude.ai sesji (m.in. Supabase, Gmail, Google Drive, Kalendarz, Shopify) | OAuth konta claude.ai, poza plikami | **Tak, jeśli konto ma tam projekty produkcyjne.** Supabase daje m.in. `execute_sql` i `apply_migration` na projektach konta. Reguły deny ich nie obejmują |
+| `~/.codex/auth.json`, logowanie Claude Code (pęk kluczy) | konta subskrypcji AI | nie aplikacyjna, ale koszt i limity |
+| `~/.docker/config.json` | `credsStore: desktop`, brak wpisów `auths` | nie |
+| `~/.paperclip/instances/default/.env` | `PAPERCLIP_AGENT_JWT_SECRET`, `PAPERCLIP_TOOL_ACTION_SIGNING_SECRET` | nie, lokalny Paperclip |
+| `~/Documents/Carbon_footprint/{IM_PL/back,carbon/backend,carbon_IMPL/carbon/backend}/.env.local` | `ALCHEMY_URL`, `PRIVATE_KEY_METAMASK`, `PUBLIC_KEY_METAMASK`, `JWT_SECRET_KEY` | nie: `ALCHEMY_URL` wskazuje testnet `polygon-mumbai`; klucz prywatny portfela trzeba jednak traktować jak sekret, gdyby ten sam portfel był używany w mainnecie |
+| `~/Documents/Carbon_footprint/**/.env.dev`, `.env.staging` | bez zmiennych z kluczami | nie |
+| `~/.hermes/.env`, `~/hermes-config-backup-20261022/.env` | wszystkie klucze zakomentowane | nie |
+| `~/forgejo/data/gitea/jwt/private.pem`, `actions_id_token/private.pem` | klucze lokalnego Forgejo | nie |
+| `~/Downloads/certyfikat-stemich-20211019*.p12` (2 pliki) | certyfikat osobisty z 2021 | nie aplikacyjny; nieznane przeznaczenie |
+
+Nie sprawdzano zawartości pęku kluczy (poza `gh auth status`) ani tokenów w aplikacjach.
+
+`~/Documents` i `~/Downloads` (klucz portfela, `.p12`) są od 2026-11-09 poza zasięgiem sesji SH.
 
 ### Codex
 
