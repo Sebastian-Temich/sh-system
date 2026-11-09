@@ -20,9 +20,8 @@ ustawia `sh-start.sh`; zmiana tego ustawienia działa dopiero po ponownym starci
 
 To jedna rozmowa, niezależnie od urządzenia. **Jedna sesja prowadzi jeden projekt:** podaj jego
 nazwę w pierwszym poleceniu („wznów sh-dryrun”). Bez nazwy, przy kilku projektach, orkiestrator
-zapyta, który projekt prowadzi. Zapisuje to w `/Users/Shared/sh/stan/NAZWA.json` (`shctl sesja`) i
-ostrzega, gdy ten sam projekt prowadzi inna sesja aktywna w ostatnich 30 minutach: wtedy zamknij
-jedną z nich albo napisz „przejmij projekt”. Drugi projekt to osobna sesja Remote Control. „status?”
+zapyta, który projekt prowadzi. Nie otwieraj dwóch sesji dla jednego projektu. Drugi projekt to
+osobna sesja Remote Control. „status?”
 bez nazwy nadal pokazuje wszystkie projekty.
 
 W panelu orkiestratora nie wpisuj `exit`. Zamyka sesję i trzeba ją uruchomić ponownie
@@ -108,7 +107,7 @@ klienta.
 
 1. Wrzuć pliki (także w podfolderach albo jako ZIP).
 2. Napisz w czacie: „materiały w skrzynce dla NAZWA”. Domyślnie trafią do
-   `docs/02-design/zrodla/`; inne miejsce podaj wprost, np. „do 00-intake/zrodla”.
+   `docs/00-intake/zrodla/`; inne miejsce podaj wprost, np. „do 04-architektura/zrodla”.
 3. Orkiestrator otwiera PR z plikami i podaje, co przyjęto, a co odrzucono. Po zielonym CI merguje
    go sam: bez review Codexa i bez Twojej akceptacji (Twoja decyzja w [[decyzje-systemu]]).
 4. Po merge'u przyjęte pliki znikają ze skrzynki i trafiają do jej podfolderu
@@ -151,23 +150,13 @@ Obsidian na serwerze pokazuje dokumenty, nie kod. Vault `~/Documents/Obsidian Va
 | `SH/Skrzynka/NAZWA/` | Twoja skrzynka na materiały projektu; jedyne miejsce w `SH/`, w którym zapisujesz |
 
 Kopie aktualizuje serwer co 5 minut. Nowy dokument pojawia się najpóźniej 5 minut po merge'u.
-Jedyna potrzebna wtyczka to **Dataview**.
+Jedyna wtyczka to **Dataview** (dashboardy projektów v1).
 
-### Dashboard projektu
+### Stan projektu
 
-Otwórz `SH/Projekty/NAZWA/docs/_dashboard.md`. Pokazuje:
-
-| Sekcja | Co widzisz |
-|---|---|
-| Czeka na Ciebie | Otwarte eskalacje i etapy w review czekające na Twoją akceptację |
-| Etapy | Status i iteracja każdego etapu |
-| Zadania | Liczniki: todo, w toku, review, zablokowane, eskalowane, zrobione; PR otwarte, czerwone CI |
-| Wstrzymania z limitów | Aktywne limity |
-| Otwarte eskalacje | Lista z datą |
-| Ostatnie decyzje | 5 najnowszych wpisów z `decyzje.md` |
-
-Liczniki pochodzą z chwili ostatniej synchronizacji statusu przez orkiestratora (kolumna
-„Synchronizacja”). Najświeższy stan daje zawsze „status?”.
+Najświeższy stan daje „status?” w czacie. W Obsidianie: `docs/status.md` (etap, punkt
+przekazania) i `docs/decyzje.md`. Nowe projekty nie mają `_dashboard.md` (SH-lite F2); w projektach
+v1 plik zostaje do migracji.
 
 ### Ważne dokumenty projektu
 
@@ -208,7 +197,6 @@ Liczniki pochodzą z chwili ostatniej synchronizacji statusu przez orkiestratora
 
 **Raz w tygodniu:**
 
-- Dashboard każdego projektu: etapy, liczniki, decyzje.
+- „status?” dla każdego projektu: etapy, zadania, decyzje.
 - `docs/backlog-drobne.md`: czy coś warto zlecić jako tryb S.
 - Na serwerze `shctl doctor`: czy wszystko jest zdrowe ([[04-shctl#doctor]]).
-- Kopia konfiguracji: `backup-config.sh` ([[05-serwer-i-skrypty#backup-config.sh]]).

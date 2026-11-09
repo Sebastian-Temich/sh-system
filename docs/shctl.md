@@ -74,15 +74,15 @@ shctl new-project NAZWA [--tryb S|M] [--public] [--opis "..."]
 Kolejno: repo `SH_GH_OWNER/NAZWA` z szablonu (domyślnie prywatne), klon do `/Users/Shared/sh/projekty/NAZWA`,
 usuwanie gałęzi po merge'u (`gh repo edit --delete-branch-on-merge`), `setup-labels.sh`,
 frontmatter `konfiguracja.md` (`tryb_procesu`, `etap_wdrozenia: A`, `data`,
-`blok_portow`), blok portów, `supabase/config.toml`, jeśli istnieje, `pominiety` dla etapów spoza
-trybu, `status.md`, opis w `docs/00-intake/zrodlo.md`, `check-dod.sh`, commit i push na main. Na
+`blok_portow`), blok portów w `porty.md` (zwalnia się ręcznie), `supabase/config.toml`, jeśli
+istnieje, `pominiety` dla wszystkich etapów w trybie S, `status.md`, opis w `docs/00-intake/zrodlo.md`, `check-dod.sh`, commit i push na main. Na
 końcu zakłada lekki klon `docs/` w `SH_OBSIDIAN_DIR/NAZWA` (sekcja „obsidian”) i skrzynkę na
 materiały `SH_SKRZYNKA_DIR/NAZWA` (sekcja „skrzynka”). Klon aktualizuje `obsidian sync`; w Obsidianie
 nic nie trzeba włączać.
 
 | Argument | Znaczenie |
 |---|---|
-| `--tryb` | Domyślnie M. S działa z ostrzeżeniem, bo proces zaczyna nowy projekt od M lub L. L daje kod 2 (etap B) |
+| `--tryb` | Domyślnie M. S działa z ostrzeżeniem, bo proces zaczyna nowy projekt od M. L daje kod 2 (tryb odłożony) |
 | `--public` | Repo publiczne |
 | `--opis` | Trafia do `zrodlo.md` i, ucięty, do opisu repo |
 
@@ -109,7 +109,7 @@ Przy `--dry-run` pole `porty` to sam zakres, np. `"55121-55129"`.
 ## stage
 
 ```sh
-shctl stage start|review|done|skip|escalate ETAP [--notatka "..."]
+shctl stage start|review|done|escalate ETAP [--notatka "..."]
 shctl stage iter ETAP
 ```
 
@@ -122,12 +122,14 @@ shctl stage iter ETAP
 | `start` | `todo`, `review`, `escalated`, `in-progress` | `in-progress` |
 | `review` | `in-progress`, `review` | `review` |
 | `done` | `review`, `done` | `done`, po zielonym `check-dod.sh` |
-| `skip` | `todo`, `pominiety`; etap trybu tylko z `--notatka` | `pominiety` |
 | `escalate` | `todo`, `in-progress`, `review`, `escalated` | `escalated` |
 
 `done` uruchamia `check-dod.sh` na repo i na kopii `docs/` ze statusem `done`; przy brakach kończy
-się kodem 4, a status zostaje. `skip` etapu trybu bez `--notatka` to kod 4; z notatką shctl zapisuje
-ją w `uzasadnienie_pominiecia` w `DoD.md` (wymaga go `check-dod.sh`) i w dzienniku. `stage escalate`
+się kodem 4, a status zostaje. Komendy pominięcia nie ma: orkiestrator zapisuje decyzję
+(`decision add`) i ustawia w `DoD.md` na `main` `status: pominiety` oraz `decyzja: "..."`;
+`check-dod.sh` odrzuca `pominiety` bez decyzji, a `stage` nie zmienia statusu `pominiety`. Etapy z
+`DoD.md`: `00-intake`, `04-architektura`, `05-plan`, `06-zadania`, `08-qa`, `wydanie` (tryb L z
+etapami `01`–`03` jest odłożony, `07-realizacja` nie ma `DoD.md`). `stage escalate`
 zmienia tylko status: eskalację z plikiem i powiadomieniem otwiera `shctl escalate`. Etap czekający
 na coś zewnętrznego to `stage start ETAP --notatka "czeka na ..."`.
 
@@ -155,40 +157,6 @@ kod 4.
 
 ```json
 {"ok":true,"komenda":"stage","dry_run":false,"wynik":{"etap":"wydanie","pr":35,"iteracja":2,"eskalowano":false,"zmiana":true}}
-```
-
-## doc new
-
-```sh
-shctl doc new ETAP TYP [--tytul "..."] [--rola ROLA] [--nr NR]
-```
-
-Tworzy dokument z `docs/_szablony/TYP.md` z frontmatterem `projekt`, `etap`, `data`, `rola`.
-Istniejącego pliku nie nadpisuje. Domyślna rola wynika z etapu: intake, architekt, zadania, worker,
-qa, orkiestrator.
-
-| TYP | ETAP | Plik | Wymaga |
-|---|---|---|---|
-| `specyfikacja` | `00-intake` | `specyfikacja.md` | |
-| `architektura` | `04-architektura` | `architektura.md` | |
-| `adr` | `04-architektura` | `adr/ADR-NNN-slug.md` | `--tytul` |
-| `plan` | `05-plan` | `plan.md` | |
-| `raport-zadania` | `07-realizacja` | `T-NR.md` | `--nr` |
-| `raport-qa` | `08-qa` | `raport-MN.md` | `--tytul` zaczynający się od kamienia, np. `"M1 Szkielet"` |
-| `wydanie-techniczna` | `wydanie` | `techniczna/techniczna.md` | |
-| `wydanie-produktowa` | `wydanie` | `produktowa/produktowa.md` | |
-
-Numer ADR to najwyższy istniejący plus jeden. Powtórka z tym samym tytułem zwraca ten sam ADR.
-Inne szablony trafiają do `docs/ETAP/TYP.md`. Typów `eskalacja` i `decyzja` nie obsługuje: służą do
-tego `escalate` i `decision add`.
-
-```sh
-shctl doc new 04-architektura adr --tytul "Wybór bazy" --json
-```
-
-```json
-{"ok":true,"komenda":"doc","dry_run":false,"wynik":{
-  "plik":"docs/04-architektura/adr/ADR-001-wybor-bazy.md","utworzono":true,"rola":"architekt","adr":"ADR-001"}}
 ```
 
 ## decision add
@@ -252,68 +220,6 @@ shctl escalate --dotyczy "#12" --powod "brak klucza Stripe" --potrzebne "klucz t
   "id":"E-001","dotyczy":"#12","plik":"docs/07-realizacja/escalations/E-001.md",
   "katalog":"/Users/Shared/sh/projekty/sklep","z_worktree":false,"nowa":true,"slot_zwolniony":true,"panel":"w1:p7"}}
 ```
-
-## checkpoint
-
-```sh
-shctl checkpoint 00-intake|04-architektura|wydanie|#NR [--opis "..."]
-```
-
-Powiadamia właściciela, że praca czeka na jego akceptację (checkpointy z `proces-v1.md`, „Skala
-procesu”): specyfikacja (`00-intake`), architektura i plan (`04-architektura`), odbiór (`wydanie`) i
-odbiór zadania trybu S (`#NR`). Podniesienie trybu nie ma PR: idzie przez `escalate --akceptacja`.
-
-PR wynika z celu: dla etapu najnowszy otwarty PR z gałęzi `stage/ETAP`, dla `#NR` PR zadania
-(`Closes #NR` albo gałąź `task/NR-`), jak w `task close`. Kolejno:
-
-1. PR musi być otwarty, inaczej kod 4;
-2. komentarz review dla bieżącego commita PR musi mieć PASS (ten sam odczyt co `task close`), inaczej
-   kod 4: właściciel akceptuje pracę po review;
-3. `notify.sh high "Czeka na Twoją akceptację: NAZWA / CEL" "OPIS, PR #N[. --opis]" URL_PR`; adres PR
-   trafia do nagłówka `Click`;
-4. wpis `CEL HEAD` w `/Users/Shared/sh/stan/checkpointy/NAZWA`.
-
-Powtórka dla tego samego commita nic nie wysyła (`"ponownie":true`). Nowy commit w PR, np. po
-poprawkach z akceptacji, i nowy PASS dają nowe powiadomienie. Nieudane powiadomienie to kod 1 bez wpisu
-w stanie, więc ponowienie wysyła je jeszcze raz. Komenda nie zmienia plików projektu ani GitHuba.
-
-```sh
-shctl checkpoint 04-architektura --opis "4 kamienie, Resend darmowy" --json
-```
-
-```json
-{"ok":true,"komenda":"checkpoint","dry_run":false,"wynik":{
-  "projekt":"sklep","cel":"04-architektura","pr":2,"head":"68373f5...",
-  "url":"https://github.com/Sebastian-Temich/sklep/pull/2",
-  "tytul":"Czeka na Twoją akceptację: sklep / 04-architektura","powiadomiono":true,"ponownie":false}}
-```
-
-## ports
-
-```sh
-shctl ports reserve|release|list [--zakres 55|56]
-```
-
-Rejestr to tabela „Projekty Supabase” w `/Users/Shared/sh/porty.md`. `reserve` i `release` działają na projekcie
-z `--projekt` albo z bieżącego katalogu, a zapis chroni blokada `porty.md.lock`.
-
-- `reserve` bierze pierwszy wolny blok bez zajętych portów (`lsof`). Istniejącą rezerwację zwraca bez
-  zmian. W projekcie z `supabase/config.toml` ustawia wszystkie porty i `project_id`.
-- Po wyczerpaniu puli 55 kończy się kodem 4: najpierw zwalniamy bloki archiwalne, a dopiero potem
-  `--zakres 56`. Bloki tego zakresu mają w tabeli etykietę `56:X`.
-- `release` przywraca wiersz `*wolny*`. Nie zmienia `config.toml` i nie zatrzymuje stacku.
-
-```sh
-shctl ports list --json
-```
-
-```json
-{"ok":true,"komenda":"ports","dry_run":false,"wynik":[
-  {"x":"1","projekt":"sklep","katalog":"`/Users/Shared/sh/projekty/sklep`","api":"55121","db":"55122","studio":"55123",
-   "mail":"55124","analytics":"55127","shadow":"55128","pooler":"55129","inspector":"55125","stan":"zarezerwowany 2026-11-01"}]}
-```
-
-`reserve` zwraca obiekt jak pole `porty` w `new-project`, a `release` `{"projekt":"sklep","zwolniono":true}`.
 
 ## status show
 
@@ -458,7 +364,7 @@ Design, logo, teksty. Nie jest repo git i `obsidian sync` go nie dotyka. Zakład
 `przyjmij` przenosi materiały do repo w dwóch wywołaniach:
 
 1. **Partia.** Pliki ze skrzynki (bez `_przeniesione/`, plików i katalogów ukrytych oraz `__MACOSX`)
-   przechodzą kontrolę i trafiają do `docs/ETAP/KATALOG` (domyślnie `docs/02-design/zrodla`) z
+   przechodzą kontrolę i trafiają do `docs/ETAP/KATALOG` (domyślnie `docs/00-intake/zrodla`) z
    zachowaniem podkatalogów i prawami 644. Commit `ETAP: materiały ze skrzynki (N)` powstaje w
    odłączonym worktree `/Users/Shared/sh/wt/NAZWA/skrzynka-ETAP` na bazie `origin/stage/ETAP`, a bez takiej gałęzi
    na `origin/main`, i idzie pushem na `stage/ETAP`. Lokalne gałęzie repo głównego zostają nietknięte.
@@ -496,8 +402,9 @@ archiwum i śmieci systemowe (`__MACOSX`, pliki ukryte) są pomijane (`ARCHIWUM:
 `odrzucone`). Archiwum bez plików do przyjęcia jest odrzucane. Inne archiwa (`.tar`, `.7z`) trafiają
 do repo bez rozpakowania.
 
-`--etap` to ścieżka względem `docs/`, której pierwszy element jest etapem (`00-intake/zrodla` daje
-gałąź `stage/00-intake`); `..`, `/` na początku i znaki spoza `A-Za-z0-9._/-` to kod 2. Gdy skrzynka
+`--etap` to ścieżka względem `docs/`, której pierwszy element jest etapem (`04-architektura/zrodla` daje
+gałąź `stage/04-architektura`). Przy trwającym intake domyślny cel `00-intake/zrodla` trafia do
+otwartego PR etapu. `..`, `/` na początku i znaki spoza `A-Za-z0-9._/-` to kod 2. Gdy skrzynka
 nie zawiera niczego nowego: `stan: pusto`. Gdy wszystko zostało odrzucone: kod 4. Ta sama treść już na
 `main`: pliki od razu do `_przeniesione/`, bez PR. Brak skrzynki: kod 3. `--dry-run` sprawdza pliki,
 nie wypycha i nie zapisuje stanu (`stan: do_przyjecia`). Wymaga `unzip` i `zipinfo` tylko przy ZIP.
@@ -509,33 +416,10 @@ shctl skrzynka przyjmij sklep --json
 ```json
 {"ok":true,"komenda":"skrzynka","dry_run":false,"wynik":{
   "projekt":"sklep","skrzynka":"/Users/.../Obsidian Vault/SH/Skrzynka/sklep","stan":"pr_otwarty",
-  "cel":"docs/02-design/zrodla","galaz":"stage/02-design","pr":7,
+  "cel":"docs/00-intake/zrodla","galaz":"stage/00-intake","pr":7,
   "url":"https://github.com/Sebastian-Temich/sklep/pull/7","przyjete":["logo.png","makiety.zip"],
   "odrzucone":[{"plik":"makiety.zip:makiety/run.sh","powod":"plik wykonywalny (.sh)"}],
   "przeniesione":[],"pozostawione":[]}}
-```
-
-## sesja
-
-```sh
-shctl sesja start|stan|koniec [--przejmij] --projekt NAZWA
-```
-
-Jedna sesja orkiestratora prowadzi jeden projekt. Wpis `.sesja` w `/Users/Shared/sh/stan/NAZWA.json`:
-`id` (`CLAUDE_CODE_SESSION_ID`), `pid` (`CLAUDE_PID`), `panel` (`HERDR_PANE_ID`), `od`, `ostatnio`.
-Ta sama sesja to to samo `id` albo ten sam `pid` (sesja po `/clear`), chyba że `pid` to serwer
-`claude remote-control`, wspólny dla jego sesji. Inna sesja jest aktywna, gdy jej proces żyje, a
-`ostatnio` jest młodsze niż `SHCTL_SESJA_MIN` minut (30).
-
-`start` zapisuje wpis; przy innej aktywnej sesji kończy się kodem 4, a z `--przejmij` nadpisuje wpis
-(pole `przejeta_od`). Poza sesją Claude Code (bez `CLAUDE_CODE_SESSION_ID`) to kod 2. `stan` tylko
-czyta, `koniec` usuwa wpis własnej sesji. Komendy orkiestratora (`task`, `review run`, `pr check`,
-`stage`, `reset-dryrun`) odświeżają `ostatnio` własnej sesji, zajmują wolny projekt, a przy innej
-aktywnej sesji wypisują ostrzeżenie i niczego nie przejmują.
-
-```json
-{"ok":true,"komenda":"sesja","dry_run":false,"wynik":{"projekt":"sklep","stan":"wolna","sesja":{
-  "id":"61b0a97e-...","pid":"4827","panel":"w1:p1","od":"2026-11-04T21:30:00Z","ostatnio":"2026-11-04T21:30:00Z"},"zmiana":true}}
 ```
 
 ## doctor
@@ -894,7 +778,7 @@ niezacommitowane zmiany albo commity spoza PR. Potem, na main po `git pull --ff-
 | Zgłoszenia ⚪ z ostatniego review (komentarz w PR) | `docs/backlog-drobne.md`, źródło `review PR #N` |
 | Czas od dispatchu, iteracje, eskalacje | Wiersz `| #NR tytuł | tryb | czas | 1 | iteracje | eskalacje | PR #N |` na końcu ostatniej tabeli `docs/metryki.md` (w `sh-dryrun`: tabela bieżącego przebiegu) |
 | Tytuł i PR | `- #NR: tytuł (PR #N)` w sekcji „Niewydane” `CHANGELOG.md` |
-| „Propozycje dla systemu” | Wpis w `docs/propozycje.md` w jednym otwartym PR miesiąca do `sh-system` (gałąź `propozycje-RRRR-MM`, tytuł „Propozycje RRRR-MM”); brak otwartego PR: nowy od `main` |
+| „Propozycje dla systemu” | Pusty commit z treścią i znacznikiem `<!-- propozycje:NAZWA:T-NR -->` w opisie, w jednym otwartym PR miesiąca do `sh-system` (gałąź `propozycje-RRRR-MM`, tytuł „Propozycje RRRR-MM”); PR nie zmienia plików; brak otwartego PR: nowy od `main` |
 
 Pozycje sekcji to punkty listy (z kontynuacją) albo akapity; „brak” jest pomijane. Na końcu usuwa
 worktree, gałąź `task/NR-*` i panel (także `eskalacja:NAZWA:NR`), zamyka issue, zdejmuje etykiety `status:*`, uruchamia

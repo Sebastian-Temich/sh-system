@@ -10,18 +10,17 @@ setup() {
   cp -R "$REPO/scripts/shctl" "$K/scripts/"
   mkdir -p "$K/scripts/server"
   cp -R "$REPO/scripts/server/lib" "$K/scripts/server/"
-  # Skill zbudowany z szablonu, jak robi to autor nowego skilla.
+  # Nowy skill jako kopia istniejącego, jak robi to autor nowego skilla.
   S="$K/plugin/skills/sh-test"
   mkdir -p "$S"
-  sed -e 's/^name: _szablon$/name: sh-test/' \
+  sed -e 's/^name: sh-worker$/name: sh-test/' \
     -e 's/^description: .*/description: Testowy skill. Użyj, gdy test tego wymaga./' \
-    -e '/^# Tylko w szablonie/d' -e '/^disable-model-invocation: true$/d' -e '/^user-invocable: false$/d' \
-    "$REPO/plugin/skills/_szablon/SKILL.md" >"$S/SKILL.md"
+    "$REPO/plugin/skills/sh-worker/SKILL.md" >"$S/SKILL.md"
 }
 
 sprawdz() { run --separate-stderr bash "$REPO/scripts/plugin/sprawdz-skille.sh" "$K"; }
 
-@test "repo i skill z szablonu sa zgodne z kontraktem" {
+@test "repo i nowy skill sa zgodne z kontraktem" {
   run --separate-stderr bash "$REPO/scripts/plugin/sprawdz-skille.sh"
   [ "$status" -eq 0 ]
   sprawdz
@@ -62,15 +61,13 @@ sprawdz() { run --separate-stderr bash "$REPO/scripts/plugin/sprawdz-skille.sh" 
   [[ "$stderr" == *"### Tryb M"* ]] || false
 }
 
-@test "skill zablokowany jak szablon i szablon bez blokad" {
+@test "skill zablokowany do wywolania" {
   printf -- '---\nname: sh-test\ndescription: X. Użyj, gdy Y.\ndisable-model-invocation: true\nuser-invocable: false\n---\n' >"$S/x"
   sed -n '/^---$/,/^---$/!p' "$S/SKILL.md" | sed '1,0d' >>"$S/x"
   mv "$S/x" "$S/SKILL.md"
-  sed -i.bak '/^user-invocable: false$/d' "$K/plugin/skills/_szablon/SKILL.md"
   sprawdz
   [ "$status" -eq 1 ]
-  [[ "$stderr" == *"sh-test/SKILL.md: skill zablokowany jak szablon"* ]] || false
-  [[ "$stderr" == *"_szablon/SKILL.md: szablon musi mieć"* ]] || false
+  [[ "$stderr" == *"sh-test/SKILL.md: skill zablokowany"* ]] || false
 }
 
 @test "marketplace: nazwa wpisu rozna od plugin.json" {

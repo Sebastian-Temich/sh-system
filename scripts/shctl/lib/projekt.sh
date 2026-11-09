@@ -1,8 +1,9 @@
 # Funkcje projektu: katalog, frontmatter, etapy, sekcje status.md.
 # shellcheck shell=bash
 
-ETAPY="00-intake 01-brief 02-design 03-wymagania 04-architektura 05-plan 06-zadania 07-realizacja 08-qa wydanie"
-ETAPY_M="00-intake 04-architektura 05-plan 06-zadania 07-realizacja 08-qa wydanie"
+# Etapy z DoD.md (tryb M). Tryb L z osobnymi etapami jest odłożony (proces-v1.md). Stan realizacji
+# jest w issue, więc 07-realizacja nie ma DoD (katalog zostaje na raporty i eskalacje).
+ETAPY="00-intake 04-architektura 05-plan 06-zadania 08-qa wydanie"
 
 ROOT=""
 ST=""
@@ -39,13 +40,8 @@ fm_set() {
 
 tryb() { fm_get "$KONFIG" tryb_procesu; }
 
-etap_w_trybie() {
-  case "$2" in
-    S) return 1 ;;
-    L) return 0 ;;
-    *) case " $ETAPY_M " in *" $1 "*) return 0 ;; *) return 1 ;; esac ;;
-  esac
-}
+# Tryb S nie ma etapów DoD; w trybie M należą do niego wszystkie etapy z ETAPY.
+etap_w_trybie() { [ "$2" != S ]; }
 
 sprawdz_etap() {
   case " $ETAPY " in

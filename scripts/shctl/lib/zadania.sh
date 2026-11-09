@@ -22,7 +22,6 @@ zadania_init() {
   SLUG="$(slug_repo)"
   [ -n "$SLUG" ] || die "$E_BRAK" "origin projektu $PROJEKT nie wskazuje repo GitHub"
   WT="$SH_DIR/wt/$PROJEKT"
-  [ "${SHCTL_KOMENDA:-}" = sesja ] || sesja_odswiez
 }
 
 # Wartość z frontmattera konfiguracja.md albo domyślna.
@@ -390,78 +389,6 @@ stan_etapu_zapisz() {
   mv "$t.n" "$f"
   rm -f "$t"
   odblokuj "$f.lock"
-}
-
-# --- Sesja prowadząca projekt (klucz .sesja) ------------------------------------------------------
-
-# Jedna sesja orkiestratora na projekt. Sesję rozpoznaje CLAUDE_CODE_SESSION_ID; ten sam CLAUDE_PID
-# po /clear to ta sama sesja, chyba że to serwer claude remote-control (wtedy PID mają wszystkie jego
-# sesje). Wpis innej sesji jest aktywny, gdy jej proces żyje, a ostatnia komenda była w ciągu
-# SHCTL_SESJA_MIN minut (domyślnie 30).
-sesja_wpis() {
-  local f
-  f="$(plik_stanu)"
-  [ -f "$f" ] || { echo null; return 0; }
-  jq -c '.sesja // null' "$f"
-}
-
-pid_rc() { ps -o command= -p "$1" 2>/dev/null | grep -q 'remote-control'; }
-
-# Wypisuje: brak (nie w sesji Claude), wolna, moja albo inna.
-sesja_ocen() {
-  local w="$1" id="${CLAUDE_CODE_SESSION_ID:-}" pid="${CLAUDE_PID:-}" wid wpid ost wiek
-  [ -n "$id" ] || { echo brak; return 0; }
-  [ "$w" != null ] || { echo wolna; return 0; }
-  wid="$(jq -r '.id // ""' <<<"$w")"
-  wpid="$(jq -r '.pid // ""' <<<"$w")"
-  if [ "$wid" = "$id" ]; then echo moja; return 0; fi
-  if [ -n "$pid" ] && [ "$wpid" = "$pid" ] && ! pid_rc "$pid"; then echo moja; return 0; fi
-  ost="$(jq -r '.ostatnio // ""' <<<"$w")"
-  wiek="$(jq -nr --arg o "$ost" '(now - ($o | fromdateiso8601)) | floor' 2>/dev/null || echo 999999)"
-  if [ -n "$wpid" ] && kill -0 "$wpid" 2>/dev/null && [ "$wiek" -lt $((${SHCTL_SESJA_MIN:-30} * 60)) ]; then
-    echo inna
-  else
-    echo wolna
-  fi
-}
-
-sesja_zapisz() {
-  local obj="$1" f t
-  [ "$DRY" -eq 0 ] || return 0
-  f="$(plik_stanu)"
-  mkdir -p "$STAN"
-  zablokuj "$f.lock"
-  t="$(tmp_plik)"
-  if [ -f "$f" ]; then cp "$f" "$t"; else jq -n --arg p "$PROJEKT" '{projekt:$p, zadania:{}}' >"$t"; fi
-  jq --argjson o "$obj" 'if $o == null then del(.sesja) else .sesja = $o end' "$t" >"$t.n"
-  mv "$t.n" "$f"
-  rm -f "$t"
-  odblokuj "$f.lock"
-}
-
-sesja_nowy_wpis() {
-  jq -nc --arg i "${CLAUDE_CODE_SESSION_ID:-}" --arg p "${CLAUDE_PID:-}" --arg h "${HERDR_PANE_ID:-}" \
-    --arg t "$(teraz_utc)" --arg od "${1:-}" \
-    '{id:$i, pid:$p, panel:$h, od:(if $od == "" then $t else $od end), ostatnio:$t}'
-}
-
-opis_sesji() {
-  jq -r '"sesja \(.id[0:8]) (PID \(.pid), panel \(if .panel == "" then "-" else .panel end), ostatnio \(.ostatnio))"' <<<"$1"
-}
-
-# Wywoływane przez komendy orkiestratora: odświeża wpis własnej sesji, zajmuje wolny projekt, a przy
-# innej aktywnej sesji ostrzega (bez zmiany wpisu). Poza sesją Claude nic nie robi.
-sesja_odswiez() {
-  local w s
-  [ "$DRY" -eq 0 ] || return 0
-  [ -n "${CLAUDE_CODE_SESSION_ID:-}" ] || return 0
-  w="$(sesja_wpis)"
-  s="$(sesja_ocen "$w")"
-  case "$s" in
-    moja) sesja_zapisz "$(sesja_nowy_wpis "$(jq -r '.od // ""' <<<"$w")")" ;;
-    wolna) sesja_zapisz "$(sesja_nowy_wpis)" ;;
-    inna) uwaga "projekt $PROJEKT prowadzi inna aktywna $(opis_sesji "$w"); jedna sesja = jeden projekt (shctl sesja start --przejmij)" ;;
-  esac
 }
 
 # --- PR: konflikt z main ----------------------------------------------------------------------------

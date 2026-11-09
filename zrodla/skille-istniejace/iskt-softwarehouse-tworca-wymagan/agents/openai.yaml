@@ -1,3 +1,0 @@
-display_name: ISKT Software House - Tworca Wymagan
-short_description: Przygotowuje precyzyjne zlecenia do Intake Lead w ISKT Software House.
-default_prompt: Przygotuj zlecenie techniczne dla ISKT Software House na podstawie opisu uzytkownika. Jesli brakuje informacji blokujacych, zadaj maksymalnie 3 pytania.

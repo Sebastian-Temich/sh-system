@@ -35,7 +35,7 @@ Materiały w skrzynce.
 ```
 
 **Orkiestrator:** `shctl skrzynka przyjmij strona-firmowa`. Pliki przechodzą kontrolę, a ZIP jest
-rozpakowany do `docs/02-design/zrodla/makiety/`. Powstaje PR #1 z gałęzi `stage/02-design`. Po
+rozpakowany do `docs/00-intake/zrodla/makiety/`. Powstaje PR #1 z gałęzi `stage/00-intake`. Po
 zielonym CI orkiestrator go merguje i wywołuje komendę jeszcze raz, co odkłada pliki w skrzynce.
 
 ```text
@@ -44,7 +44,7 @@ Odrzucone: makiety.zip:export/podglad.command (plik wykonywalny), zostaje w skrz
 ```
 
 W skrzynce przyjęte pliki leżą teraz w `_przeniesione/20261103/`, a w Obsidianie, po synchronizacji,
-w `SH/Projekty/strona-firmowa/docs/02-design/zrodla/`. Następnie orkiestrator uruchamia `sh-intake`,
+w `SH/Projekty/strona-firmowa/docs/00-intake/zrodla/`. Następnie orkiestrator uruchamia `sh-intake`,
 który czyta materiały jako dane.
 
 **Orkiestrator odpowiada (przykład):**
@@ -59,7 +59,7 @@ Pytania (piszę dalej z propozycjami jako założeniami):
 ```
 
 **W Obsidianie:** po kilku minutach pojawia się `SH/Projekty/strona-firmowa/docs/` z pustymi
-szablonami i `_dashboard.md`. Specyfikacji jeszcze nie ma: powstaje na gałęzi
+szablonami. Specyfikacji jeszcze nie ma: powstaje na gałęzi
 `stage/00-intake`.
 
 ## 2. Specyfikacja i pierwszy checkpoint
@@ -77,15 +77,14 @@ Otwarte pytania: 3, z propozycjami jak wyżej.
 Szacunek poglądowy: 9 zadań, ok. tydzień, ok. 2 godziny Twojego czasu.
 ```
 
-Jednocześnie przychodzi push (`shctl checkpoint 00-intake`):
+Jednocześnie przychodzi push (`notify.sh`):
 
 ```text
 Czeka na Twoją akceptację: strona-firmowa / 00-intake
 Specyfikacja, PR #2
 ```
 
-Kliknięcie otwiera PR. W dashboardzie etap widać też w „Etapach w review, które po PASS czekają na
-Twoją akceptację”.
+Kliknięcie otwiera PR. Etap widać też w „status?” w „Czeka na Ciebie”.
 
 **Ty:** czytasz PR #2 na GitHubie (wymagania `W-1`…`W-6` z kryteriami Given/When/Then).
 
@@ -149,7 +148,7 @@ Potem `shctl task create` zakłada issue na GitHubie.
 Blokuje pracę: klucz testowy Resend przed T6.
 ```
 
-**W Obsidianie:** `docs/06-zadania/index.md` z mapą zadań, a w dashboardzie liczniki „todo”.
+**W Obsidianie:** `docs/06-zadania/index.md` z mapą zadań, a w „status?” liczniki „todo”.
 
 ## 5. Realizacja
 
@@ -183,7 +182,7 @@ Eskalacja E-001: strona-firmowa
 #10: brak klucza testowego Resend
 ```
 
-W Obsidianie: `docs/07-realizacja/escalations/E-001.md`, w dashboardzie w „Czeka na Ciebie”.
+W Obsidianie: `docs/07-realizacja/escalations/E-001.md`, a w „status?” w „Czeka na Ciebie”.
 Zakładasz konto Resend, wpisujesz klucz testowy do `/Users/Shared/sh/projekty/strona-firmowa/.env.local` na
 serwerze i piszesz w czacie (bez klucza):
 
@@ -214,7 +213,7 @@ Punkt przekazania zapisany. Proponuję /clear i „wznów”.
 
 ## 7. Odbiór na stagingu
 
-Po ostatnim kamieniu orkiestrator otwiera PR etapów `07-realizacja` i `wydanie` (review jak
+Po ostatnim kamieniu orkiestrator otwiera PR etapu `wydanie` (review jak
 wcześniej). Staging to wdrożenie gałęzi `main` w Vercel pod stałym aliasem i osobny projekt
 Supabase, migrowany przez CI.
 

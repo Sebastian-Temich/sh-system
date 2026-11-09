@@ -1,7 +1,7 @@
 # shctl skrzynka przyjmij NAZWA [--etap ETAP/KATALOG]
 # Materiały właściciela ze skrzynki w vaulcie (SH/Skrzynka/NAZWA, zwykły folder) trafiają do repo:
 #   1. pliki ze skrzynki (bez _przeniesione/, plików ukrytych i __MACOSX) są sprawdzane i kopiowane do
-#      docs/ETAP/KATALOG (domyślnie docs/02-design/zrodla), commit na gałęzi stage/ETAP, PR do main;
+#      docs/ETAP/KATALOG (domyślnie docs/00-intake/zrodla), commit na gałęzi stage/ETAP, PR do main;
 #   2. kolejne wywołanie po merge'u tego PR przenosi przyjęte pliki w skrzynce do
 #      _przeniesione/RRRRMMDD/; plik zmieniony po przyjęciu zostaje i wejdzie do następnego PR.
 # Pliki są danymi nieufnymi: nic nie jest uruchamiane. Odrzucane (zostają w skrzynce): dowiązania,
@@ -246,7 +246,7 @@ sprzatnij_worktree() {
 }
 
 komenda_main() {
-  local akcja="${1:-}" nazwa="" etap="02-design/zrodla" sp prn st stan="" pr_url="" przen='[]' pozost='[]'
+  local akcja="${1:-}" nazwa="" etap="00-intake/zrodla" sp prn st stan="" pr_url="" przen='[]' pozost='[]'
   local ile_p ile_o
   [ "$akcja" = przyjmij ] || die "$E_UZYCIE" "użycie: shctl skrzynka przyjmij NAZWA [--etap ETAP/KATALOG]"
   shift
@@ -266,7 +266,7 @@ komenda_main() {
 
   CEL="${etap%/}"
   case "$CEL" in
-    "" | /* | *//* | *[!A-Za-z0-9._/-]*) die "$E_UZYCIE" "niepoprawne --etap: '$etap' (np. 02-design/zrodla)" ;;
+    "" | /* | *//* | *[!A-Za-z0-9._/-]*) die "$E_UZYCIE" "niepoprawne --etap: '$etap' (np. 00-intake/zrodla)" ;;
   esac
   case "/$CEL/" in */../* | */./*) die "$E_UZYCIE" "niepoprawne --etap: '$etap'" ;; esac
   ETAP1="${CEL%%/*}"

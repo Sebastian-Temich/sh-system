@@ -1,7 +1,7 @@
 # Wspólne środowisko testów shctl: atrapy gh, herdr i notify, projekt w katalogu tymczasowym.
 bats_require_minimum_version 1.5.0
 
-ETAPY="00-intake 01-brief 02-design 03-wymagania 04-architektura 05-plan 06-zadania 07-realizacja 08-qa wydanie"
+ETAPY="00-intake 04-architektura 05-plan 06-zadania 08-qa wydanie"
 
 wspolny_setup() {
   REPO="$(cd "$BATS_TEST_DIRNAME/../../.." && pwd -P)"
@@ -11,7 +11,7 @@ wspolny_setup() {
   mkdir -p "$T"
   export SH_DIR="$T/sh" SH_NOTIFY_CMD="$T/mock/notify" SH_GH_OWNER=test-owner
   export SH_OBSIDIAN_DIR="$T/Obsidian Vault/SH/Projekty"
-  # Testy nie dziedziczą sesji Claude Code, która je uruchamia (shctl sesja).
+  # Testy nie dziedziczą sesji Claude Code ani panelu herdr, które je uruchamiają.
   unset SH_CONFIG HERDR_PANE_ID CLAUDE_CODE_SESSION_ID CLAUDE_PID
   export GIT_CONFIG_NOSYSTEM=1 GIT_CONFIG_GLOBAL="$T/gitconfig" HOME="$T/home"
   mkdir -p "$SH_DIR/projekty" "$SH_DIR/logs" "$T/mock" "$T/home"

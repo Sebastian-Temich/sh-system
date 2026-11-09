@@ -6,7 +6,7 @@
 - [Zakres etapu A (pilot)](#zakres-etapu-a-pilot)
 - [Infrastruktura](#infrastruktura)
 - [Automatyzacja: CLI shctl](#automatyzacja-cli-shctl)
-- [Skala procesu (tryby S, M, L)](#skala-procesu-tryby-s-m-l)
+- [Skala procesu (tryby S i M)](#skala-procesu-tryby-s-i-m)
 - [Typ projektu](#typ-projektu)
 - [Struktura docs/ projektu](#struktura-docs-projektu)
 - [Pliki wspólne i konflikty](#pliki-wspólne-i-konflikty)
@@ -47,13 +47,13 @@ dokumentację wydania.
 
 Plik `docs/konfiguracja.md` projektu ma pole `etap_wdrozenia`: A albo B. W etapie A:
 
-- dostępne są tylko tryby S i M (tryb L pojawia się w etapie B);
+- dostępne są tylko tryby S i M;
 - wszystkie zadania mają `runner:local` i `wykonawca:claude`, Codex robi wyłącznie review;
 - nie ma workerów w chmurze, Lovable ani GitHub Projects;
 - strażnik limitów tylko wykrywa limit i powiadamia, a wznowienie wywołuje właściciel („wznów”);
 - `auto_merge_S` działa, ale domyślnie ma wartość `false`; włączamy go po kilku udanych zleceniach S;
 - dostępne skille: `sh-intake`, `sh-architekt`, `sh-zadania`, `sh-worker`, `sh-review`, `sh-qa`,
-  `sh-orkiestrator`, `sh-status`.
+  `sh-orkiestrator`.
 
 Wszystko inne w tym dokumencie to model docelowy, wdrażany w etapie B.
 
@@ -80,7 +80,7 @@ Wszystko inne w tym dokumencie to model docelowy, wdrażany w etapie B.
 - **Hosting produkcji:** domyślnie Vercel + Supabase Cloud (region UE) na kontach klienta. Hosting
   proponuje intake, a właściciel akceptuje.
 - **Supabase local:** jedna instancja na projekt, blok portów z `/Users/Shared/sh/porty.md`. Po wyczerpaniu
-  puli najpierw zwalniamy bloki projektów archiwalnych (`shctl ports release`), a dopiero potem
+  puli najpierw zwalniamy bloki projektów archiwalnych (ręcznie w `porty.md`), a dopiero potem
   sięgamy po kolejny zakres 56X21–56X29. Zadania z migracjami lub resetem bazy mają etykietę
   `db:migracja` i idą pojedynczo w projekcie.
 - **Limity równoległości:** limit lokalnych workerów Maca jest w `/Users/Shared/sh/konfiguracja.md`
@@ -116,7 +116,7 @@ Skille wywołują shctl z argumentami. shctl jest idempotentny, ma `--dry-run`, 
 (bats), a dokumentację w `docs/shctl.md`. Gdy brakuje komendy, agent wykonuje operację ręcznie i
 zapisuje propozycję dla systemu (obieg: „Pliki wspólne i konflikty”).
 
-## Skala procesu (tryby S, M, L)
+## Skala procesu (tryby S i M)
 
 Tryb proponuje `sh-intake` z jednym zdaniem uzasadnienia, a właściciel go akceptuje. Zapis:
 `tryb_procesu` w `konfiguracja.md` albo etykieta `tryb:S` / `tryb:M` na pojedynczym zleceniu w
@@ -126,7 +126,8 @@ trwającym projekcie.
 |---|---|---|---|
 | S, szybki | Poprawka, drobna zmiana, mała funkcja w działającym projekcie; bez zmian modelu danych i bez obszarów ryzyka | 1–3 zadania | Odbiór (przy `auto_merge_S: true` orkiestrator merguje sam i powiadamia; domyślnie `false`) |
 | M, średni | Nowa funkcja lub moduł, mały samodzielny projekt | 4–15 zadań | Akceptacja specyfikacji, akceptacja architektury i planu, odbiór |
-| L, pełny (etap B) | Nowy produkt, MVP, duża przebudowa | | Checkpoint 1 (etap 4), Checkpoint 2 (etap 10) |
+
+Tryb L (nowy produkt, MVP, duża przebudowa, z osobnymi etapami briefu, designu i wymagań) jest odłożony.
 
 ### Etapy trybu S
 
@@ -158,39 +159,21 @@ trwającym projekcie.
   wymaga nowej decyzji właściciela przez `shctl escalate`. Zadania niezależne trwają.
 - **Checkpointy właściciela** są tylko te z tabeli trybów: specyfikacja, architektura i plan, odbiór.
   Każde zatrzymanie na akceptację (także odbiór zadania S i podniesienie trybu) wysyła powiadomienie
-  „Czeka na Twoją akceptację” (`shctl checkpoint`, `shctl escalate --akceptacja`).
+  „Czeka na Twoją akceptację” (`notify.sh`, `shctl escalate --akceptacja`).
 - **Gotowość środowiska.** Przed pierwszym `shctl task dispatch` projektu orkiestrator uruchamia
   `shctl doctor`. Stan `blad` wstrzymuje dispatch: brakujące narzędzie, logowanie albo dostęp staje się
   zadaniem właściciela albo eskalacją i blokuje zadania od niego zależne. Wynik z czasem UTC trafia do
   „Punktu przekazania” w `status.md`.
 
-### Etapy trybu L (etap B)
-
-| Nr | Etap |
-|---|---|
-| 0 | Intake |
-| 1 | Brief |
-| 2 | Analiza designu |
-| 3 | Wymagania |
-| 4 | Architektura (Checkpoint 1) |
-| 5 | Plan |
-| 6 | Zadania |
-| 7 | Szkielet |
-| 8 | Orkiestracja |
-| 9 | QA końcowe |
-| 10 | Dokumentacja wydania (Checkpoint 2) |
-| 11 | Retro |
-
 ### Zasady
 
 - Ryzyko podnosi tryb (auth i RLS, płatności, dane osobowe, AI przetwarzające dane użytkowników i
   migracje prod to minimum M z ADR).
-- Nowy projekt zaczyna od M lub L.
-- Etapy, których tryb M lub L nie przewiduje, mają w DoD status `pominiety`. Tryb S nie ma DoD
-  etapów.
-- Etap trybu pomija się tylko z uzasadnieniem: `shctl stage skip ETAP --notatka "..."` zapisuje je w
-  `uzasadnienie_pominiecia` w `DoD.md` i w dzienniku etapów, a `check-dod.sh` bez niego odrzuca
-  `pominiety` w etapie trybu.
+- Nowy projekt zaczyna od M.
+- Tryb S nie ma DoD etapów.
+- Etap trybu M pomija się tylko z decyzją: orkiestrator zapisuje ją przez `shctl decision add`, a w
+  `DoD.md` etapu na `main` ustawia `status: pominiety` i `decyzja: "..."`. `check-dod.sh` odrzuca
+  `pominiety` bez decyzji.
 - Podniesienie trybu w trakcie: orkiestrator proponuje, właściciel decyduje, nigdy po cichu.
 
 ## Typ projektu
@@ -211,17 +194,13 @@ Nie ma osobnych plików profili.
 
 ```text
 docs/
-├── 00-intake/         specyfikacja.md, zrodlo.md; w trybie L także intake.md,
-│                      tech-proposal.md, narzedzia.md, wycena.md
-├── 01-brief/
-├── 02-design/         zrodla/, design-spec.md
-├── 03-wymagania/
+├── 00-intake/         specyfikacja.md, zrodlo.md, zrodla/ (materiały właściciela ze skrzynki)
 ├── 04-architektura/   architektura.md, adr/
 ├── 05-plan/
 ├── 06-zadania/        index.md
-├── 07-realizacja/     raporty T-NR.md, escalations/
+├── 07-realizacja/     raporty T-NR.md, escalations/ (bez DoD.md: stan realizacji jest w issue)
 ├── 08-qa/
-├── wydanie/           techniczna/, produktowa/, w trybie L także architektoniczna/
+├── wydanie/           techniczna/, produktowa/
 ├── status.md
 ├── decyzje.md
 ├── metryki.md
@@ -250,9 +229,9 @@ zamiast czekać na CI. Konflikt rozwiązuje autor gałęzi: `git merge origin/ma
 
 Worker pisze tylko własne pliki: kod, testy, docs obszaru swojego zadania i raport
 `docs/07-realizacja/T-NR.md` z sekcjami „Decyzje”, „Drobne uwagi” i „Propozycje dla systemu”.
-Orkiestrator przenosi dwie pierwsze do plików wspólnych, a propozycje zbiera do
-`sh-system/docs/propozycje.md` przez jeden otwarty PR miesiąca do `sh-system` (`propozycje-RRRR-MM`;
-`shctl task close` dopisuje do niego kolejne wpisy). Decyzję o nich podejmuje retro: w etapie A
+Orkiestrator przenosi dwie pierwsze do plików wspólnych, a propozycje trafiają do jednego otwartego
+PR miesiąca w `sh-system` (`propozycje-RRRR-MM`): `shctl task close` dopisuje każdą jako pusty commit z
+treścią w opisie, więc PR nie zmienia plików. Decyzję o nich podejmuje retro: w etapie A
 właściciel przegląda je w retro pilota (prompt ręczny), a od etapu B robi to skill `sh-retro`.
 
 ## Definition of Done
@@ -261,7 +240,7 @@ właściciel przegląda je w retro pilota (prompt ręczny), a od etapu B robi to
 
 - frontmatter: `etap` (nazwa folderu, np. `04-architektura`), `status`
   (`todo|in-progress|review|done|escalated|pominiety`), `iteracja` (`0-3`), przy pominięciu etapu
-  trybu `uzasadnienie_pominiecia`;
+  `decyzja`;
 - sekcje: Dokumentacja, Funkcjonalność, Checklisty jakości, Checkpoint (review PASS, akceptacja
   właściciela, jeśli wymagana).
 
@@ -291,7 +270,7 @@ Etapy trybu M zapisujemy w tych folderach:
 |---|---|
 | Specyfikacja | `00-intake` |
 | Architektura i plan | `04-architektura`, `05-plan`, `06-zadania` |
-| Realizacja | `07-realizacja` |
+| Realizacja | brak (stan w issue i PR) |
 | QA | `08-qa` |
 | Odbiór i dokumentacja | `wydanie` |
 
@@ -382,10 +361,8 @@ staje, gdy na review czeka `max_review_queue` PR (domyślnie 3, w `konfiguracja.
 - Orkiestrator po każdym kamieniu milowym zapisuje w `status.md` punkt przekazania i proponuje
   właścicielowi restart sesji (`/clear` + „wznów”). Stan jest w plikach, więc nic nie ginie.
 
-- **Jedna sesja = jeden projekt.** Sesja orkiestratora prowadzi jeden projekt, zapisany przez
-  `shctl sesja start` w `/Users/Shared/sh/stan/NAZWA.json`. Druga aktywna sesja tego projektu (komenda
-  w ostatnich 30 minutach) dostaje odmowę albo ostrzeżenie; przejęcie tylko na polecenie właściciela.
-  Polecenie bez projektu przy kilku projektach: orkiestrator pyta o projekt.
+- **Jedna sesja = jeden projekt.** Sesja orkiestratora prowadzi jeden projekt. Polecenie bez
+  projektu przy kilku projektach: orkiestrator pyta o projekt.
 
 ## Awaryjny stop
 
@@ -542,10 +519,9 @@ zakłada od nowa.
 
 ## Model docelowy (etap B), skrót
 
-- Tryb L z pełnym zestawem etapów.
 - Codex jako wykonawca.
 - Workery w chmurze (`claude --cloud`).
-- Design przez Claude Design (dostawy do `docs/02-design/zrodla/`) z trybem Storybook (domyślnie)
+- Design przez Claude Design (dostawy do `docs/00-intake/zrodla/`) z trybem Storybook (domyślnie)
   albo Lovable (opcjonalnie: dwukierunkowa synchronizacja z main, okno Lovable, review po fakcie,
   Supabase dev).
 - Dokumentacja wydania w 3 rodzajach.

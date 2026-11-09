@@ -131,7 +131,7 @@ w prostej formie. Odmowa nie pyta, tylko kosztuje wywołanie. Dlatego:
 | `git -c core.editor=true rebase --continue` | `git merge --no-edit origin/main` · po konflikcie `git add PLIK` · `git commit --no-edit` |
 | `until gh pr checks 31 \| grep -q .; do sleep 20; done` | `gh pr checks 31 --watch` |
 | `for r in 1 2; do gh run view $r --json conclusion; done` | `gh run view 1 --json conclusion` · `gh run view 2 --json conclusion` |
-| `cd docs/02-design && sed -n 15,40p a.html` | Read `docs/02-design/a.html` (offset 15, limit 25) |
+| `cd docs/00-intake/zrodla && sed -n 15,40p a.html` | Read `docs/00-intake/zrodla/a.html` (offset 15, limit 25) |
 | `python3 - <<'EOF' … s.replace(…)` | Edit pliku |
 | `ASTRO_ADAPTER=node pnpm build > build.log; tail build.log` | `pnpm build:e2e` (skrypt z env w `package.json`) |
 | `gh api repos/a/b/issues -f title=x` | nie robisz: issue zakłada orkiestrator; potrzebę zapisujesz w raporcie |
@@ -182,7 +182,7 @@ dokładnie w tej kolejności i z tymi nazwami, bo `shctl task close` czyta je po
 - „Drobne uwagi”: rzeczy poza zakresem, do `backlog-drobne.md`.
 - „Ryzyka”: co może nie działać, czego nie sprawdziłeś (np. brak podglądu Vercel), czerwone testy.
 - „Propozycje dla systemu”: zmiany w procesie, skillach, shctl albo szablonie, w tym operacje wykonane
-  ręcznie z braku komendy; trafiają przez PR do `sh-system/docs/propozycje.md`.
+  ręcznie z braku komendy; `shctl task close` dopisuje je do zbiorczego PR miesiąca w `sh-system`.
 - Pusta sekcja ma jedną pozycję `brak`. Sekrety, tokeny i dane osobowe nie trafiają do raportu.
 
 ## Tryby

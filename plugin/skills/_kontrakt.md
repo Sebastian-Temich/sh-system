@@ -1,8 +1,8 @@
 # Kontrakt SKILL.md
 
 Każdy skill pluginu `software-house` (`plugin/skills/NAZWA/SKILL.md`) spełnia ten kontrakt. Proces:
-`docs/proces-v1.md`, mechanika: `docs/shctl.md`. Nowy skill zaczynamy od kopii
-`plugin/skills/_szablon/`. Zgodność sprawdza `scripts/plugin/sprawdz-skille.sh` (też w CI).
+`docs/proces-v1.md`, mechanika: `docs/shctl.md`. Nowy skill zaczynamy od kopii istniejącego
+skilla. Zgodność sprawdza `scripts/plugin/sprawdz-skille.sh` (też w CI).
 
 Ten plik leży w `skills/`, ale nie jest skillem: Claude Code ładuje tylko katalogi
 `skills/NAZWA/SKILL.md`.
@@ -42,8 +42,8 @@ description: Realizuje jedno zadanie (issue) w worktree /Users/Shared/sh/wt/NAZW
   w formie „Użyj, gdy …” z frazami, które padają w poleceniach (np. „zrealizuj issue”, „wznów”,
   „review PR”). Razem do 1536 znaków, bez `<` i `>` (Claude Code je zamienia).
 - Inne pola Claude Code (`disable-model-invocation`, `user-invocable`, `allowed-tools`, `model`,
-  `effort`, `context`) tylko z uzasadnieniem w „Rola i granice”. Szablon ma oba pola blokujące
-  wywołanie; kopia je usuwa.
+  `effort`, `context`) tylko z uzasadnieniem w „Rola i granice”. Skill nie może mieć obu pól blokujących
+  wywołanie (`disable-model-invocation: true` i `user-invocable: false`).
 
 ## 1. Rola i granice
 

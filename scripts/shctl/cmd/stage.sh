@@ -1,4 +1,6 @@
-# shctl stage start|review|done|skip|escalate ETAP [--notatka]
+# shctl stage start|review|done|escalate ETAP [--notatka]
+# Pominięcie etapu: orkiestrator ustawia w DoD.md status pominiety i decyzja (shctl decision add);
+# check-dod.sh odrzuca pominiety bez decyzji.
 # shctl stage iter ETAP: po FAIL review etapu podbija iteracja i wraca do in-progress, oba pola na main.
 # Gałąź stage/ETAP nie zmienia frontmattera DoD.md, więc PR etapu nie ma konfliktu z main.
 # shellcheck shell=bash
@@ -30,19 +32,10 @@ docelowy_status() {
     start:todo | start:review | start:escalated | start:in-progress) echo in-progress ;;
     review:in-progress | review:review) echo review ;;
     done:review | done:done) echo done ;;
-    skip:todo | skip:pominiety)
-      # Etap trybu wolno pominąć tylko z uzasadnieniem: trafia do DoD.md i dziennika.
-      if etap_w_trybie "$etap" "$(tryb)" && [ -z "$NOTATKA" ]; then
-        die "$E_ODMOWA" "etap $etap należy do trybu $(tryb): pominięcie wymaga --notatka z uzasadnieniem"
-      fi
-      echo pominiety
-      ;;
     escalate:todo | escalate:in-progress | escalate:review | escalate:escalated) echo escalated ;;
     *) die "$E_ODMOWA" "stage $akcja niedozwolone dla $etap w statusie $obecny" ;;
   esac
 }
-
-NOTATKA=""
 
 # Limit iteracji review etapu: dokumenty (00, 04, 05, 06) mają najwyżej jedną iterację poprawek, potem
 # uwagi idą do decyzje.md (SH-lite F1); wydanie zostaje przy limicie zadań.
@@ -109,11 +102,11 @@ stage_iter() {
 
 komenda_main() {
   local akcja="" etap="" notatka="" obecny cel linia zmiana=0
-  [ $# -gt 0 ] || die "$E_UZYCIE" "użycie: shctl stage start|review|done|skip|escalate|iter ETAP [--notatka]"
+  [ $# -gt 0 ] || die "$E_UZYCIE" "użycie: shctl stage start|review|done|escalate|iter ETAP [--notatka]"
   akcja="$1"
   shift
   case "$akcja" in
-    start | review | done | skip | escalate | iter) ;;
+    start | review | done | escalate | iter) ;;
     *) die "$E_UZYCIE" "nieznana akcja stage: $akcja" ;;
   esac
   while [ $# -gt 0 ]; do
@@ -133,10 +126,8 @@ komenda_main() {
     stage_iter "$etap"
     return 0
   fi
-  NOTATKA="$notatka"
   znajdz_projekt
   sprawdz_etap "$etap"
-  sesja_odswiez
 
   obecny="$(fm_get "$ROOT/docs/$etap/DoD.md" status)"
   cel="$(docelowy_status "$akcja" "$obecny" "$etap")"
@@ -146,7 +137,6 @@ komenda_main() {
   if [ "$DRY" -eq 0 ]; then
     ostrzez_gdy_nie_main
     [ "$zmiana" -eq 0 ] || zmien_status_etapu "$etap" "$cel"
-    if [ "$akcja" = skip ] && [ -n "$notatka" ]; then fm_set "$ROOT/docs/$etap/DoD.md" uzasadnienie_pominiecia "$notatka"; fi
     if [ "$zmiana" -eq 1 ] || [ -n "$notatka" ]; then
       linia="- $(dzis) \`$etap\`: $cel"
       [ -z "$notatka" ] || linia="$linia, $(komorka "$notatka")"

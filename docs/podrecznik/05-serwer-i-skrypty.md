@@ -122,21 +122,6 @@ nadpisuje Twoich zmian.
 
 Stan: `/Users/Shared/sh/stan/obsidian-sync.json`, a data ostatniej udanej synchronizacji jest w `shctl doctor`.
 
-### backup-config.sh
-
-Archiwum konfiguracji agentów: ustawienia i skille Claude Code, konfiguracja Codexa, `~/.config/sh`,
-`/Users/Shared/sh/bin`, `/Users/Shared/sh/porty.md`. Bez sesji, historii i tokenów logowania. Po spakowaniu sprawdza je
-gitleaks i kasuje archiwum przy znalezionym sekrecie.
-
-```sh
-backup-config.sh              # do /Users/Shared/sh/backups
-backup-config.sh /Volumes/X   # na wskazany dysk
-```
-
-Archiwum zawiera temat ntfy, więc traktuj je jak dane poufne. Skrypty nie są w archiwum: odtwarza je
-klon `sh-system` i `install.sh`. Dlatego skrypt ostrzega, gdy `sh-system` ma niezapisane w GitHubie
-zmiany (log `/Users/Shared/sh/logs/backup-config.log`).
-
 ### install.sh
 
 Instaluje pliki serwera z repo. Bezpieczny do powtarzania.
@@ -229,7 +214,6 @@ Actions”. Zużycie widzisz w GitHubie: Settings → Billing and plans → Usag
 | `/Users/Shared/sh/logs/sh-start.log` | Start herdr i orkiestratora |
 | `/Users/Shared/sh/logs/watchdog.log` | Przebiegi strażnika limitów (bez treści komunikatów) |
 | `/Users/Shared/sh/logs/obsidian-sync.log` | Synchronizacja kopii, pominięte kopie z powodem |
-| `/Users/Shared/sh/logs/backup-config.log` | Ostrzeżenia kopii konfiguracji |
 | `/Users/Shared/sh/logs/herdr-server.log` | Serwer herdr uruchomiony przez `sh-start.sh` |
 | `/Users/Shared/sh/stan/review/PROJEKT-NR/codex.log` | Wyjście Codexa z review |
 
@@ -239,9 +223,8 @@ Actions”. Zużycie widzisz w GitHubie: Settings → Billing and plans → Usag
 |---|---|
 | `/Users/Shared/sh/limity.md` | Aktywne limity subskrypcji |
 | `/Users/Shared/sh/konfiguracja.md` | Limit workerów Maca `max_local` (domyślnie 2); zmieniasz go tu, projekt może go tylko obniżyć |
-| `/Users/Shared/sh/porty.md` | Bloki portów baz projektów |
+| `/Users/Shared/sh/porty.md` | Bloki portów baz projektów (rezerwuje `new-project`, zwalniasz ręcznie) |
 | `/Users/Shared/sh/stan/NAZWA.json` | Mapa zadań projektu na panele, stan po STOP |
 | `/Users/Shared/sh/stan/do-usuniecia.md` | Repo testowe do usunięcia przez Ciebie |
 | `/Users/Shared/sh/stan/obsidian-sync.json` | Ostatnia synchronizacja Obsidiana i problemy |
-| `/Users/Shared/sh/stan/checkpointy/NAZWA` | Wysłane powiadomienia „Czeka na Twoją akceptację” (cel i commit) |
 | `/Users/Shared/sh/stan/skrzynka/NAZWA.json` | Partia materiałów ze skrzynki czekająca na merge PR |

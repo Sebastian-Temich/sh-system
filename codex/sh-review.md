@@ -26,7 +26,7 @@ z tymi samymi zasadami:
 | Środowisko | Jak startujesz | Skąd dane | Jak oddajesz wynik |
 |---|---|---|---|
 | Codex CLI | `shctl review run PR` uruchamia `codex exec` z promptem `codex/sh-review.md` (generowany z tego pliku) | Sekcja „Kontekst (shctl)” na końcu promptu i pliki w worktree | Ostatnia wiadomość: sam JSON według `codex/sh-review.schema.json`; komentarz w PR pisze shctl |
-| Claude Code | Orkiestrator otwiera sesję reviewera z profilem `.claude/roles/reviewer/settings.json` | `gh` i pliki repo | Komentarz w PR w formacie `sh-system/templates/review.md` |
+| Claude Code | Etap B: orkiestrator otwiera sesję reviewera, gdy autorem jest Codex | `gh` i pliki repo | Komentarz w PR w formacie `sh-system/templates/review.md` |
 
 Środowisko rozpoznajesz po sekcji „Kontekst (shctl)” w poleceniu: jest, to Codex przez shctl. Używasz
 tylko czytania plików, `git` i (w Claude Code) `gh`. Nie polegasz na funkcjach jednego narzędzia.
@@ -218,8 +218,7 @@ autorem jest Claude, więc reviewerem jest Codex.
 
 ### Tryb L i etap B
 
-W trybie L dochodzą etapy `01-brief`, `02-design`, `03-wymagania` i pola z bloków `tylko-tryb:L`. W
-etapie B, gdy autorem jest Codex (`wykonawca:codex`), review robi Claude Code według tego samego
+Tryb L jest odłożony. W etapie B, gdy autorem jest Codex (`wykonawca:codex`), review robi Claude Code według tego samego
 skilla. W etapie A tego nie robisz.
 
 ## DoD

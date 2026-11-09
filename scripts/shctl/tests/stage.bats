@@ -81,31 +81,22 @@ zaznacz() { sed -i.bak 's/^- \[ \]/- [x]/' "$(dod "$1")"; rm -f "$(dod "$1").bak
   [ "$status" -eq 4 ]
 }
 
-@test "skip etapu z trybu M bez notatki: odmowa" {
+@test "stage skip nie istnieje: pominiecie to status w DoD.md z decyzja" {
   run --separate-stderr "$SHCTL" stage skip 04-architektura
-  [ "$status" -eq 4 ]
-  [[ "$stderr" == *"pominięcie wymaga --notatka"* ]] || false
-  [ "$(fm "$(dod 04-architektura)" status)" = todo ]
-}
-
-@test "skip etapu z trybu M z notatka: uzasadnienie w DoD.md i dzienniku" {
-  run --separate-stderr "$SHCTL" stage skip 04-architektura --notatka "biblioteka bez architektury: jeden moduł"
-  [ "$status" -eq 0 ]
-  [ "$(fm "$(dod 04-architektura)" status)" = pominiety ]
-  [ "$(fm "$(dod 04-architektura)" uzasadnienie_pominiecia)" = "biblioteka bez architektury: jeden moduł" ]
-  grep -qF '`04-architektura`: pominiety, biblioteka bez architektury: jeden moduł' docs/status.md
-}
-
-@test "skip etapu spoza trybu M" {
-  run "$SHCTL" stage skip 02-design
-  [ "$status" -eq 0 ]
-  [ "$(fm "$(dod 02-design)" status)" = pominiety ]
+  [ "$status" -eq 2 ]
 }
 
 @test "start pominietego etapu: odmowa" {
-  "$SHCTL" stage skip 02-design
-  run --separate-stderr "$SHCTL" stage start 02-design
+  yq -i --front-matter=process '.status = "pominiety" | .decyzja = "test"' "$(dod 04-architektura)"
+  run --separate-stderr "$SHCTL" stage start 04-architektura
   [ "$status" -eq 4 ]
+}
+
+@test "etapy trybu L i DoD realizacji nie sa etapami shctl" {
+  for e in 01-brief 02-design 03-wymagania 07-realizacja; do
+    run --separate-stderr "$SHCTL" stage start "$e"
+    [ "$status" -eq 2 ]
+  done
 }
 
 @test "escalate i powrot przez start" {

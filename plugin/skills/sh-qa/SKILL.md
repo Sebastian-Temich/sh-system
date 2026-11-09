@@ -1,6 +1,6 @@
 ---
 name: sh-qa
-description: QA zbiorcze po kamieniu milowym trybu M. Zbiera zamknięte issue kamienia, uruchamia testy E2E Playwright (chromium i webkit), sprawdza przepływy między funkcjami, scenariusze odbioru kamienia i zgodność ze specyfikacją. Pisze raport docs/08-qa/raport-MN.md (shctl doc new) na gałęzi stage/08-qa. Błędy krytyczne i istotne zakłada jako nowe issue typ:qa z wagą przez shctl task create, a drobne wpisuje do sekcji Drobne uwagi raportu. Użyj, gdy wszystkie zadania kamienia są zamknięte, a orkiestrator poleca „QA kamienia MN”, „QA zbiorcze”, „przetestuj kamień” albo „sprawdź kamień przed kolejnym”, oraz gdy trzeba poprawić raport QA (na przykład po czerwonym CI albo uwagach orkiestratora).
+description: QA zbiorcze po kamieniu milowym trybu M. Zbiera zamknięte issue kamienia, uruchamia testy E2E Playwright (chromium i webkit), sprawdza przepływy między funkcjami, scenariusze odbioru kamienia i zgodność ze specyfikacją. Pisze raport docs/08-qa/raport-MN.md na gałęzi stage/08-qa. Błędy krytyczne i istotne zakłada jako nowe issue typ:qa z wagą przez shctl task create, a drobne wpisuje do sekcji Drobne uwagi raportu. Użyj, gdy wszystkie zadania kamienia są zamknięte, a orkiestrator poleca „QA kamienia MN”, „QA zbiorcze”, „przetestuj kamień” albo „sprawdź kamień przed kolejnym”, oraz gdy trzeba poprawić raport QA (na przykład po czerwonym CI albo uwagach orkiestratora).
 ---
 
 # sh-qa
@@ -53,8 +53,8 @@ to w raporcie.
 
 Faza 1, gałąź `stage/08-qa` i PR do `main`:
 
-- `docs/08-qa/raport-MN.md`: z `docs/_szablony/raport-qa.md` przez `shctl doc new`, format „Raport”
-  (niżej)
+- `docs/08-qa/raport-MN.md`: kopia `docs/_szablony/raport-qa.md` (Write), raz na kamień, format
+  „Raport” (niżej)
 - `docs/08-qa/zadania-MN.yaml`: błędy 🔴 i 🟡 w formacie `shctl task create` (format „Plik błędów”,
   niżej); bez takich błędów plik nie powstaje
 - `e2e/qa/MN-*.spec.ts`: testy przepływów i scenariuszy; test błędu oznaczony `test.fixme`
@@ -68,14 +68,11 @@ Faza 2, na `main` po merge'u (commit robi orkiestrator):
 ## Komendy shctl
 
 ```sh
-shctl doc new 08-qa raport-qa --tytul "MN NAZWA" --json
 shctl task create --plik docs/08-qa/zadania-MN.yaml --dry-run --json
 shctl task create --plik docs/08-qa/zadania-MN.yaml --json
 shctl escalate --dotyczy 08-qa --powod "..." --potrzebne "..." --opcje "A;B"
 ```
 
-- `doc new`: raz na kamień, na gałęzi `stage/08-qa`. Tytuł zaczyna się od `MN` (np. „M2 Katalog i
-  koszyk”), plik to `raport-MN.md`. Powtórka zwraca istniejący plik (`"utworzono":false`).
 - `task create --dry-run`: po każdej zmianie pliku błędów. Kod 2 to błąd w pliku: popraw i powtórz.
   Kod 4 (ID zajęte przez issue o innym tytule) oznacza nowe ID.
 - `task create`: w fazie 2, raz, na `main` po `git pull --ff-only`. Powtórka niczego nie dubluje, więc
@@ -91,7 +88,8 @@ shctl escalate --dotyczy 08-qa --powod "..." --potrzebne "..." --opcje "A;B"
 2. Pobierz issue kamienia. Otwarte zadanie inne niż `typ:qa` oznacza, że kamień nie jest skończony:
    kończysz i mówisz orkiestratorowi, które. Zadania zamknięte jako „not planned” wpisujesz do
    raportu jako poza zakresem.
-3. Załóż gałąź `stage/08-qa` od `main` i uruchom `shctl doc new 08-qa raport-qa --tytul "MN NAZWA"`.
+3. Załóż gałąź `stage/08-qa` od `main` i utwórz `docs/08-qa/raport-MN.md` z szablonu, z tytułem
+   „MN NAZWA” (istniejącego raportu kamienia nie nadpisujesz).
 4. Zrób listę do sprawdzenia: kryteria zamkniętych issue, wymagania `W-n` kamienia, scenariusze odbioru
    kamienia z planu i przepływy między funkcjami (miejsca, gdzie wynik jednej funkcji jest wejściem
    drugiej, np. rejestracja → logowanie → koszyk → zamówienie).
@@ -135,7 +133,7 @@ shctl escalate --dotyczy 08-qa --powod "..." --potrzebne "..." --opcje "A;B"
     `index.md` na `main` i liczbę pozycji „Drobnych uwag”. Orkiestrator przenosi je do
     `docs/backlog-drobne.md` jak `shctl task close` uwagi z raportu zadania: wiersz
     `| DATA | QA MN | uwaga | otwarta |` na pozycję, bez dublowania. Komendy shctl na to nie ma, więc
-    robi to ręcznie (`sh-system/docs/propozycje.md`). Kolejny kamień startuje według „Autoryzacji i kamieni milowych” w procesie.
+    robi to ręcznie. Kolejny kamień startuje według „Autoryzacji i kamieni milowych” w procesie.
 
 ### Raport
 
@@ -195,8 +193,7 @@ Zachowanie domyślne etapu A: QA po każdym kamieniu z planu, lokalnie, Procedur
 
 ### Tryb L i etap B
 
-W trybie L QA końcowe (etap 9) obejmuje cały produkt i scenariusze z `docs/03-wymagania/`, a w etapie
-B także testy na stagingu i raport dla klienta. W etapie A tego nie robisz.
+Tryb L jest odłożony. Etap B doda testy na stagingu i raport dla klienta. W etapie A tego nie robisz.
 
 ## DoD
 
@@ -276,8 +273,7 @@ sekretu nie zapisujesz nigdzie.
 Orkiestrator: „QA kamienia M2 skillem sh-qa.”
 
 1. `main` na `9c1e2f0`; issue M2: #14, #15, #16 zamknięte, otwartych brak.
-2. `git switch -c stage/08-qa`, `shctl doc new 08-qa raport-qa --tytul "M2 Katalog i koszyk"`:
-   `docs/08-qa/raport-M2.md`.
+2. `git switch -c stage/08-qa`, `docs/08-qa/raport-M2.md` z szablonu, tytuł „M2 Katalog i koszyk”.
 3. `supabase start`, `pnpm build`, `pnpm exec playwright test --project=chromium --project=webkit
    --workers=1`: chromium 18/18, webkit 17/18 (`koszyk.spec.ts` czerwony także w powtórce).
 4. Nowy test `e2e/qa/M2-koszyk-logowanie.spec.ts` (przepływ koszyk → logowanie) pokazuje błąd w webkit:

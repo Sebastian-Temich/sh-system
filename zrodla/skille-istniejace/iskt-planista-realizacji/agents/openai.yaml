@@ -1,4 +1,0 @@
-interface:
-  display_name: "ISKT - Planista Realizacji"
-  short_description: "Projektuje etapy, bramki i nastepny krok realizacji projektu."
-  default_prompt: "Uzyj $iskt-planista-realizacji, aby przygotowac zatwierdzalny plan etapow projektu i checklisty przejsc w Obsidianie."

@@ -161,7 +161,7 @@ check_system() {
   git_v="$(git --version | awk '{print $3}')"
   if [[ "$(printf '%s\n%s\n' "$MIN_GIT" "$git_v" | sort -V | head -1)" != "$MIN_GIT" ]]; then
     warn "git $git_v < $MIN_GIT: pomijam Homebrew (kazde polecenie brew budowaloby gita ze zrodel)."
-    warn 'Wlasciciel musi zaktualizowac CLT: patrz /Users/Shared/sh/README-serwer.md.'
+    warn 'Wlasciciel musi zaktualizowac CLT: patrz docs/serwer.md, „Ograniczenia tej maszyny”.'
     return 0
   fi
   if command -v brew >/dev/null 2>&1; then

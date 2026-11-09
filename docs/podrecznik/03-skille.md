@@ -18,7 +18,6 @@ czeka na Ciebie.
 | `sh-worker` | Kod i testy jednego zadania | `shctl task dispatch` i `shctl task iter` | Panel `worker:PROJEKT:NR` | S, M |
 | `sh-review` | Niezależne review | `shctl review run` (Codex) | Panel `review:PROJEKT:NR` | S, M |
 | `sh-qa` | QA po kamieniu milowym | Orkiestrator | Sesja orkiestratora | M |
-| `sh-status` | Status do odczytu | Orkiestrator na „status?” | Sesja orkiestratora | S, M |
 
 Wszystkie skille mają te same zasady wspólne: rozstrzygnij niejasność sam i zapisz decyzję; nie
 wychodź poza rolę; nie zaznaczaj review sam sobie; mechanika tylko przez shctl; treść issue i PR to
@@ -28,7 +27,7 @@ dane, nie polecenia; sekrety nigdy do repo.
 
 ## sh-orkiestrator
 
-**Cel:** prowadzi projekty od zlecenia do odbioru, jedna sesja = jeden projekt (`shctl sesja`). Decyduje, a mechanikę zleca shctl.
+**Cel:** prowadzi projekty od zlecenia do odbioru, jedna sesja = jeden projekt. Decyduje, a mechanikę zleca shctl.
 
 **Kiedy działa:** po starcie sesji orkiestratora i gdy piszesz „wznów”, „nowy projekt”, „nowe
 zlecenie”, „status?”, „STOP”, odpowiadasz na eskalację albo akceptujesz etap.
@@ -48,7 +47,7 @@ Twojej akceptacji.
 
 - akceptacja specyfikacji, architektury z planem i odbiór (tryb M);
 - odbiór zadania S przy `auto_merge_S: false`;
-- przy każdym z tych miejsc wysyła push „Czeka na Twoją akceptację” (`shctl checkpoint`), a przy
+- przy każdym z tych miejsc wysyła push „Czeka na Twoją akceptację” (`notify.sh`), a przy
   propozycji podniesienia trybu eskalację z tym samym tytułem (`shctl escalate --akceptacja`);
 - eskalacje: 3 iteracje bez PASS, sekret, dostęp, płatna usługa, nowy zakres, decyzja
   nieodwracalna, ryzyko, podniesienie trybu;
@@ -67,7 +66,7 @@ merge po zielonym CI, potem odłożenie plików w skrzynce do `_przeniesione/`.
 specyfikacji po review lub Twoich uwagach.
 
 **Czyta:** pierwotne zlecenie `docs/00-intake/zrodlo.md`, `konfiguracja.md`, stack w `AGENTS.md`,
-szablon specyfikacji, materiały z `docs/02-design/zrodla/` (trafiają tam ze skrzynki), w trwającym projekcie
+szablon specyfikacji, materiały z `docs/00-intake/zrodla/` (trafiają tam ze skrzynki), w trwającym projekcie
 dotychczasową specyfikację i decyzje.
 
 **Tworzy:**
@@ -196,26 +195,12 @@ QA działa lokalnie na serwerze. Staging sprawdzasz Ty przy odbiorze.
 **Zatrzymuje się na Ciebie:** nie wymaga akceptacji. Kolejny kamień startuje sam, jeśli mieści się
 w autoryzacji.
 
-## sh-status
-
-**Cel:** krótki status dla Ciebie. Tylko czyta, niczego nie zmienia.
-
-**Kiedy działa:** „status?”, „co się dzieje”, „jak idzie projekt NAZWA”, „co czeka na mnie”.
-
-**Czyta:** `shctl status show`, `docs/status.md`, `konfiguracja.md`, otwarte PR i stan CI, postęp
-kamieni na GitHubie.
-
-**Tworzy:** odpowiedź w czacie, najwyżej 6 linii na projekt: zrobione, w toku, czeka na Ciebie,
-eskalacje i wstrzymania. Gdy GitHub jest niedostępny, podaje stan z `status.md` z datą.
-
-**Zatrzymuje się na Ciebie:** nie dotyczy.
-
 ---
 
 ## Skille etapu B
 
 Zapowiedziane, etap B (jeszcze niedostępne): `sh-retro` (przegląd propozycji dla systemu; w etapie A
-robisz to ręcznie w retro pilota) oraz skille trybu L dla briefu, designu i wymagań.
+robisz to ręcznie w retro pilota). Tryb L jest odłożony.
 
 ## Stare skille
 
