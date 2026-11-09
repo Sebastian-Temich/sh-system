@@ -162,11 +162,11 @@ częściach:
 
 - **Dla właściciela** (czyta ją właściciel w checkpoincie): opis w jednym akapicie prostym językiem,
   przebieg z perspektywy użytkownika, stany ekranu (pusty, w trakcie, sukces, częściowy sukces, błędy)
-  z tekstami, które zobaczy użytkownik, reguły biznesowe i na końcu „Do potwierdzenia” (założenia z
-  proponowanymi odpowiedziami). Bez kodów HTTP, atrybutów, nazw pól z kodu i backticków
+  z tekstami, które zobaczy użytkownik, reguły biznesowe, „Poza zakresem” prostym językiem i na końcu
+  „Do potwierdzenia” (założenia z proponowanymi odpowiedziami). Bez kodów HTTP, atrybutów, nazw pól z kodu i backticków
   (`check-dod.sh` to sprawdza).
 - **Dla wykonawcy**: wejście (trasa), pola i walidacja, kody odpowiedzi i logi, dostępność, przypadki
-  brzegowe, kryteria `W-NN/Kn` w Given/When/Then, odwołania do designu i ADR, poza zakresem.
+  brzegowe, kryteria `W-NN/Kn` w Given/When/Then, odwołania do designu i ADR.
 
 Numeracja wymagań jest dwucyfrowa i jedna wszędzie: `W-01`, `W-02` … w specyfikacji, nazwie i polu
 `wymaganie` karty, zadaniach i kryteriach (`W-01/K1`).
@@ -198,7 +198,7 @@ Lista kontrolna kompletności karty:
 - [ ] Przypadki brzegowe: podwójne wysłanie, wolna sieć i timeout, wartości graniczne, brak JS,
   dostępność, telefon
 - [ ] Kryteria `W-NN/Kn` w Given/When/Then, każde sprawdzalne testem albo z dopiskiem „(ręcznie: dlaczego)”
-- [ ] Poza zakresem nazwane wprost
+- [ ] Poza zakresem nazwane wprost, w części „Dla właściciela”
 - [ ] Część „Dla właściciela” zrozumiała bez wiedzy technicznej: teksty ekranów, bez kodów i atrybutów
 - [ ] Każde założenie w „Do potwierdzenia” ma proponowaną odpowiedź i status
 

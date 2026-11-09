@@ -77,7 +77,7 @@ dotychczasową specyfikację i decyzje.
   użytkownicy, zakres i „Poza zakresem”, wymagania `W-NN` z kryteriami Given/When/Then, typ projektu,
   stack z alternatywą, hosting, design, Twoje kroki ręczne, ryzyka, szacunek poglądowy. Do tego karta
   każdej funkcji `docs/00-intake/funkcje/W-NN.md` (W-01, W-02 …): na górze część „Dla właściciela”
-  (opis, przebieg, stany ekranu z tekstami, reguły, do potwierdzenia), na dole część dla wykonawcy
+  (opis, przebieg, stany ekranu z tekstami, reguły, poza zakresem, do potwierdzenia), na dole część dla wykonawcy
   (pola, kody odpowiedzi, dostępność, kryteria, design);
 - tryb S: plik zlecenia w `/Users/Shared/sh/stan/zlecenia/` i jedno issue z etykietą `tryb:S`.
 
