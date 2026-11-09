@@ -155,13 +155,14 @@ JQ_CI='def ci:
     else "pass" end;'
 
 # Wynik review z treści komentarza w formacie sh-system/templates/review.md: zgłoszenia z linii
-# „- IKONA WAGA [`plik[:linia]`]: opis”, werdykt liczony z wag (FAIL przy krytyczne lub istotne).
+# „- IKONA WAGA [(przyczyna: P)] [`plik[:linia]`]: opis”, werdykt liczony z wag (FAIL przy krytyczne
+# lub istotne). Przyczyna (wymaganie, kod, test, design) jest opcjonalna dla komentarzy sprzed F4.
 JQ_PARSUJ_REVIEW='def parsuj_review($h):
   split("\n") as $l
   | ([range(0; $l | length) | select($l[.] | startswith("<!-- shctl:review head="))][0]) as $m
   | ([range(0; $l | length) | select($l[.] == "### Zgłoszenia")][0] // ($l | length)) as $k
-  | [$l[] | capture("^- (?:🔴|🟡|⚪) (?<waga>krytyczne|istotne|drobne)(?: `(?<plik>[^`]*?)(?::(?<linia>[0-9]+))?`)?: (?<opis>.+)$")
-      | {waga, plik: (.plik // ""), linia: ((.linia // "0") | tonumber), opis}] as $z
+  | [$l[] | capture("^- (?:🔴|🟡|⚪) (?<waga>krytyczne|istotne|drobne)(?: \\(przyczyna: (?<przyczyna>wymaganie|kod|test|design)\\))?(?: `(?<plik>[^`]*?)(?::(?<linia>[0-9]+))?`)?: (?<opis>.+)$")
+      | {waga, przyczyna: (.przyczyna // ""), plik: (.plik // ""), linia: ((.linia // "0") | tonumber), opis}] as $z
   | {werdykt: (if any($z[]; .waga != "drobne") then "FAIL" else "PASS" end),
      podsumowanie: ([$l[($m + 1):$k][] | select(length > 0 and (startswith("Commit `") | not))] | join(" ")),
      zgloszenia: $z, head: $h};'
@@ -258,6 +259,23 @@ aktywni_workerzy_projektu() {
 # Wynik: {kandydaci, zablokowane, blokady, sloty, kolejka_review, wolne_gb, min_wolne_gb}.
 # Sloty: limit globalny Maca liczy workerów wszystkich projektów; max_local projektu może go tylko
 # obniżyć i liczy workerów tego projektu.
+# Lista startowa (sh-intake): rzeczy zewnętrzne od właściciela (konta, dostępy, domeny, klucze testowe,
+# materiały). Realizacja nie startuje, dopóki w docs/00-intake/lista-startowa.md na main jest pole
+# „- [ ]” poza blokiem kodu. „- [x]” to potwierdzone, „- [-] … (nie dotyczy: powód)” to pominięte.
+# Brak pliku (projekt sprzed SH-lite F4) nie blokuje. Wypisuje liczbę niepotwierdzonych pozycji.
+lista_startowa_braki() {
+  local plik="$ROOT_G/docs/00-intake/lista-startowa.md"
+  if [ ! -f "$plik" ]; then
+    echo 0
+    return 0
+  fi
+  awk '
+    /^[ \t]*(```|~~~)/ { kod = !kod; next }
+    kod { next }
+    /^[ \t]*[-*+] \[ \]/ { n++ }
+    END { print n + 0 }' "$plik"
+}
+
 ocen_gotowe() {
   local issues="$1" panele="$2" bez="${3:-}" max_local max_g max_p max_q min_gb wolne aktywni akt_p blokady='[]' w wolne_s
   max_g="$(max_local_globalny)"
@@ -291,6 +309,11 @@ ocen_gotowe() {
     blokady="$(jq -c --arg o "limity.md: $w" '. + [{rodzaj:"limit", opis:$o}]' <<<"$blokady")"
   fi
   alarm_dysku "$wolne" "$min_gb"
+  w="$(lista_startowa_braki)"
+  if [ "$w" -gt 0 ]; then
+    blokady="$(jq -c --arg o "lista startowa: $w pozycji bez potwierdzenia (docs/00-intake/lista-startowa.md)" \
+      '. + [{rodzaj:"lista_startowa", opis:$o}]' <<<"$blokady")"
+  fi
 
   jq -c --argjson b "$blokady" --argjson ml "$max_local" --argjson a "$aktywni" --argjson mq "$max_q" \
     --argjson wg "$wolne" --argjson mg "$min_gb" --argjson g "$max_g" --arg mp "$max_p" --argjson ap "$akt_p" \

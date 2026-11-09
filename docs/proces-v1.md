@@ -141,7 +141,12 @@ Tryb L (nowy produkt, MVP, duża przebudowa, z osobnymi etapami briefu, designu 
 ### Etapy trybu M
 
 1. Specyfikacja (`docs/00-intake/specyfikacja.md`: cel, zakres, wymagania z kryteriami, stack,
-   hosting, notatka o designie).
+   hosting, notatka o designie), karty funkcji (`docs/00-intake/funkcje/W-NN.md`: przebieg, stany
+   ekranu, dane, reguły, przypadki brzegowe, kryteria `W-NN/Kn`, założenia) i lista startowa
+   (`docs/00-intake/lista-startowa.md`: konta, dostępy, domeny, klucze testowe, materiały od
+   właściciela). Pytania do właściciela tylko o luki kart, paczkami 5–7 z proponowanymi odpowiedziami;
+   „zdecyduj sam” to założenie do potwierdzenia w checkpoincie. Realizacja nie startuje przy
+   niekompletnej liście startowej (blokada `lista_startowa` w `shctl task ready`).
 2. Plan (`docs/04-plan/plan.md`: krótka architektura z punktem wejścia każdej funkcji i plan
    kamieni milowych, ADR dla ważnych decyzji w `docs/04-plan/adr/`) i zadania (`zadania.yaml` z
    kategorią i stackiem, issue). Jedna funkcja albo strona to jedno zadanie, podpięte do punktu
@@ -199,7 +204,7 @@ Nie ma osobnych plików profili.
 
 ```text
 docs/
-├── 00-intake/         specyfikacja.md, zrodlo.md, zrodla/ (materiały właściciela ze skrzynki)
+├── 00-intake/         specyfikacja.md, funkcje/ (karty W-NN), lista-startowa.md, zrodlo.md, zrodla/
 ├── 04-plan/           plan.md (krótka architektura i kamienie), adr/
 ├── 06-zadania/        index.md
 ├── 07-realizacja/     raporty T-NR.md, escalations/ (bez DoD.md: stan realizacji jest w issue)

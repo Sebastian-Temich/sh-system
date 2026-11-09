@@ -1,4 +1,8 @@
 # shctl escalate --dotyczy "#NR|ETAP" --powod --potrzebne [--opcje "A;B"] [--priorytet high] [--akceptacja]
+#   [--typ blokada|pytanie]
+# --typ pytanie: pytanie workera o UX albo regułę biznesową (sh-worker nie zgaduje). Nie zmienia statusu
+# issue ani etapu, nie zwalnia slotu (worker kontynuuje niezależne części), nie liczy się jako iteracja
+# ani eskalacja w metryki.md; powiadomienie „Pytanie E-NNN: PROJEKT”, domyślny priorytet default.
 # --akceptacja: decyzja do akceptacji właściciela (podniesienie trybu); powiadomienie ma tytuł
 # „Czeka na Twoją akceptację: PROJEKT / podniesienie trybu” zamiast „Eskalacja E-NNN: PROJEKT”.
 # shctl escalate close E-NNN --odpowiedz "..."
@@ -66,7 +70,7 @@ ile_otwartych_dla() {
   for f in "$(kat_esk)"/E-[0-9]*.md; do
     [ -e "$f" ] || continue
     if [ "$(basename "$f" .md)" != "$2" ] && [ "$(fm_get "$f" status)" = otwarta ] &&
-      [ "$(fm_get "$f" dotyczy)" = "$1" ]; then n=$((n + 1)); fi
+      [ "$(fm_get "$f" dotyczy)" = "$1" ] && [ "$(fm_get "$f" typ)" != pytanie ]; then n=$((n + 1)); fi
   done
   echo "$n"
 }
@@ -76,6 +80,10 @@ odswiez_liste() {
   for f in "$(kat_esk)"/E-[0-9]*.md; do
     [ -e "$f" ] || continue
     [ "$(fm_get "$f" status)" = otwarta ] || continue
+    if [ "$(fm_get "$f" typ)" = pytanie ]; then
+      l="$l- $(basename "$f" .md) ($(fm_get "$f" dotyczy), pytanie): $(komorka "$(fm_get "$f" powod)")"$'\n'
+      continue
+    fi
     l="$l- $(basename "$f" .md) ($(fm_get "$f" dotyczy)): $(komorka "$(fm_get "$f" powod)")"$'\n'
   done
   ustaw_sekcje "$ST" "Otwarte eskalacje" "${l:-(brak)}"
@@ -87,7 +95,7 @@ status_z_etykiet() {
 }
 
 utworz_plik() {
-  local plik="$1" id="$2" dotyczy="$3" powod="$4" potrzebne="$5" opcje="$6" priorytet="$7" poprz="$8"
+  local plik="$1" id="$2" dotyczy="$3" powod="$4" potrzebne="$5" opcje="$6" priorytet="$7" poprz="$8" typ="$9"
   local szablon="$ROOT/docs/_szablony/eskalacja.md" linia_celu lista="" o rest t
   [ -f "$szablon" ] || die "$E_BRAK" "brak docs/_szablony/eskalacja.md"
   case "$dotyczy" in
@@ -105,6 +113,7 @@ utworz_plik() {
       /^Powód: / { print "Powód: " ENVIRON["POWOD"]; next }
       { print }' "$szablon"
   } >"$plik"
+  fm_set "$plik" typ "$typ"
   fm_set "$plik" dotyczy "$dotyczy"
   fm_set "$plik" powod "$powod"
   fm_set "$plik" priorytet "$priorytet"
@@ -123,7 +132,7 @@ utworz_plik() {
 }
 
 otworz() {
-  local dotyczy="" powod="" potrzebne="" opcje="" priorytet=high id plik poprz="" nr="" etap="" slug="" nowa=0 url=""
+  local dotyczy="" powod="" potrzebne="" opcje="" priorytet="" typ=blokada id plik poprz="" nr="" etap="" slug="" nowa=0 url=""
   local akceptacja=0 tytul tresc
   while [ $# -gt 0 ]; do
     case "$1" in
@@ -133,11 +142,17 @@ otworz() {
       --opcje) opcje="$(wartosc "$@")"; shift 2 ;;
       --priorytet) priorytet="$(wartosc "$@")"; shift 2 ;;
       --akceptacja) akceptacja=1; shift ;;
+      --typ) typ="$(wartosc "$@")"; shift 2 ;;
       *) opcja_wspolna "$@"; shift "$ZJEDZONE" ;;
     esac
   done
   [ -n "$dotyczy" ] && [ -n "$powod" ] && [ -n "$potrzebne" ] ||
     die "$E_UZYCIE" "wymagane: --dotyczy, --powod, --potrzebne"
+  case "$typ" in blokada | pytanie) ;; *) die "$E_UZYCIE" "--typ: blokada albo pytanie, jest: $typ" ;; esac
+  [ "$typ" = blokada ] || [ "$akceptacja" -eq 0 ] || die "$E_UZYCIE" "--akceptacja tylko z --typ blokada"
+  if [ -z "$priorytet" ]; then
+    if [ "$typ" = pytanie ]; then priorytet=default; else priorytet=high; fi
+  fi
   case "$priorytet" in min | default | high | urgent) ;; *) die "$E_UZYCIE" "nieznany priorytet: $priorytet" ;; esac
   znajdz_projekt
   uzyj_glownej_kopii
@@ -168,16 +183,26 @@ otworz() {
     ostrzez_gdy_nie_main
     if [ "$nowa" -eq 1 ]; then
       # Odczyt przed zapisem: nieistniejące issue nie zostawia pliku eskalacji.
-      if [ -n "$nr" ]; then
+      if [ "$typ" = pytanie ]; then
+        poprz=""
+        if [ -n "$nr" ]; then
+          status_z_etykiet "$nr" "$slug" >/dev/null || die "$E_WYKONANIE" "nie można odczytać issue #$nr"
+        fi
+      elif [ -n "$nr" ]; then
         poprz="$(status_z_etykiet "$nr" "$slug")" || die "$E_WYKONANIE" "nie można odczytać issue #$nr"
         poprz="${poprz#status:}"
       else
         poprz="$(fm_get "$ROOT/docs/$etap/DoD.md" status)"
         [ "$poprz" != escalated ] || poprz=in-progress
       fi
-      utworz_plik "$plik" "$id" "$dotyczy" "$powod" "$potrzebne" "$opcje" "$priorytet" "$poprz"
+      utworz_plik "$plik" "$id" "$dotyczy" "$powod" "$potrzebne" "$opcje" "$priorytet" "$poprz" "$typ"
     fi
-    if [ -n "$nr" ]; then
+    # Istniejąca eskalacja zachowuje swój typ (powtórka tej samej komendy).
+    typ="$(fm_get "$plik" typ)"
+    [ -n "$typ" ] || typ=blokada
+    if [ "$typ" = pytanie ]; then
+      :
+    elif [ -n "$nr" ]; then
       poprz="$(fm_get "$plik" poprzedni_status)"
       if [ -n "$poprz" ] && [ "$poprz" != escalated ]; then
         gh issue edit "$nr" --repo "$slug" --add-label status:escalated --remove-label "status:$poprz" >/dev/null ||
@@ -196,7 +221,9 @@ otworz() {
     if [ "$(fm_get "$plik" powiadomiono)" != tak ]; then
       tytul="Eskalacja $id: $PROJEKT"
       tresc="$dotyczy: $powod"
-      if [ "$akceptacja" -eq 1 ]; then
+      if [ "$typ" = pytanie ]; then
+        tytul="Pytanie $id: $PROJEKT"
+      elif [ "$akceptacja" -eq 1 ]; then
         tytul="Czeka na Twoją akceptację: $PROJEKT / podniesienie trybu"
         tresc="$id, $tresc"
       fi
@@ -205,16 +232,16 @@ otworz() {
       fm_set "$plik" powiadomiono tak
     fi
   fi
-  if [ -n "$nr" ]; then
+  if [ -n "$nr" ] && [ "$typ" != pytanie ]; then
     SLOT_PANEL="$(zwolnij_slot "$nr")"
     [ -z "$SLOT_PANEL" ] || info "panel $SLOT_PANEL: etykieta $(etykieta_eskalacji "$nr"), slot workera wolny"
   fi
 
-  if [ "$nowa" -eq 1 ]; then info "$id: eskalacja otwarta ($dotyczy)"; else info "$id: eskalacja już otwarta ($dotyczy)"; fi
+  if [ "$nowa" -eq 1 ]; then info "$id: eskalacja otwarta ($dotyczy, $typ)"; else info "$id: eskalacja już otwarta ($dotyczy)"; fi
   [ -z "$Z_WORKTREE" ] || info "zapisano w $ROOT (main), nie w worktree; commit robi orkiestrator"
   wynik_json "$(jq -nc --arg i "$id" --arg d "$dotyczy" --arg p "${plik#"$ROOT"/}" --argjson n "$nowa" \
-    --arg k "$ROOT" --arg w "$Z_WORKTREE" --arg s "${SLOT_PANEL:-}" \
-    '{id:$i, dotyczy:$d, plik:$p, katalog:$k, z_worktree:($w != ""), nowa:($n == 1),
+    --arg k "$ROOT" --arg w "$Z_WORKTREE" --arg s "${SLOT_PANEL:-}" --arg t "$typ" \
+    '{id:$i, typ:$t, dotyczy:$d, plik:$p, katalog:$k, z_worktree:($w != ""), nowa:($n == 1),
       slot_zwolniony:($s != ""), panel:(if $s == "" then null else $s end)}')"
 }
 
@@ -254,8 +281,8 @@ zamknij() {
   poprz="$(fm_get "$plik" poprzedni_status)"
   if [ "$DRY" -eq 0 ]; then
     ostrzez_gdy_nie_main
-    # Cel zdejmujemy tylko, gdy nie ma innej otwartej eskalacji na to samo.
-    if [ "$(ile_otwartych_dla "$dotyczy" "$id")" -eq 0 ]; then
+    # Cel zdejmujemy tylko, gdy nie ma innej otwartej eskalacji na to samo. Pytanie celu nie zmieniało.
+    if [ "$(fm_get "$plik" typ)" != pytanie ] && [ "$(ile_otwartych_dla "$dotyczy" "$id")" -eq 0 ]; then
       case "$dotyczy" in
         \#*)
           nr="${dotyczy#\#}"

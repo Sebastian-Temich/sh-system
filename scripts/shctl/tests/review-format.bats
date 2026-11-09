@@ -31,6 +31,7 @@ przyklad() {
   [ "$(jq -c '.wynik.zgloszenia[0] | [.waga, .plik, .linia]' <<<"$output")" = '["krytyczne","src/auth/login.ts",42]' ]
   [ "$(jq -c '.wynik.zgloszenia[1] | [.waga, .plik, .linia]' <<<"$output")" = '["istotne","src/auth/login.test.ts",0]' ]
   [ "$(jq -c '.wynik.zgloszenia[2] | [.waga, .plik, .opis]' <<<"$output")" = '["drobne","","nazwa `x` w `validate` mało czytelna."]' ]
+  [ "$(jq -r '[.wynik.zgloszenia[].przyczyna] | join(",")' <<<"$output")" = "kod,test,kod" ]
   [[ "$(jq -r .wynik.podsumowanie <<<"$output")" == "Formularz działa"* ]] || false
   run --separate-stderr "$SHCTL" task iter 12 --json
   [ "$status" -eq 0 ]

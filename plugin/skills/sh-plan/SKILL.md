@@ -20,12 +20,14 @@ Robisz:
   w `AGENTS.md`, zadania właściciela, scenariusze odbioru, zakres autoryzacji, `shctl doctor`;
 - etap `06-zadania`: `zadania.yaml` w formacie `shctl task create`, a po review i merge'u issue przez
   `shctl task create` i tabela zadań dla właściciela;
-- pilnujesz trzech zasad zadań: grube zadania (jedna funkcja albo strona to jedno zadanie), podpięcie
-  każdej funkcji do punktu wejścia lub routingu w kryteriach, konkretne pliki designu w zadaniach z UI.
+- pilnujesz czterech zasad zadań: grube zadania (jedna funkcja albo strona to jedno zadanie), podpięcie
+  każdej funkcji do punktu wejścia lub routingu w kryteriach, konkretne pliki designu w zadaniach z UI,
+  karta `W-NN` i jej konkretne kryteria `W-NN/Kn` w każdym zadaniu z funkcją;
+- kryteria kart niesprawdzalne testem zbierasz w jedno pytanie do właściciela przed startem realizacji.
 
 Nie robisz:
 
-- zmian specyfikacji (lukę rozstrzygasz założeniem w ADR albo zwracasz do `sh-intake`);
+- zmian specyfikacji ani kart funkcji (lukę rozstrzygasz założeniem w ADR albo zwracasz do `sh-intake`);
 - kodu, także szkieletu (to pierwsze zadanie workera, `sh-worker`);
 - ręcznych issue, etykiet i milestone'ów przez `gh`: zakłada je wyłącznie `shctl task create`;
 - issue dla zadań właściciela: zostają w planie, a zadanie zależne wskazuje je w celu;
@@ -35,7 +37,10 @@ Nie robisz:
 
 ## Wejście
 
-- `docs/00-intake/specyfikacja.md`: wymagania `W-n` z kryteriami Given/When/Then, stack, hosting, ryzyka
+- `docs/00-intake/specyfikacja.md`: wymagania `W-NN` z kryteriami Given/When/Then, stack, hosting, ryzyka
+- `docs/00-intake/funkcje/W-NN.md`: karty funkcji (przebieg, stany ekranu, dane, reguły, kryteria
+  `W-NN/Kn`); projekt sprzed SH-lite F4 kart nie ma, wtedy kryteria bierzesz ze specyfikacji
+- `docs/00-intake/lista-startowa.md`: rzeczy zewnętrzne od właściciela (zadania właściciela planu)
 - `docs/00-intake/zrodla/`: materiały właściciela, w tym pliki designu (makiety, eksporty Figmy)
 - `docs/decyzje.md`: odpowiedzi właściciela z checkpointów i zapisane decyzje
 - `docs/konfiguracja.md`: `wersja_procesu`, tryb, hosting, `playwright_version`, `playwright_workers`, `blok_portow`
@@ -108,7 +113,7 @@ Etap `04-plan`:
    (nie `git -C`: w sandboxie sesji nie zapisze `.git/config`), potem `cd` do worktree. Dalej pracujesz w tym katalogu; dokumenty tworzysz z szablonów.
 3. Napisz sekcję „Architektura” `plan.md` krótko, tyle ile trzeba do rozpisania zadań. Tabela „Moduły
    i punkty wejścia”: każda funkcja z punktem wejścia (strona i trasa, element nawigacji, komenda,
-   endpoint), plikami designu i wymaganiami `W-n`. Do tego model danych z zasadą migracji zgodnych
+   endpoint), plikami designu i wymaganiami `W-NN`. Do tego model danych z zasadą migracji zgodnych
    wstecz (expand/contract), integracje, bezpieczeństwo (auth, dostęp do danych, sekrety, dane
    osobowe) i tylko te elementy środowisk i drogi na produkcję (`proces-v1.md`), które w projekcie są
    inne. W etapie A nie ma deployów prod.
@@ -121,7 +126,7 @@ Etap `04-plan`:
 7. Wypisz zadania właściciela z terminem „przed czym”: konta prod na kontach klienta (Vercel, Supabase
    prod w UE), projekt Supabase staging, `STAGING_DB_URL` w GitHub Secrets, domena i DNS, zmienne prod
    w Vercel oraz kroki typu projektu (sklepy, publikacja, płatne usługi). Ryzyka z właścicielem każdego.
-8. Napisz 5–10 scenariuszy odbioru z wymaganiami `W-n` i kamieniem, „Gotowość środowiska” z wynikiem
+8. Napisz 5–10 scenariuszy odbioru z wymaganiami `W-NN` i kamieniem, „Gotowość środowiska” z wynikiem
    `shctl doctor --json` i czasem UTC, „Zakres autoryzacji” (na co, zakres, do kiedy, co wymaga nowej
    decyzji) i dokładnie jeden „Następny krok”.
 9. Zaznacz w `docs/04-plan/DoD.md` spełnione pola poza Checkpointem. Commit `04-plan: plan`, push i
@@ -137,13 +142,20 @@ Etap `06-zadania` (po akceptacji planu i merge'u PR `stage/04-plan`):
 11. Rozpisz `T1` szkielet według „Zadania szkieletu”, potem zadania kamieni według „Zasad zadań”. Każde
     zależy od `T1`, wprost albo przez inne; ostatnie to dokumentacja wydania (`typ: docs`).
 12. Sprawdź nakładanie plików (pary ze wspólną ścieżką dostają zależność albo łączysz zadania) i
-    pokrycie: każde `W-n` i każda funkcja z tabeli punktów wejścia mają zadanie z kryterium podpięcia.
-13. Uruchom `shctl task create --plik docs/06-zadania/zadania.yaml --dry-run --json` w worktree i popraw
+    pokrycie: każde `W-NN` i każda funkcja z tabeli punktów wejścia mają zadanie z kryterium podpięcia,
+    a każde kryterium `W-NN/Kn` z kart jest w kryteriach dokładnie jednego zadania.
+13. Kryteria kart niesprawdzalne testem (np. „e-mail dochodzi do skrzynki”, ocena wyglądu, krok w
+    panelu usługi) zbierz w sekcji „Kryteria do potwierdzenia” opisu PR zadań: dla każdego kryterium
+    propozycja sprawdzenia (scenariusz odbioru, sprawdzenie ręczne właściciela, test z atrapą usługi).
+    To jedno zbiorcze pytanie do właściciela; orkiestrator zadaje je przed dispatchem `T1`, a
+    odpowiedzi trafiają do `decyzje.md`.
+14. Uruchom `shctl task create --plik docs/06-zadania/zadania.yaml --dry-run --json` w worktree i popraw
     plik do kodu 0. Zaznacz pola `DoD.md`, które spełnia sam plik.
-14. Commit `06-zadania: zadania z planu`, push, `gh pr create --base main --head stage/06-zadania`. Opis:
-    rewizja planu, tabela zadań, pary plików rozwiązane zależnością, „Decyzje do rejestru”. Review
+15. Commit `06-zadania: zadania z planu`, push, `gh pr create --base main --head stage/06-zadania`. Opis:
+    rewizja planu, tabela zadań, pary plików rozwiązane zależnością, „Kryteria do potwierdzenia” (albo
+    „brak”), „Decyzje do rejestru”. Review
     etapu, potem merge (bez akceptacji właściciela, plan już ją ma).
-15. Po merge'u: w głównym klonie na `main` `git pull --ff-only` i `shctl task create --plik
+16. Po merge'u: w głównym klonie na `main` `git pull --ff-only` i `shctl task create --plik
     docs/06-zadania/zadania.yaml --json`. Pokaż właścicielowi tabelę
     `| ID | Issue | Tytuł | Kamień | Kategoria | Zależności | db | Zadanie właściciela |` i zadania
     właściciela, które blokują pracę. Usunięcie worktree etapów i dispatch `T1` robi orkiestrator.
@@ -166,12 +178,14 @@ zadania:
   - id: T3
     tytul: Strona koszyka
     cel: >-
-      Klient dodaje kawę do koszyka i usuwa ją na stronie /koszyk (W-2). Design:
-      docs/00-intake/zrodla/koszyk.png. Poza zakresem: płatność (T5).
+      Klient dodaje kawę do koszyka i usuwa ją na stronie /koszyk (W-02). Karta:
+      docs/00-intake/funkcje/W-02.md, kryteria W-02/K1–K3. Design: docs/00-intake/zrodla/koszyk.png.
+      Poza zakresem: płatność (T5).
     kryteria:
       - "Strona /koszyk jest w routingu i w nawigacji nagłówka (test e2e koszyk.spec.ts wchodzi z /)"
-      - "Given pusty koszyk, when klient dodaje kawę, then koszyk ma 1 pozycję (test e2e koszyk.spec.ts)"
-      - "Given koszyk z 1 pozycją, when klient ją usuwa, then koszyk jest pusty (test jednostkowy)"
+      - "W-02/K1: Given pusty koszyk, when klient dodaje kawę, then koszyk ma 1 pozycję (test e2e koszyk.spec.ts)"
+      - "W-02/K2: Given koszyk z 1 pozycją, when klient ją usuwa, then koszyk jest pusty (test jednostkowy)"
+      - "W-02/K3: Given wysyłka trwa, when klient klika ponownie, then przycisk jest zablokowany (test jednostkowy)"
       - pnpm lint, pnpm typecheck i pnpm test przechodzą
     pliki: [src/app/koszyk/, src/components/naglowek.tsx, e2e/koszyk.spec.ts]
     testy: pnpm test src/app/koszyk && pnpm test:e2e e2e/koszyk.spec.ts
@@ -203,10 +217,12 @@ nadaje shctl.
   technologii z „Stack (kontrakt)” (np. `nextjs`, `supabase`). Z nich `shctl task dispatch` składa listę
   skilli workera; `skille` dopisujesz tylko dla skilla spoza warstw.
 - **ID** to `T1`, `T2`, …; zadanie podzielone dostaje `T4.1`, `T4.2`.
-- **Cel:** co i dla kogo, `W-n`, design, jedno zdanie „Poza zakresem”; zadanie właściciela z planu, na
-  które czeka.
-- **Kryteria:** 2–6, sprawdzalne testem albo komendą z nazwą; Given/When/Then ze specyfikacji; obszar
-  ryzyka z minimalnymi dowodami z ADR. Bez „działa poprawnie”.
+- **Cel:** co i dla kogo, `W-NN`, ścieżka karty (`docs/00-intake/funkcje/W-NN.md`) i numery jej kryteriów,
+  design, jedno zdanie „Poza zakresem”; zadanie właściciela z planu, na które czeka.
+- **Kryteria:** 2–6, sprawdzalne testem albo komendą z nazwą; konkretne kryteria karty z identyfikatorem
+  (`W-NN/Kn: Given …`), a nie „zgodnie z kartą”; stany ekranu z karty, które zadanie implementuje;
+  obszar ryzyka z minimalnymi dowodami z ADR. Bez „działa poprawnie”. Kryterium niesprawdzalne testem
+  nie trafia do zadania bez odpowiedzi właściciela z „Kryteriów do potwierdzenia”.
 - **Pliki:** pełna lista ścieżek i katalogów zadania. `package.json` i lockfile nie są wspólnym plikiem.
 - **Testy:** jedna komenda zawężona do zadania, do ok. 30 min.
 - **Baza:** `db_migracja: true` dla migracji, resetu, seedu i zmiany `supabase/config.toml`; kryterium
@@ -257,7 +273,7 @@ dokumentację architektoniczną wydania. W etapie A tego nie robisz.
 - [ ] Migracje zgodne wstecz są zasadą modelu danych; środowiska opisane tam, gdzie projekt odbiega
 - [ ] Każdy obszar ryzyka z oceną `tak` ma ADR z minimalnymi dowodami
 - [ ] „Stack (kontrakt)” w `AGENTS.md` jest uzupełniony
-- [ ] Kamienie to pionowe przekroje, kamień 1 to szkielet; każde `W-n` ma kamień
+- [ ] Kamienie to pionowe przekroje, kamień 1 to szkielet; każde `W-NN` ma kamień
 - [ ] Zadania właściciela, ryzyka z właścicielami, 5–10 scenariuszy odbioru, zakres autoryzacji,
   gotowość środowiska z czasem UTC i jeden następny krok
 - [ ] `zadania.yaml` przechodzi `shctl task create --dry-run` z kodem 0
@@ -265,6 +281,9 @@ dokumentację architektoniczną wydania. W etapie A tego nie robisz.
 - [ ] Zadania są grube: jedna funkcja albo strona to jedno zadanie
 - [ ] Każde zadanie z funkcją ma kryterium podpięcia do punktu wejścia lub routingu, a plik w `pliki`
 - [ ] Zadania z UI wskazują konkretne pliki designu
+- [ ] Każde zadanie z funkcją wskazuje kartę `W-NN` i konkretne kryteria `W-NN/Kn`; każde kryterium karty
+  ma jedno zadanie
+- [ ] Kryteria niesprawdzalne testem są w „Kryteriach do potwierdzenia” PR zadań (albo „brak”)
 - [ ] Każde zadanie ma kategorię i stack, cel z „Poza zakresem”, 2–6 sprawdzalnych kryteriów, pliki,
   testy, kamień i typ
 - [ ] Wspólne pliki mają zależność; migracje mają `db_migracja: true`
@@ -275,11 +294,12 @@ dokumentację architektoniczną wydania. W etapie A tego nie robisz.
 
 ## Kryteria review
 
-- 🔴 krytyczne: sekret w dokumentach; wymaganie `W-n` bez kamienia albo zadania; obszar ryzyka bez ADR;
+- 🔴 krytyczne: sekret w dokumentach; wymaganie `W-NN` bez kamienia albo zadania; obszar ryzyka bez ADR;
   migracja niezgodna wstecz albo bez `db_migracja`; płatna usługa albo dostęp bez zadania właściciela;
   droga na produkcję z dostępem agentów do prod; zadanie poza planem; brak szkieletu jako `T1`.
 - 🟡 istotne: funkcja bez punktu wejścia w planie albo zadanie z funkcją bez kryterium podpięcia do
-  routingu lub nawigacji; zadanie z UI bez konkretnych plików designu; funkcja pocięta na warstwy w
+  routingu lub nawigacji; zadanie z funkcją bez karty `W-NN` albo bez jej kryteriów `W-NN/Kn`; kryterium
+  karty bez zadania; kryterium niesprawdzalne testem bez wpisu w „Kryteriach do potwierdzenia”; zadanie z UI bez konkretnych plików designu; funkcja pocięta na warstwy w
   osobnych zadaniach; kamień warstwowy; brak kategorii lub stacku; kryterium niesprawdzalne; wspólne
   pliki bez zależności; mniej niż 5 albo więcej niż 10 scenariuszy odbioru; brak zakresu autoryzacji
   lub następnego kroku; issue założone ręcznie przez `gh`.

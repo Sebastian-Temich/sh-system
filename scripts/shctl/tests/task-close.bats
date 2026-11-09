@@ -160,3 +160,19 @@ pass() {
   [ "$status" -eq 0 ]
   [ "$(grep -c '^issue create .*test-owner/sh-system' "$GH_ATRAPA/calls")" -eq 2 ]
 }
+
+@test "close: przyczyny uwag ze wszystkich review do metryk, pytania osobno od eskalacji" {
+  mkdir -p docs/07-realizacja/escalations
+  printf -- "---\nid: E-001\nstatus: zamknieta\ntyp: pytanie\ndotyczy: '#12'\n---\n" >docs/07-realizacja/escalations/E-001.md
+  printf -- "---\nid: E-002\nstatus: zamknieta\ndotyczy: '#12'\n---\n" >docs/07-realizacja/escalations/E-002.md
+  git add docs/07-realizacja/escalations && git commit -qm esk && git push -q origin main
+  wynik_codex PASS '[{"waga":"drobne","przyczyna":"design","plik":"src/a.ts","linia":3,"opis":"odstęp"},{"waga":"drobne","przyczyna":"kod","plik":"","linia":0,"opis":"nazwa"},{"waga":"drobne","plik":"","linia":0,"opis":"bez przyczyny"}]'
+  "$SHCTL" review run 20 >/dev/null
+  komentarze 20 | grep -q '^- ⚪ drobne (przyczyna: design) `src/a.ts:3`: odstęp$'
+  run --separate-stderr "$SHCTL" task close 12
+  echo "$output $stderr"
+  [ "$status" -eq 0 ]
+  grep -qE '^\| #12 Zadanie 12 \| M \| .* \| 1 \| 1 \| 1 \| PR #20, pytania: 1 \|$' docs/metryki.md
+  grep -qxF '| review PR #20 (#12 Zadanie 12) | 0 | 1 | 0 | 1 | 1 |' docs/metryki.md
+  grep -qxF '## Przyczyny uwag' docs/metryki.md
+}

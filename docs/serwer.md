@@ -126,6 +126,7 @@ sekcje „Disabling skills” i „Hiding a skill from settings”.
 | Sesja | Plik |
 |---|---|
 | Orkiestrator (`/Users/Shared/sh`) | `/Users/Shared/sh/.claude/settings.json`, symlink z `install.sh` do `scripts/server/orkiestrator-settings.json` |
+| Instrukcje sesji w `/Users/Shared/sh` (orkiestrator, builder) | `/Users/Shared/sh/CLAUDE.md`, symlink z `install.sh` do `scripts/server/CLAUDE-sh.md`: jedna prosta komenda na wywołanie, `cd` osobno, bez `&&`, `;`, potoków i zmiennych przed komendą (inaczej komenda traci wyjątek sandboxa) |
 | Worker w Claude Code | `.claude/roles/worker/settings.json` szablonu (`--settings`) |
 
 Ustawienia projektu działają tylko w sesji, której katalogiem roboczym jest `/Users/Shared/sh`, a `--settings`

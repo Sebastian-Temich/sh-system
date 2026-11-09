@@ -85,7 +85,7 @@ Specyfikacja, PR #2
 
 Kliknięcie otwiera PR. Etap widać też w „status?” w „Czeka na Ciebie”.
 
-**Ty:** czytasz PR #2 na GitHubie (wymagania `W-1`…`W-6` z kryteriami Given/When/Then).
+**Ty:** czytasz PR #2 na GitHubie (wymagania `W-01`…`W-06` z kryteriami Given/When/Then).
 
 ```text
 Akceptuję specyfikację. Odpowiedzi na pytania: zgodnie z propozycjami.
@@ -217,9 +217,9 @@ Supabase, migrowany przez CI.
 ```text
 strona-firmowa: gotowe do odbioru. Staging: https://strona-firmowa-staging.vercel.app
 Scenariusze do sprawdzenia (z planu):
-1. Gość otwiera każdą z 5 podstron na telefonie i komputerze (W-1, W-2).
-2. Gość wysyła formularz z poprawnymi danymi: widzi potwierdzenie, e-mail dochodzi (W-4).
-3. Formularz bez zgody RODO: nie da się wysłać (W-5).
+1. Gość otwiera każdą z 5 podstron na telefonie i komputerze (W-01, W-02).
+2. Gość wysyła formularz z poprawnymi danymi: widzi potwierdzenie, e-mail dochodzi (W-04).
+3. Formularz bez zgody RODO: nie da się wysłać (W-05).
 …
 Decyzje do przejrzenia: 7 w decyzje.md. Drobne uwagi w backlogu: 4.
 ```

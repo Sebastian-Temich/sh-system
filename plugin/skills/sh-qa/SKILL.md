@@ -18,7 +18,7 @@ Robisz:
 - zlecasz w CI pełny zestaw E2E Playwright w chromium i webkit (job `e2e` na PR) oraz E2E i Lighthouse
   na stagingu (job `qa-staging`, gdy `staging_url` jest ustawione) i czytasz ich wyniki;
 - piszesz testy E2E przepływów między funkcjami i scenariuszy odbioru kamienia w `e2e/qa/`;
-- sprawdzasz zgodność z wymaganiami `W-n` kamienia;
+- sprawdzasz zgodność z wymaganiami `W-NN` kamienia;
 - piszesz raport `docs/08-qa/raport-MN.md` i plik błędów `docs/08-qa/zadania-MN.yaml`;
 - po merge'u zakładasz błędy 🔴 i 🟡 jako issue `typ:qa` z wagą przez `shctl task create`;
 - zgłoszenia ⚪ wpisujesz wyłącznie do sekcji „Drobne uwagi” raportu, bez issue.
@@ -39,7 +39,7 @@ Nie robisz:
 - `gh issue list --milestone "MN NAZWA" --state all --limit 200 --json number,title,state,stateReason,labels,body`:
   zadania kamienia, ich kryteria i stan
 - `docs/04-plan/plan.md` (projekt v1: `docs/05-plan/plan.md`): kamień MN (rezultat, wymagania, warunek startu) i jego scenariusze odbioru
-- `docs/00-intake/specyfikacja.md`: wymagania `W-n` kamienia z kryteriami Given/When/Then
+- `docs/00-intake/specyfikacja.md`: wymagania `W-NN` kamienia z kryteriami Given/When/Then
 - `docs/04-plan/plan.md`, sekcja „Architektura” (v1: `docs/04-architektura/architektura.md`): moduły,
   punkty wejścia i przepływy danych między funkcjami
 - `AGENTS.md`: „Stack (kontrakt)”, czyli komendy instalacji, testów, buildu, uruchomienia i E2E
@@ -96,7 +96,7 @@ shctl escalate --dotyczy 08-qa --powod "..." --potrzebne "..." --opcje "A;B"
    `git worktree add --no-track -b stage/08-qa /Users/Shared/sh/wt/NAZWA/stage-08-qa origin/main` i `cd`
    do worktree (nie `git -C`; bez przełączania gałęzi głównego klonu), potem utwórz `docs/08-qa/raport-MN.md` z szablonu, z tytułem
    „MN NAZWA” (istniejącego raportu kamienia nie nadpisujesz).
-4. Zrób listę do sprawdzenia: kryteria zamkniętych issue, wymagania `W-n` kamienia, scenariusze odbioru
+4. Zrób listę do sprawdzenia: kryteria zamkniętych issue, wymagania `W-NN` kamienia, scenariusze odbioru
    kamienia z planu i przepływy między funkcjami (miejsca, gdzie wynik jednej funkcji jest wejściem
    drugiej, np. rejestracja → logowanie → koszyk → zamówienie).
 5. Sprawdź w `package.json` i lockfile, że wersja Playwright równa się `playwright_version`; inna
@@ -112,11 +112,14 @@ shctl escalate --dotyczy 08-qa --powod "..." --potrzebne "..." --opcje "A;B"
    --failed --repo …`): zielony za drugim razem to test niestabilny. Test, który pokazuje błąd, oznacz
    `test.fixme(true, 'QA-MN-k')` i wypchnij, żeby CI na `main` zostało zielone; zdjęcie `fixme` jest
    kryterium issue błędu. Wyniki jobów (liczby testów, wyniki Lighthouse) zapisz do raportu.
-8. Sprawdź zgodność ze specyfikacją: każde `W-n` kamienia ma wynik `spełnione`, `częściowo` albo
+8. Sprawdź zgodność ze specyfikacją: każde `W-NN` kamienia ma wynik `spełnione`, `częściowo` albo
    `niespełnione` z dowodem (test, komenda, krok scenariusza). Sprawdź też sekrety
    (`gitleaks git --redact --no-banner .`, gdy jest zainstalowany) i dane osobowe w logach aplikacji
    z przebiegu testów.
-9. Każdemu problemowi nadaj wagę według „Kryteriów review” (niżej, część „Waga błędów”). Błąd 🔴 albo
+9. Każdemu problemowi nadaj wagę według „Kryteriów review” (niżej, część „Waga błędów”) i przyczynę:
+   `wymaganie` (luka albo sprzeczność w specyfikacji lub karcie funkcji), `kod`, `test` (brak testu
+   albo test nie sprawdza kryterium), `design` (brak lub niespójność designu). Przyczyna trafia do
+   tabeli „Zgłoszenia”, na początek pozycji „Drobnych uwag” i do celu issue błędu. Błąd 🔴 albo
    🟡 zapisz w `docs/08-qa/zadania-MN.yaml` według „Pliku błędów” i w tabeli „Zgłoszenia” raportu, z
    tym samym ID. Zgłoszenie ⚪ zapisz tylko jako pozycję listy w „Drobnych uwagach” raportu: bez ID i
    bez issue.
@@ -138,8 +141,8 @@ shctl escalate --dotyczy 08-qa --powod "..." --potrzebne "..." --opcje "A;B"
 16. Sprawdź „DoD” i przekaż orkiestratorowi: werdykt, numery issue z wyniku `mapa` z wagami, commit
     `index.md` na `main` i liczbę pozycji „Drobnych uwag”. Orkiestrator przenosi je do
     `docs/backlog-drobne.md` jak `shctl task close` uwagi z raportu zadania: wiersz
-    `| DATA | QA MN | uwaga | otwarta |` na pozycję, bez dublowania. Komendy shctl na to nie ma, więc
-    robi to ręcznie. Kolejny kamień startuje według „Autoryzacji i kamieni milowych” w procesie.
+    `| DATA | QA MN | uwaga | otwarta |` na pozycję, bez dublowania, a wiersz „Przyczyn” raportu do
+    tabeli „Przyczyny uwag” w `docs/metryki.md`. Komendy shctl na to nie ma, więc robi to ręcznie. Kolejny kamień startuje według „Autoryzacji i kamieni milowych” w procesie.
 
 ### Raport
 
@@ -150,9 +153,10 @@ shctl escalate --dotyczy 08-qa --powod "..." --potrzebne "..." --opcje "A;B"
 | Nagłówek | `Data:` czas UTC z kroku 1, `Commit:` skrót z kroku 1 |
 | `Zakres` | Kamień, zamknięte issue (`#NR tytuł`), pominięte („not planned”), przepływy i scenariusze |
 | `Wyniki testów` | Wiersze: E2E chromium, E2E webkit, Integracja, Testy QA (`e2e/qa/`); wynik `pass`/`fail` z liczbami i komendą, niestabilne testy w „Uwagach” |
-| `Zgodność z wymaganiami` | Każde `W-n` kamienia: wynik i dowód |
-| `Zgłoszenia` | Tylko 🔴 i 🟡: `| QA-MN-k | waga | opis z krokami odtworzenia |`; bez nich jeden wiersz `| brak | | |` |
-| `Drobne uwagi` | Zgłoszenia ⚪, jedna pozycja listy na uwagę (z kontynuacją w kolejnych liniach); bez uwag jedna pozycja `brak` |
+| `Zgodność z wymaganiami` | Każde `W-NN` kamienia: wynik i dowód |
+| `Zgłoszenia` | Tylko 🔴 i 🟡: `| QA-MN-k | waga | przyczyna | opis z krokami odtworzenia |`; bez nich jeden wiersz `| brak | | | |` |
+| `Drobne uwagi` | Zgłoszenia ⚪, jedna pozycja listy na uwagę, zaczyna się od `(przyczyna: P)` (z kontynuacją w kolejnych liniach); bez uwag jedna pozycja `brak` |
+| `Przyczyny` | Jeden wiersz `| QA MN | wymaganie | kod | test | design | bez przyczyny |` z liczbą zgłoszeń wszystkich wag |
 | `Werdykt` | `PASS` albo `FAIL` i jedno zdanie uzasadnienia |
 
 Logów z sekretami i danymi osobowymi nie wklejasz: krótki fragment z zamaskowanymi wartościami.
@@ -165,7 +169,7 @@ zadania:
   - id: QA-M2-1
     tytul: "QA M2: koszyk gubi pozycje po zalogowaniu w webkit"
     cel: >-
-      Po zalogowaniu koszyk gościa znika w webkit (W-2, przepływ koszyk → logowanie). Kroki: dodaj
+      Po zalogowaniu koszyk gościa znika w webkit (W-02, przepływ koszyk → logowanie). Kroki: dodaj
       kawę jako gość, zaloguj się, otwórz koszyk. Oczekiwane: 1 pozycja. Jest: pusty koszyk.
     kryteria:
       - "Given koszyk gościa z 1 pozycją, when klient się loguje, then koszyk ma 1 pozycję w chromium i webkit"
@@ -206,12 +210,13 @@ Tryb L jest odłożony. Etap B doda testy na stagingu i raport dla klienta. W et
 - [ ] Wszystkie zadania kamienia poza `typ:qa` są zamknięte, a raport wymienia je w „Zakresie”
 - [ ] Pełne E2E w chromium i webkit uruchomione w CI (job `e2e`, oraz `qa-staging`, gdy jest `staging_url`), wynik w raporcie
 - [ ] Przepływy między funkcjami i scenariusze odbioru kamienia sprawdzone testami w `e2e/qa/` albo istniejącymi
-- [ ] Każde `W-n` kamienia ma wynik i dowód w „Zgodności z wymaganiami”
+- [ ] Każde `W-NN` kamienia ma wynik i dowód w „Zgodności z wymaganiami”
 - [ ] Każdy błąd 🔴 i 🟡 ma ID `QA-MN-k`, wagę i kroki odtworzenia, w raporcie i w `zadania-MN.yaml`
 - [ ] Zgłoszenia ⚪ są wyłącznie w „Drobnych uwagach” raportu, bez issue
 - [ ] `shctl task create --dry-run` przechodzi; po merge'u issue założone (albo brak błędów)
 - [ ] Testy błędów oznaczone `test.fixme`, CI na PR zielone
 - [ ] Werdykt raportu zgodny z wagami: FAIL tylko przy 🔴 lub 🟡
+- [ ] Każde zgłoszenie (także ⚪) ma przyczynę: wymaganie, kod, test albo design; sekcja „Przyczyny” je sumuje
 - [ ] Brak sekretów i danych osobowych w raporcie, testach i PR
 - [-] Review PASS (nie dotyczy: raport QA nie ma review etapu, merge po zielonym CI)
 
@@ -225,7 +230,7 @@ wagami:
 - 🔴 krytyczne: sekret lub dane osobowe w raporcie, testach albo PR; błąd 🔴 lub 🟡 opisany w raporcie
   bez wpisu w `zadania-MN.yaml`; werdykt `PASS` mimo błędu 🔴 lub 🟡; zmiana kodu aplikacji w PR;
   wynik testów w raporcie niezgodny z tym, co da się odtworzyć komendą.
-- 🟡 istotne: brak przebiegu w webkit albo chromium; wymaganie `W-n` kamienia bez wyniku lub dowodu;
+- 🟡 istotne: brak przebiegu w webkit albo chromium; wymaganie `W-NN` kamienia bez wyniku lub dowodu;
   scenariusz odbioru kamienia albo przepływ między funkcjami niesprawdzony; błąd bez kroków
   odtworzenia lub z niesprawdzalnym kryterium; test błędu bez `test.fixme` (czerwone CI po merge'u);
   zła waga błędu; zgłoszenie ⚪ w `zadania-MN.yaml` zamiast w „Drobnych uwagach”; brak sekcji
@@ -236,7 +241,7 @@ wagami:
 
 | Waga | Kiedy |
 |---|---|
-| 🔴 `krytyczne` | Bezpieczeństwo (dostęp do cudzych danych, obejście auth), utrata danych, główna ścieżka kamienia nie działa, wymaganie `W-n` niespełnione, sekret w repo |
+| 🔴 `krytyczne` | Bezpieczeństwo (dostęp do cudzych danych, obejście auth), utrata danych, główna ścieżka kamienia nie działa, wymaganie `W-NN` niespełnione, sekret w repo |
 | 🟡 `istotne` | Wymaganie spełnione częściowo, błąd w jednej przeglądarce, błąd przepływu między funkcjami z obejściem, test niestabilny, scenariusz odbioru wymaga obejścia |
 | ⚪ `drobne` | Kosmetyka UI, teksty, drobna niewygoda bez wpływu na wymaganie; bez issue, tylko „Drobne uwagi” |
 
@@ -284,7 +289,7 @@ Orkiestrator: „QA kamienia M2 skillem sh-qa.”
    w powtórce), `qa-staging`: Lighthouse z artefaktu `qa-staging`.
 4. Nowy test `e2e/qa/M2-koszyk-logowanie.spec.ts` (przepływ koszyk → logowanie) pokazuje błąd w webkit:
    `test.fixme(true, 'QA-M2-1')`.
-5. `W-2` częściowo, reszta spełniona. `zadania-M2.yaml`: `QA-M2-1`, `waga: istotne`. `--dry-run`: kod 0.
+5. `W-02` częściowo, reszta spełniona. `zadania-M2.yaml`: `QA-M2-1`, `waga: istotne`. `--dry-run`: kod 0.
    Literówka na przycisku „Do kasy” idzie do „Drobnych uwag”.
 6. Raport: werdykt FAIL. Commit `08-qa: raport M2`, `gh pr ready 40`.
 7. CI zielone, werdykt zgodny z wagami, merge. Na `main`: `shctl task create --plik docs/08-qa/zadania-M2.yaml`: #41

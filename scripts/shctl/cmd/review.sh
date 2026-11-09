@@ -123,6 +123,7 @@ def ikona: if . == "krytyczne" then "🔴" elif . == "istotne" then "🟡" else 
 + "\(.podsumowanie)\n\n### Zgłoszenia\n\n"
 + (if (.zgloszenia | length) == 0 then "Brak."
    else [.zgloszenia[] | "- \(.waga | ikona) \(.waga)"
+     + (if (.przyczyna // "") != "" then " (przyczyna: \(.przyczyna))" else "" end)
      + (if .plik != "" then " `\(.plik)\(if .linia > 0 then ":\(.linia)" else "" end)`" else "" end)
      + ": \(.opis | gsub("\n"; " "))"] | join("\n") end)
 + (if $wm != $w then "\n\nWerdykt modelu (\($wm)) nie zgadzał się z wagą zgłoszeń; obowiązuje \($w): FAIL tylko przy 🔴 lub 🟡." else "" end)
@@ -244,7 +245,7 @@ review_run() {
     rc="$(cat "$dir/rc")"
     [ "$rc" = 0 ] || die "$E_WYKONANIE" "codex exec zakończył się kodem $rc (limit Codexa?); wyjście panelu: $REVIEW_LOG"
     wynik="$(jq -c '{werdykt, podsumowanie: (.podsumowanie // ""),
-      zgloszenia: [(.zgloszenia // [])[] | {waga, plik: (.plik // ""), linia: (.linia // 0), opis}]}' "$dir/wynik.json" 2>/dev/null)" ||
+      zgloszenia: [(.zgloszenia // [])[] | {waga, przyczyna: (.przyczyna // ""), plik: (.plik // ""), linia: (.linia // 0), opis}]}' "$dir/wynik.json" 2>/dev/null)" ||
       die "$E_WYKONANIE" "codex nie zwrócił poprawnego JSON ($dir/wynik.json)"
     jq -e '.zgloszenia | all(.waga | IN("krytyczne", "istotne", "drobne"))' <<<"$wynik" >/dev/null ||
       die "$E_WYKONANIE" "codex zwrócił nieznaną wagę zgłoszenia ($dir/wynik.json)"

@@ -122,3 +122,25 @@ esk() { "$SHCTL" escalate --dotyczy "#7" --powod "brak klucza" --potrzebne "kluc
   grep -q '^high Czeka na Twoją akceptację: demo / podniesienie trybu E-001, #7: propozycja S do M: zmiana modelu danych ' "$T/notified"
   ! grep -q 'Eskalacja E-001' "$T/notified" || false
 }
+
+@test "pytanie: bez zmiany etykiety i statusu, osobny tytul powiadomienia, zamkniecie bez etykiet" {
+  run --separate-stderr esk --typ pytanie --json
+  echo "$output $stderr"
+  [ "$status" -eq 0 ]
+  [ "$(fm "$E1" typ)" = pytanie ]
+  [ "$(jq -r .wynik.typ <<<"$output")" = pytanie ]
+  ! grep -q 'issue edit 7' "$T/gh.calls" || false
+  grep -q 'E-001 (#7, pytanie): brak klucza' docs/status.md
+  grep -q '^default Pytanie E-001: demo' "$T/notified"
+  run --separate-stderr "$SHCTL" escalate close E-001 --odpowiedz "tak"
+  [ "$status" -eq 0 ]
+  ! grep -q 'issue edit 7' "$T/gh.calls" || false
+  [ "$(fm "$E1" status)" = zamknieta ]
+}
+
+@test "pytanie: nieznany typ i --akceptacja z pytaniem to blad uzycia" {
+  run --separate-stderr esk --typ inne
+  [ "$status" -eq 2 ]
+  run --separate-stderr esk --typ pytanie --akceptacja
+  [ "$status" -eq 2 ]
+}

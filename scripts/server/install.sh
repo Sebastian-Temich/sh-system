@@ -3,7 +3,7 @@
 #
 # Symlinki: scripts/server/*.sh (bez install.sh) i pliki wykonywalne z scripts/shctl/ do
 # /Users/Shared/sh/bin, Brewfile do /Users/Shared/sh/Brewfile, codex/reviewer.config.toml do $CODEX_HOME (~/.codex) i
-# orkiestrator-settings.json do /Users/Shared/sh/.claude/settings.json. Zwykly plik zastepuje tylko, gdy jest identyczny
+# orkiestrator-settings.json do /Users/Shared/sh/.claude/settings.json, CLAUDE-sh.md do /Users/Shared/sh/CLAUDE.md. Zwykly plik zastepuje tylko, gdy jest identyczny
 # z repo. Roznica to blad: nowsze zmiany trzeba najpierw przeniesc do repo.
 # Konfiguracja Maca (max_local): kopia scripts/server/konfiguracja-sh.md do /Users/Shared/sh/konfiguracja.md, gdy jej brak.
 # Plisty: scripts/server/*.plist kopiuje do ~/Library/LaunchAgents tylko przy roznicy
@@ -177,6 +177,8 @@ link "$REPO/codex/reviewer.config.toml" "$CODEX_DIR/reviewer.config.toml"
 # Ustawienia sesji orkiestratora w /Users/Shared/sh: stare skille zostawione dla Paperclipa ukryte i zablokowane.
 mkdir -p "$SH_DIR/.claude"
 link "$REPO/scripts/server/orkiestrator-settings.json" "$SH_DIR/.claude/settings.json"
+# Instrukcje sesji Claude Code w /Users/Shared/sh (orkiestrator i builder): prosta komenda na wywołanie.
+link "$REPO/scripts/server/CLAUDE-sh.md" "$SH_DIR/CLAUDE.md"
 
 for src in "$REPO"/scripts/server/*.plist; do
   plist "$src"

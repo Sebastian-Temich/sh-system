@@ -190,6 +190,7 @@ shctl decision add --co "Postgres zamiast SQLite" --dlaczego "potrzebne RLS" --c
 
 ```sh
 shctl escalate --dotyczy "#NR|ETAP" --powod "..." --potrzebne "..." [--opcje "A;B"] [--priorytet high] [--akceptacja]
+                [--typ blokada|pytanie]
 shctl escalate close E-NNN --odpowiedz "..."
 ```
 
@@ -201,6 +202,14 @@ issue albo status `escalated` etapu, aktualizuje sekcję „Otwarte eskalacje”
 `--akceptacja` oznacza decyzję do akceptacji właściciela, dziś propozycję podniesienia trybu
 (`proces-v1.md`, „Zasady” trybów). Plik, etykieta i status są takie same, a powiadomienie ma tytuł
 „Czeka na Twoją akceptację: NAZWA / podniesienie trybu” i treść `E-NNN, DOTYCZY: POWÓD`.
+
+`--typ pytanie` (SH-lite F4) to pytanie workera o UX albo regułę biznesową, której nie rozstrzyga karta
+funkcji ani issue (`sh-worker`, „Pytania”). Plik ma `typ: pytanie`, a komenda nie zmienia etykiety
+issue ani statusu etapu, nie zwalnia slotu i nie wymaga `poprzedni_status`. Powiadomienie: „Pytanie
+E-NNN: NAZWA”, domyślnie `default`. W „Otwartych eskalacjach” `status.md` wpis ma dopisek „pytanie”,
+w `status show --json` pole `typ`. `task close` liczy pytania osobno („pytania: N” w „Uwagach”
+metryk), nie w kolumnie „Eskalacje”. Zamknięcie pytania nie rusza etykiet. `--akceptacja` z pytaniem
+to błąd użycia (kod 2). Domyślny typ to `blokada` (dotychczasowe zachowanie).
 
 Powtórka z tym samym `--dotyczy` i `--powod` dotyczy tej samej otwartej eskalacji. Nieudane
 powiadomienie daje kod 1, a ponowienie komendy wysyła je jeszcze raz.
@@ -225,7 +234,7 @@ shctl escalate --dotyczy "#12" --powod "brak klucza Stripe" --potrzebne "klucz t
 
 ```json
 {"ok":true,"komenda":"escalate","dry_run":false,"wynik":{
-  "id":"E-001","dotyczy":"#12","plik":"docs/07-realizacja/escalations/E-001.md",
+  "id":"E-001","typ":"blokada","dotyczy":"#12","plik":"docs/07-realizacja/escalations/E-001.md",
   "katalog":"/Users/Shared/sh/projekty/sklep","z_worktree":false,"nowa":true,"slot_zwolniony":true,"panel":"w1:p7"}}
 ```
 
@@ -486,7 +495,9 @@ projekcie trwa już takie zadanie (status inny niż `todo`).
 
 Blokady całego dispatchu (`blokady`): brak wolnego slotu `max_local` (limit Maca albo niższy limit
 projektu), wolne miejsce poniżej
-`min_wolne_gb`, kolejka review pełna (`max_review_queue`), wstrzymanie Claude w `/Users/Shared/sh/limity.md`.
+`min_wolne_gb`, kolejka review pełna (`max_review_queue`), wstrzymanie Claude w `/Users/Shared/sh/limity.md`,
+niekompletna lista startowa (`lista_startowa`: pole `- [ ]` poza blokiem kodu w
+`docs/00-intake/lista-startowa.md` na main; brak pliku nie blokuje).
 `gotowe` to kandydaci, gdy blokad nie ma, inaczej pusta lista.
 
 Z `limity.md` liczą się pozycje list i wiersze tabel (bez nagłówka); wpis „brak” nie jest
@@ -758,7 +769,8 @@ niezacommitowane zmiany albo commity spoza PR. Potem, na main po `git pull --ff-
 | „Decyzje” z `docs/07-realizacja/T-NR.md` | `docs/decyzje.md`; `pytanie → decyzja` dzieli kolumny, inaczej Pytanie to `-` |
 | „Drobne uwagi” z raportu | `docs/backlog-drobne.md`, stan `otwarta` |
 | Zgłoszenia ⚪ z ostatniego review (komentarz w PR) | `docs/backlog-drobne.md`, źródło `review PR #N` |
-| Czas od dispatchu, iteracje, eskalacje | Wiersz `| #NR tytuł | tryb | czas | 1 | iteracje | eskalacje | PR #N |` na końcu ostatniej tabeli `docs/metryki.md` (w `sh-dryrun`: tabela bieżącego przebiegu) |
+| Czas od dispatchu, iteracje, eskalacje | Wiersz `| #NR tytuł | tryb | czas | 1 | iteracje | eskalacje | PR #N |` na końcu ostatniej tabeli `docs/metryki.md` (w `sh-dryrun`: tabela bieżącego przebiegu); pytania (`escalate --typ pytanie`) nie wchodzą do „Eskalacji”, tylko jako „, pytania: N” w ostatniej kolumnie |
+| Przyczyny uwag review | Wiersz `| review PR #N (#NR tytuł) | wymaganie | kod | test | design | bez przyczyny |` w tabeli „Przyczyny uwag” `docs/metryki.md`: zgłoszenia ze wszystkich review PR (ostatni komentarz dla każdego commita); bez zgłoszeń wiersza nie ma. Projekt bez tej tabeli dostaje sekcję pod ostatnią tabelą metryk |
 | Tytuł i PR | `- #NR: tytuł (PR #N)` w sekcji „Niewydane” `CHANGELOG.md` |
 | „Propozycje dla systemu” | Komentarz z treścią i znacznikiem `<!-- propozycje:NAZWA:T-NR -->` w otwartym issue miesiąca w `sh-system` (etykieta `propozycja`, tytuł „Propozycje RRRR-MM”); brak otwartego issue: nowe; wynik `propozycje` to link do issue |
 

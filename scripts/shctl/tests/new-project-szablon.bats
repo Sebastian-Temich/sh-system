@@ -9,6 +9,9 @@ setup() {
   SZABLON="${SH_TEMPLATE_DIR:-/Users/Shared/sh/sh-template-projekt}"
   [ -d "$SZABLON/.git" ] || [ -f "$SZABLON/.git" ] || skip "brak szablonu $SZABLON (SH_TEMPLATE_DIR)"
   command -v bats >/dev/null || skip "brak bats"
+  # Sandbox Claude Code (SANDBOX_RUNTIME): zagnieżdżony bats szablonu nie przechodzi w sandboxie
+  # (zapis poza dozwolonymi katalogami, np. mktemp do /var/folders), więc lokalnie test się pomija.
+  [ -z "${SANDBOX_RUNTIME:-}" ] || skip "wymaga zapisu poza sandboxem Claude Code, sprawdza CI"
   wspolny_setup
   git clone -q --bare "$SZABLON" "$T/remote.git"
   # Szablon może stać na gałęzi roboczej: jej HEAD staje się main nowego repo, jak przy --template.
