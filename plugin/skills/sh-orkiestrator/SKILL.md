@@ -125,7 +125,8 @@ shctl stop-all
   najpierw `cd /Users/Shared/sh/projekty/NAZWA` (albo worktree), potem zwykłe `git …`; Claude Code
   pamięta katalog. Nigdy `cd … && git …` w jednym wywołaniu (zawsze wymaga zgody). Po pracy
   `cd /Users/Shared/sh`. `git -C` zostaje tylko do lokalnego odczytu (`status`, `log`, `diff`, `show`,
-  `rev-parse`, `ls-files`, `worktree list`).
+  `rev-parse`, `ls-files`, `worktree list`) i tylko dla ścieżek w `/Users/Shared/sh/`. Worktree zakładasz
+  wyłącznie w `/Users/Shared/sh/wt/` (`git worktree add --no-track -b GAŁĄŹ /Users/Shared/sh/wt/…`).
 - `stage`, `decision add`, `escalate`, `task create` (w skillach) i `task close` zostawiają zmiany
   niezacommitowane. Od razu potem na `main`: `git -C /Users/Shared/sh/projekty/NAZWA status --porcelain`
   pokazuje tylko pliki z „Wyjścia”, potem `cd /Users/Shared/sh/projekty/NAZWA`, `git add PLIKI`,

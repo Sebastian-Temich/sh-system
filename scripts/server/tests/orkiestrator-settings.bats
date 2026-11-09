@@ -13,7 +13,7 @@ deny() { jq -e --arg r "$1" '.permissions.deny | index($r) != null' "$S" >/dev/n
 
 @test "git: zapis i siec przez cd i zwykly git (sandbox nie wylacza git -C), -C tylko do odczytu" {
   for r in 'Bash(cd /Users/Shared/sh/*)' 'Bash(git add *)' 'Bash(git commit *)' 'Bash(git push)' 'Bash(git push *)' \
-    'Bash(git fetch *)' 'Bash(git worktree add *)' 'Bash(git -C * status)' 'Bash(git -C * log *)' 'Bash(git -C * show *)'; do
+    'Bash(git fetch *)' 'Bash(git -C /Users/Shared/sh/* status)' 'Bash(git -C /Users/Shared/sh/* log *)' 'Bash(git -C /Users/Shared/sh/* show *)'; do
     allow "$r" || { echo "brak allow: $r"; false; }
   done
   for r in 'Bash(git -C * add *)' 'Bash(git -C * commit *)' 'Bash(git -C * push *)' 'Bash(git -C * fetch *)' \
@@ -83,11 +83,15 @@ dozwolone() {
 }
 
 @test "worktree etapu: add i remove zwyklym git z katalogu projektu, bez --force; switch zabroniony" {
-  for r in 'Bash(git worktree add *)' 'Bash(git worktree remove /Users/Shared/sh/wt/*)' \
-    'Bash(git worktree remove /Users/Shared/sh/wt-system/*)'; do
+  for r in 'Bash(git worktree add --no-track -b * /Users/Shared/sh/wt/*)' 'Bash(git worktree add --no-track -b * /Users/Shared/sh/wt-system/*)' \
+    'Bash(git worktree remove /Users/Shared/sh/wt/*)' 'Bash(git worktree remove /Users/Shared/sh/wt-system/*)'; do
     allow "$r" || { echo "brak allow: $r"; false; }
   done
   ! allow 'Bash(git worktree remove *)' || false
+  ! allow 'Bash(git worktree add *)' || false
+  dozwolone 'git worktree add --no-track -b stage/04-plan /Users/Shared/sh/wt/x/stage-04-plan origin/main'
+  ! dozwolone 'git worktree add --no-track -b x /tmp/y origin/main' || false
+  pasuje 'git worktree add --no-track -b x /Users/Shared/sh/wt/../../../tmp/y origin/main'
   dozwolone 'git worktree remove /Users/Shared/sh/wt/x/stage-04-plan'
   dozwolone 'git worktree remove /Users/Shared/sh/wt-system/f3b'
   ! dozwolone 'git worktree remove /Users/Shared/sh/projekty/x' || false
@@ -118,11 +122,34 @@ dozwolone() {
   done
 }
 
-@test "sandbox: wlaczony, bez wyjscia poza sandbox; shctl, herdr, gh, git i notify.sh poza nim" {
+@test "sandbox: wlaczony, bez wyjscia poza sandbox; shctl, herdr, gh, git push|fetch|pull i notify.sh poza nim" {
   jq -e '.sandbox.enabled == true and .sandbox.allowUnsandboxedCommands == false' "$S" >/dev/null
-  for c in "shctl *" "herdr *" "gh *" "git *" "notify.sh *"; do
+  for c in "shctl *" "herdr *" "gh *" "git push *" "notify.sh *"; do
     jq -e --arg c "$c" '.sandbox.excludedCommands | index($c)' "$S" >/dev/null || { echo "brak excluded $c"; false; }
   done
   [ "$(jq -r '[.sandbox.excludedCommands[] | select(test("^(node|npx|pnpm|npm|python|uv|bash|cat|jq) "))] | length' "$S")" -eq 0 ]
   jq -e '.sandbox.network.allowedDomains | index("ntfy.sh") and index("api.github.com")' "$S" >/dev/null
+}
+
+@test "git poza sandboxem tylko do sieci i worktree; odczyt (diff, show, log, config, blame, grep) w sandboxie" {
+  ! jq -e '.sandbox.excludedCommands | index("git *")' "$S" >/dev/null || false
+  for c in "git push *" "git fetch *" "git pull *" "git worktree add *" "git worktree remove *"; do
+    jq -e --arg c "$c" '.sandbox.excludedCommands | index($c)' "$S" >/dev/null || { echo "brak excluded $c"; false; }
+  done
+  [ "$(jq -r '[.sandbox.excludedCommands[] | select(test("^git (diff|show|log|config|blame|grep|commit|cat-file|hash-object|-C)"))] | length' "$S")" -eq 0 ]
+}
+
+@test "git czytajacy pliki spoza repo: --no-index, config -f, blame --contents, -C poza /Users/Shared/sh zabronione" {
+  for k in 'git diff --no-index /Users/x/Documents/a /dev/null' 'git -C /Users/Shared/sh/projekty/x diff --no-index a b' \
+    'git grep --no-index sekret /Users/x/Documents' 'git config -f /Users/x/Documents/a --list' \
+    'git -C /Users/Shared/sh/projekty/x config --file a --list' 'git blame --contents /Users/x/Documents/a plik' \
+    'git -C ~/Documents status' 'git -C /Users/sebastiant./Documents log' 'git -C /tmp/x status' \
+    'git -C /private/tmp/x log' 'git -C ../.. status' 'git -C /Users/Shared/sh/../../../etc status'; do
+    pasuje "$k" || { echo "przechodzi: $k"; false; }
+  done
+  ! dozwolone 'git -C /Users/Shared/inny status' || false
+  for k in 'git -C /Users/Shared/sh/wt/x/12 log --oneline origin/main..HEAD' 'git -C /Users/Shared/sh/wt/x/12 diff origin/main...HEAD --stat'; do
+    ! pasuje "$k" || { echo "zablokowane: $k"; false; }
+    dozwolone "$k" || { echo "nie dozwolone: $k"; false; }
+  done
 }

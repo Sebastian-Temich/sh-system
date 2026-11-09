@@ -825,7 +825,7 @@ Od 2026-11-09 profil workera (`.claude/roles/worker/settings.json` szablonu) i u
 
 | | Worker | Orkiestrator |
 |---|---|---|
-| Poza sandboxem (`excludedCommands`, zwykłe reguły uprawnień dalej obowiązują) | `git`, `gh`, `shctl escalate`, `brew install` | `shctl`, `herdr`, `gh`, `git`, `notify.sh` |
+| Poza sandboxem (`excludedCommands`, zwykłe reguły uprawnień dalej obowiązują) | `git push|fetch|pull`, `gh`, `shctl escalate`, `brew install` | `shctl`, `herdr`, `gh`, `git push|fetch|pull`, `git worktree add|remove|prune`, `notify.sh` |
 | Zapis | worktree, `$TMPDIR`, `~/Library/pnpm`, `~/.npm`, `~/.cache`, `~/Library/Caches` | `/Users/Shared/sh`, `$TMPDIR` |
 | Sieć | GitHub, `registry.npmjs.org`, pobieranie Playwrighta; gniazdo Dockera; trustd (TLS) | GitHub, `ntfy.sh`; trustd |
 | Odczyt zablokowany | reguły `Read()` deny z `~/.claude/settings.json` i z profilu | jw. |
@@ -848,7 +848,9 @@ Ustalenia z testu w sh-dryrun (2026-11-09, nowe sesje w panelach herdr):
 
 - **`git -C` zawsze w sandboxie.** Claude Code nie wyłącza z sandboxa formy `git -C KATALOG …`, także
   przy wzorcu `git -C *` w `excludedCommands`. Taki git nie ma tokenu (`could not read Username`) ani
-  zapisu `.git/config` (chroniona ścieżka). Zwykłe `git …` jest wyłączone i działa. Orkiestrator i
+  zapisu `.git/config` (chroniona ścieżka). Poza sandboxem działają tylko `git push|fetch|pull` (token) i u
+  orkiestratora `git worktree add|remove|prune` (zapis `.git/worktrees` i `.git/config`), w zwykłej formie;
+  `commit`, `merge`, `diff`, `show`, `log` działają w sandboxie. Orkiestrator i
   skille etapów robią więc `cd KATALOG` i `git …` dwoma osobnymi wywołaniami (Claude Code pamięta
   katalog; `cd … && git …` w jednym wywołaniu zawsze wymaga zgody), a `git -C` tylko do lokalnego
   odczytu. Lista dozwolonych nie ma już `git -C … add|commit|push|fetch|pull|worktree add|remove`.
@@ -864,6 +866,11 @@ Ustalenia z testu w sh-dryrun (2026-11-09, nowe sesje w panelach herdr):
 - **Przeglądarki nie startują w sandboxie** (Chromium: `bootstrap_check_in … Permission denied`, WebKit
   wisi). Decyzja właściciela: E2E i Lighthouse tylko w CI (job `e2e` na PR, `qa-staging` na stagingu dla
   PR z `stage/08-qa`); worker lokalnie robi testy jednostkowe i build, QA czyta wyniki jobów.
+- **Git czyta pliki spoza repo** (`git diff A B` z plikiem spoza repo przechodzi sam w tryb `--no-index`,
+  także `git config -f`, `git blame --contents`, `git grep --no-index`). Dlatego tylko komendy sieciowe i
+  worktree są poza sandboxem, a reszta git w nim (system odmawia `~/Documents`). Dodatkowo deny:
+  `--no-index`, `git config`, `blame --contents`, `git -C` poza `/Users/Shared/sh` (`~`, katalog domowy,
+  `/tmp`, `/private`, `..` i inne), a `git worktree add` tylko do `/Users/Shared/sh/wt/` i `wt-system/`.
 - Nie testowano: `supabase start` (sh-dryrun nie używa Supabase) i `brew install`.
 
 ### Uprawnienia sesji SH
