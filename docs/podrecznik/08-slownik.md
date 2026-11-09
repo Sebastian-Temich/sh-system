@@ -27,11 +27,11 @@ Wróć do: [[00-start-tutaj]]
 | **Obsidian** | Aplikacja do czytania dokumentów. Folder `SH/` w vaulcie to kopie `docs/` z GitHuba |
 | **Orkiestrator** | Agent, z którym rozmawiasz. Prowadzi projekty i rozdziela pracę |
 | **PASS / FAIL** | Werdykt review. FAIL, gdy jest choć jedno zgłoszenie 🔴 krytyczne albo 🟡 istotne |
-| **Pliki wspólne** | `status.md`, `decyzje.md`, `metryki.md`, `backlog-drobne.md`, `06-zadania/index.md`, `CHANGELOG.md`. Zmienia je tylko orkiestrator |
+| **Pliki wspólne** | `Projekt.md`, `decyzje.md`, `metryki.md`, `backlog-drobne.md`, `06-zadania/index.md`, `CHANGELOG.md`. Zmienia je tylko orkiestrator |
 | **PR** | Pull request: propozycja zmian na GitHubie, z review i CI, przed merge'em |
 | **Preview (podgląd)** | Wdrożenie PR w Vercel do obejrzenia przed merge'em |
 | **Produkcja (prod)** | Wersja dla użytkowników. Wdraża wyłącznie właściciel. W etapie A jej nie ma |
-| **Punkt przekazania** | Sekcja w `status.md` po każdym kamieniu: stan potrzebny do wznowienia po restarcie sesji |
+| **Punkt przekazania** | Sekcja w `Projekt.md` po każdym kamieniu: stan potrzebny do wznowienia po restarcie sesji |
 | **QA zbiorcze** | Testy całego kamienia po jego zakończeniu (`sh-qa`): E2E, przepływy, zgodność ze specyfikacją |
 | **Remote Control** | Połączenie sesji Claude Code na serwerze z aplikacją Claude na telefonie i w przeglądarce |
 | **Review** | Niezależna ocena pracy przez inny model (Codex). Review PR dla zadań, review etapu dla dokumentów |

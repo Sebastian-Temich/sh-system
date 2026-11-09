@@ -1,39 +1,46 @@
 #!/usr/bin/env bats
 load helper
 
-setup() { wspolny_setup; szablon_remote; }
+setup() { wspolny_setup; szablon_nowy; }
 
-nowy() { "$SHCTL" new-project demo "$@"; }
+nowy() { "$SHCTL" new-project demo --opis "Aplikacja testowa" "$@"; }
 K() { echo "$SH_DIR/projekty/demo/$1"; }
 
 @test "pelny przebieg na atrapie GitHuba" {
-  run nowy --opis "Aplikacja testowa"
+  run nowy --zlecenie "Treść zlecenia"
   [ "$status" -eq 0 ]
-  grep -q 'repo create test-owner/demo --template test-owner/sh-template-projekt --private --description Aplikacja testowa' "$T/gh.calls"
+  grep -qx 'repo create test-owner/demo --public --description Aplikacja testowa' "$T/gh.calls"
+  ! grep -q -- '--template' "$T/gh.calls" || false
   grep -q 'label create' "$T/gh.calls"
-  grep -qx 'repo edit test-owner/demo --delete-branch-on-merge' "$T/gh.calls"
+  grep -qx 'repo edit test-owner/demo --description Aplikacja testowa --add-topic sh-projekt --delete-branch-on-merge' "$T/gh.calls"
+  grep -q '^api -X POST repos/test-owner/demo/rulesets --input ' "$T/gh.calls"
+  grep -qxF "git --redact --no-banner $SH_DIR/projekty/demo" "$T/gitleaks.calls"
+  [ "$(git -C "$T/remote.git" log --format=%s main | tail -1)" = "Projekt demo z sh-template-projekt@$(git -C "$T/szablon" rev-parse --short HEAD)" ]
+  [ "$(git -C "$T/remote.git" rev-list --count main)" -eq 2 ]
+  [ "$(head -1 "$(K README.md)")" = "# demo" ]
+  grep -qx 'Aplikacja testowa' "$(K README.md)"
   [ "$(fm "$(K docs/konfiguracja.md)" tryb_procesu)" = M ]
   [ "$(fm "$(K docs/konfiguracja.md)" etap_wdrozenia)" = A ]
   [ "$(fm "$(K docs/konfiguracja.md)" data)" = "$(date +%F)" ]
   [ "$(fm "$(K docs/konfiguracja.md)" blok_portow)" = 55121-55129 ]
   grep -q '^| 1 | demo |' "$SH_DIR/porty.md"
   [ "$(fm "$(K docs/04-plan/DoD.md)" status)" = todo ]
-  grep -q '`00-intake`: todo (następny)' "$(K docs/status.md)"
-  grep -qx 'Aplikacja testowa' "$(K docs/00-intake/zrodlo.md)"
+  [ -f "$(K docs/Projekt.md)" ]
+  grep -qx 'Treść zlecenia' "$(K docs/00-intake/zrodlo.md)"
   [[ "$output" == *"Synchronizację robi serwer co 5 minut"* ]] || false
   [ -z "$(git -C "$(K .)" status --porcelain)" ]
   [ "$(git -C "$T/remote.git" log -1 --format=%s main)" = "shctl: konfiguracja projektu demo (tryb M)" ]
 }
 
 @test "powtorka nic nie zmienia" {
-  nowy --opis "Opis"
+  nowy --zlecenie "Zlecenie X"
   a="$(git -C "$(K .)" rev-parse HEAD)"
-  run nowy --opis "Opis"
+  run nowy --zlecenie "Zlecenie X"
   [ "$status" -eq 0 ]
   [ "$(git -C "$(K .)" rev-parse HEAD)" = "$a" ]
   [ "$(grep -c '^repo create' "$T/gh.calls")" -eq 1 ]
   [ "$(grep -c '^| . | demo' "$SH_DIR/porty.md")" -eq 1 ]
-  [ "$(grep -c 'Opis' "$(K docs/00-intake/zrodlo.md)")" -eq 1 ]
+  [ "$(grep -c 'Zlecenie X' "$(K docs/00-intake/zrodlo.md)")" -eq 1 ]
 }
 
 @test "powtorka dokancza niewypchniety commit" {
@@ -117,12 +124,37 @@ K() { echo "$SH_DIR/projekty/demo/$1"; }
   : >"$T/gh.calls"
   run nowy
   [ "$status" -eq 0 ]
-  grep -qx 'repo edit test-owner/demo --delete-branch-on-merge' "$T/gh.calls"
+  grep -qx 'repo edit test-owner/demo --description Aplikacja testowa --add-topic sh-projekt --delete-branch-on-merge' "$T/gh.calls"
 }
 
-@test "--public" {
-  nowy --public
-  grep -q 'repo create test-owner/demo .*--public' "$T/gh.calls"
+@test "--prywatny: repo prywatne i runner serwera w zmiennej SH_RUNS_ON" {
+  run --separate-stderr nowy --prywatny
+  [ "$status" -eq 0 ]
+  grep -qx 'repo create test-owner/demo --private --description Aplikacja testowa' "$T/gh.calls"
+  grep -qF 'variable set SH_RUNS_ON --repo test-owner/demo --body ["self-hosted","sh-imac"]' "$T/gh.calls"
+  [[ "$stderr" == *"runner serwera"* ]] || false
+}
+
+@test "--opis wymagany i najwyzej 350 znakow" {
+  run --separate-stderr "$SHCTL" new-project demo
+  [ "$status" -eq 2 ]
+  [[ "$stderr" == *"--opis wymagany"* ]] || false
+  run --separate-stderr "$SHCTL" new-project demo --opis "$(printf 'x%.0s' $(seq 1 351))"
+  [ "$status" -eq 2 ]
+  [ ! -s "$T/gh.calls" ]
+}
+
+@test "gitleaks znajduje sekret: push wstrzymany, kod 4" {
+  : >"$T/gitleaks-sekret"
+  run --separate-stderr nowy
+  [ "$status" -eq 4 ]
+  [[ "$stderr" == *"gitleaks"* ]] || false
+  [ -z "$(git -C "$T/remote.git" for-each-ref refs/heads)" ]
+}
+
+@test "ruleset zakladany raz na projekt" {
+  nowy
+  [ "$(grep -c '^api -X POST repos/test-owner/demo/rulesets' "$T/gh.calls")" -eq 1 ]
 }
 
 @test "tryb S: wszystkie etapy pominiete i ostrzezenie" {
@@ -130,7 +162,7 @@ K() { echo "$SH_DIR/projekty/demo/$1"; }
   [ "$status" -eq 0 ]
   [[ "$stderr" == *"zaczyna od M lub L"* ]] || false
   [ "$(fm "$(K docs/00-intake/DoD.md)" status)" = pominiety ]
-  grep -q 'tryb S: bez etapów' "$(K docs/status.md)"
+  [ -f "$(K docs/Projekt.md)" ]
 }
 
 @test "zmiana trybu w istniejacym projekcie: odmowa" {
@@ -145,7 +177,7 @@ K() { echo "$SH_DIR/projekty/demo/$1"; }
 }
 
 @test "repo spoza szablonu: odmowa bez zmian" {
-  printf 'inny' >"$T/repo-istnieje"
+  printf '{"isEmpty":false,"repositoryTopics":[],"templateRepository":null}' >"$T/repo-istnieje"
   run --separate-stderr nowy
   [ "$status" -eq 4 ]
   [ ! -d "$(K .)" ]

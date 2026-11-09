@@ -28,7 +28,7 @@ uzyj_glownej_kopii() {
     Z_WORKTREE="$ROOT"
     ROOT="$w"
     KONFIG="$ROOT/docs/konfiguracja.md"
-    ST="$ROOT/docs/status.md"
+    ST="$(plik_projektu "$ROOT")"
     g="$(git -C "$ROOT" symbolic-ref --short -q HEAD 2>/dev/null || true)"
     [ "$g" = main ] || die "$E_ODMOWA" "główna kopia $ROOT jest na gałęzi ${g:-(odłączony HEAD)}, nie na main; eskalację zapisuje orkiestrator na main"
   fi
@@ -75,19 +75,9 @@ ile_otwartych_dla() {
   echo "$n"
 }
 
-odswiez_liste() {
-  local f l=""
-  for f in "$(kat_esk)"/E-[0-9]*.md; do
-    [ -e "$f" ] || continue
-    [ "$(fm_get "$f" status)" = otwarta ] || continue
-    if [ "$(fm_get "$f" typ)" = pytanie ]; then
-      l="$l- $(basename "$f" .md) ($(fm_get "$f" dotyczy), pytanie): $(komorka "$(fm_get "$f" powod)")"$'\n'
-      continue
-    fi
-    l="$l- $(basename "$f" .md) ($(fm_get "$f" dotyczy)): $(komorka "$(fm_get "$f" powod)")"$'\n'
-  done
-  ustaw_sekcje "$ST" "Otwarte eskalacje" "${l:-(brak)}"
-}
+# Lista otwartych eskalacji i pytań jest w docs/Projekt.md („Czeka na Ciebie”, „Eskalacje i
+# pytania”), który liczy sync-status.sh z plików E-NNN.md.
+odswiez_liste() { odswiez_projekt || true; }
 
 status_z_etykiet() {
   gh issue view "$1" --repo "$2" --json labels \
@@ -119,6 +109,7 @@ utworz_plik() {
   fm_set "$plik" priorytet "$priorytet"
   fm_set "$plik" poprzedni_status "$poprz"
   fm_set "$plik" data "$(dzis)"
+  fm_set "$plik" otwarto "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
   ustaw_sekcje "$plik" "Czego potrzeba od właściciela" "$potrzebne"
   if [ -n "$opcje" ]; then
     rest="$opcje;"

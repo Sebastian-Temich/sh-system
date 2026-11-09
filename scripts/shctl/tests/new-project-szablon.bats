@@ -2,7 +2,8 @@
 # Nowy projekt z prawdziwego szablonu (sh-template-projekt) na atrapie GitHuba ma zielone CI od
 # pierwszego commita: po shctl new-project przechodzą zadania CI szablonu, które nie potrzebują sieci
 # (check-dod.sh i testy skryptów). Szablon: SH_TEMPLATE_DIR albo /Users/Shared/sh/sh-template-projekt;
-# bez niego (np. CI sh-system) test jest pomijany. Testowany jest commit HEAD szablonu.
+# bez niego (np. CI sh-system) test jest pomijany. Testowany jest commit HEAD szablonu: shctl
+# new-project kopiuje jego pliki do pustego repo projektu.
 load helper
 
 setup() {
@@ -13,10 +14,13 @@ setup() {
   # (zapis poza dozwolonymi katalogami, np. mktemp do /var/folders), więc lokalnie test się pomija.
   [ -z "${SANDBOX_RUNTIME:-}" ] || skip "wymaga zapisu poza sandboxem Claude Code, sprawdza CI"
   wspolny_setup
-  git clone -q --bare "$SZABLON" "$T/remote.git"
-  # Szablon może stać na gałęzi roboczej: jej HEAD staje się main nowego repo, jak przy --template.
-  git -C "$T/remote.git" update-ref refs/heads/main "$(git -C "$SZABLON" rev-parse HEAD)"
-  git -C "$T/remote.git" symbolic-ref HEAD refs/heads/main
+  # Szablon pod adresem GitHuba; może stać na gałęzi roboczej: jej HEAD staje się main szablonu.
+  git clone -q --bare "$SZABLON" "$T/szablon.git"
+  git -C "$T/szablon.git" update-ref refs/heads/main "$(git -C "$SZABLON" rev-parse HEAD)"
+  git -C "$T/szablon.git" symbolic-ref HEAD refs/heads/main
+  git config --global url."$T/szablon.git".insteadOf https://github.com/test-owner/sh-template-projekt.git
+  # Repo projektu puste, jak po gh repo create (SH-lite F5: bez szablonu GitHuba).
+  git init -q --bare "$T/remote.git"
   git config --global url."$T/remote.git".insteadOf https://github.com/test-owner/demo.git
 }
 

@@ -93,19 +93,31 @@ shctl task resume-check 12 --bez-testow --projekt strona-firmowa
 
 ### new-project
 
-Zakłada projekt: repo z szablonu (domyślnie prywatne), klon w `/Users/Shared/sh/projekty/NAZWA`, etykiety, blok
+Zakłada projekt: repo publiczne z plikami szablonu (bez „generated from”, z opisem, tematem
+`sh-projekt`, ochroną `main` i `production`, skanem `gitleaks` przed pushem), klon w
+`/Users/Shared/sh/projekty/NAZWA`, etykiety, blok
 portów bazy, konfigurację, kopię `docs/` w Obsidianie, skrzynkę na materiały
 `SH/Skrzynka/NAZWA`, commit i push.
 
 ```sh
-shctl new-project strona-firmowa --opis "Strona firmowa z formularzem kontaktowym"
+shctl new-project strona-firmowa --opis "Strona firmowa ISKT z formularzem kontaktowym" --zlecenie "…"
 ```
 
 | Opcja | Znaczenie |
 |---|---|
 | `--tryb S\|M` | Domyślnie M. Tryb L to etap B (jeszcze niedostępne) |
-| `--public` | Repo publiczne |
-| `--opis` | Treść zlecenia, trafia do `docs/00-intake/zrodlo.md` |
+| `--opis` | Wymagany: krótki opis repo na GitHubie (do 350 znaków) |
+| `--zlecenie` | Treść zlecenia, trafia do `docs/00-intake/zrodlo.md` |
+| `--prywatny` | Repo prywatne, tylko na Twoje wyraźne polecenie; CI na runnerze serwera |
+
+### repo opis
+
+Opis, tematy i strona repo na GitHubie. Orkiestrator najpierw pokazuje Ci dokładną komendę
+(`--dry-run`), a wykonuje ją po Twojej zgodzie.
+
+```sh
+shctl repo opis --opis "Strona firmowa ISKT" --topics "astro,strona-firmowa" --website https://iskt.pl --dry-run --projekt strona-firmowa
+```
 
 **Kiedy samemu:** nie trzeba. Napisz orkiestratorowi „nowy projekt …”, a on zrobi to i uruchomi
 intake.
@@ -148,7 +160,7 @@ Te komendy wywołują skille i orkiestrator. Opis dla zrozumienia, co widzisz w 
 
 ### stage
 
-Jedna komenda etapu: zmienia status etapu w `DoD.md` i w `status.md`, a po FAIL review podbija
+Jedna komenda etapu: zmienia status etapu w `DoD.md` i w `Projekt.md`, a po FAIL review podbija
 iterację. Projekty sprzed migracji (bez `wersja_procesu` w `konfiguracja.md`) mają etapy
 `04-architektura` i `05-plan` zamiast `04-plan`.
 
@@ -177,7 +189,7 @@ shctl decision add --co "Hosting Vercel" --dlaczego "akceptacja właściciela" -
 
 ### escalate
 
-Otwiera eskalację: plik `E-NNN.md`, status zadania lub etapu, wpis w `status.md`, powiadomienie push.
+Otwiera eskalację: plik `E-NNN.md`, status zadania lub etapu, wpis w `Projekt.md`, powiadomienie push.
 
 ```sh
 shctl escalate --dotyczy "#9" --powod "brak klucza testowego Resend" --potrzebne "klucz w .env.local" --opcje "czekać;mock" --projekt strona-firmowa

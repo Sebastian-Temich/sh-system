@@ -149,15 +149,18 @@ Jedyna wtyczka to **Dataview** (dashboardy projektów v1).
 
 ### Stan projektu
 
-Najświeższy stan daje „status?” w czacie. W Obsidianie: `docs/status.md` (etap, punkt
-przekazania) i `docs/decyzje.md`. Nowe projekty nie mają `_dashboard.md` (SH-lite F2); w projektach
+Najświeższy stan daje „status?” w czacie: dwie sekcje, „Gdzie jesteśmy” i „Czeka na Ciebie” (z
+tekstem do wpisania). W Obsidianie: `SH/Wszystkie projekty.md` (jedna tabela: etap, postęp, co czeka,
+eskalacje) i w projekcie `docs/Projekt.md` (to samo co „status?” plus zadania według stanu,
+eskalacje, pytania i linki do specyfikacji, kart funkcji, planu, decyzji i raportów QA; czysty
+Markdown, bez Dataview) oraz `docs/decyzje.md`. Nowe projekty nie mają `_dashboard.md` (SH-lite F2); w projektach
 v1 plik zostaje do migracji.
 
 ### Ważne dokumenty projektu
 
 | Plik | Po co zaglądać |
 |---|---|
-| `docs/status.md` | Bieżący etap i „Punkt przekazania” po kamieniu |
+| `docs/Projekt.md` | Gdzie jesteśmy, co czeka na Ciebie, zadania, eskalacje, dokumenty, „Punkt przekazania” |
 | `docs/00-intake/specyfikacja.md` | Co budujemy: wymagania `W-NN` |
 | `docs/04-plan/plan.md` | Krótka architektura, kamienie, scenariusze odbioru, Twoje zadania ręczne |
 | `docs/decyzje.md` | Wszystkie decyzje, także Twoje zgody |

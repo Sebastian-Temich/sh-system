@@ -36,7 +36,7 @@ fail_review() { wynik_codex FAIL "$ZGL"; "$SHCTL" review run 30 >/dev/null; }
   [ "$(jq -r '.wynik.iteracja, .wynik.eskalowano' <<<"$output" | tr '\n' ' ')" = "2 false " ]
   [ "$(fm docs/wydanie/DoD.md iteracja)" = 2 ]
   [ "$(fm docs/wydanie/DoD.md status)" = in-progress ]
-  grep -qF '`wydanie`: iteracja 2 (FAIL review PR #30)' docs/status.md
+  grep -qF '`wydanie`: iteracja 2 (FAIL review PR #30)' docs/Projekt.md
   [ -z "$(git diff main stage/wydanie -- docs/wydanie/DoD.md | grep '^[-+]iteracja' || true)" ]
   # Powtórka dla tego samego review nie podbija licznika.
   run --separate-stderr "$SHCTL" stage iter wydanie --json

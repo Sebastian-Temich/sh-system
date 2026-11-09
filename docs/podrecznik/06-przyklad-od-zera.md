@@ -23,7 +23,8 @@ Nowy projekt strona-firmowa: strona firmowa ISKT, 5 podstron (start, oferta, rea
 o nas, kontakt) i formularz kontaktowy, który wysyła zgłoszenie na nasz e-mail.
 ```
 
-**Orkiestrator:** `shctl new-project strona-firmowa --opis "…"`: repo prywatne z szablonu, klon w
+**Orkiestrator:** `shctl new-project strona-firmowa --opis "…" --zlecenie "…"`: repo publiczne (bez
+„generated from”, z opisem, tematem `sh-projekt` i ochroną `main`), klon w
 `/Users/Shared/sh/projekty/strona-firmowa`, blok portów bazy, kopia `docs/` w Obsidianie i pusta skrzynka
 `SH/Skrzynka/strona-firmowa/`. Odpowiada, że skrzynka czeka na materiały.
 
@@ -204,7 +205,7 @@ Punkt przekazania zapisany. Proponuję /clear i „wznów”.
 
 **Ty:** wpisujesz `/clear`, potem „wznów”. Orkiestrator odtwarza stan z plików.
 
-**W Obsidianie:** raport QA, „Punkt przekazania” w `status.md`, zaktualizowane liczniki.
+**W Obsidianie:** raport QA, „Punkt przekazania” w `Projekt.md`, zaktualizowane liczniki.
 
 ## 7. Odbiór na stagingu
 
@@ -259,7 +260,7 @@ zlecenia i zakłada jedno issue z etykietą `tryb:S`. Nie ma specyfikacji ani ch
 strona-firmowa: zlecenie S, issue #20 „Link LinkedIn w stopce”. Startuję.
 ```
 
-Worker, CI i review jak w trybie M. Potem, przy `auto_merge_S: false`:
+Worker, CI i review jak w trybie M. Potem, przy `odbior_S: reczny`:
 
 ```text
 strona-firmowa: #20 gotowe do odbioru, PR #21, review PASS, CI zielone.

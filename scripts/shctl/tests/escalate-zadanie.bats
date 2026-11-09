@@ -18,7 +18,7 @@ esk() { "$SHCTL" escalate --dotyczy "#$1" --powod "$2" --potrzebne "decyzja" --j
   [ -f "$P/docs/07-realizacja/escalations/E-001.md" ]
   [ ! -e "$SH_DIR/wt/demo/12/docs/07-realizacja/escalations/E-001.md" ]
   [ -z "$(git -C "$SH_DIR/wt/demo/12" status --porcelain)" ]
-  grep -q 'E-001 (#12)' "$P/docs/status.md"
+  grep -q -- '--repo' "$T/sync.calls"
   # Druga eskalacja z głównej kopii dostaje kolejny numer.
   cd "$P"
   issue 13 "Inne" "status:todo"

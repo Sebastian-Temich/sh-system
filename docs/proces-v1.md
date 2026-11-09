@@ -52,7 +52,9 @@ Plik `docs/konfiguracja.md` projektu ma pole `etap_wdrozenia`: A albo B. W etapi
 - nie ma workerów w chmurze, Lovable ani GitHub Projects;
 - strażnik orkiestratora tylko podnosi orkiestratora, gdy padnie; limity wpisuje do `limity.md`
   właściciel albo orkiestrator, a wznowienie wywołuje właściciel („wznów”);
-- `auto_merge_S` działa, ale domyślnie ma wartość `false`; włączamy go po kilku udanych zleceniach S;
+- `odbior_S` ma domyślnie `reczny`: zlecenie S odbiera właściciel („odbieram #NR”, `task close --odbior`);
+  `auto_bez_zmian_widocznych` zamyka zlecenie bez zmian widocznych dla użytkownika (etykieta
+  `widoczne:nie`) po PASS i zielonym CI z powiadomieniem;
 - dostępne skille: `sh-intake`, `sh-plan`, `sh-worker`, `sh-review`, `sh-qa`, `sh-orkiestrator`;
 - wersja procesu projektu jest w `docs/konfiguracja.md` (`wersja_procesu`): `2` ma jeden etap `04-plan`,
   a projekt bez pola (wersja 1, sprzed migracji) etapy `04-architektura` i `05-plan`. shctl obsługuje
@@ -127,7 +129,7 @@ trwającym projekcie.
 
 | Tryb | Zastosowanie | Skala | Checkpointy |
 |---|---|---|---|
-| S, szybki | Poprawka, drobna zmiana, mała funkcja w działającym projekcie; bez zmian modelu danych i bez obszarów ryzyka | 1–3 zadania | Odbiór (przy `auto_merge_S: true` orkiestrator merguje sam i powiadamia; domyślnie `false`) |
+| S, szybki | Poprawka, drobna zmiana, mała funkcja w działającym projekcie; bez zmian modelu danych i bez obszarów ryzyka | 1–3 zadania | Odbiór właściciela (`odbior_S: reczny`, domyślnie); przy `auto_bez_zmian_widocznych` zlecenie bez zmian widocznych merguje się samo z powiadomieniem |
 | M, średni | Nowa funkcja lub moduł, mały samodzielny projekt | 4–15 zadań | Akceptacja specyfikacji, akceptacja architektury i planu, odbiór |
 
 Tryb L (nowy produkt, MVP, duża przebudowa, z osobnymi etapami briefu, designu i wymagań) jest odłożony.
@@ -173,7 +175,7 @@ Tryb L (nowy produkt, MVP, duża przebudowa, z osobnymi etapami briefu, designu 
 - **Gotowość środowiska.** Przed pierwszym `shctl task dispatch` projektu orkiestrator uruchamia
   `shctl doctor`. Stan `blad` wstrzymuje dispatch: brakujące narzędzie, logowanie albo dostęp staje się
   zadaniem właściciela albo eskalacją i blokuje zadania od niego zależne. Wynik z czasem UTC trafia do
-  „Punktu przekazania” w `status.md`.
+  „Punktu przekazania” w `Projekt.md`.
 
 ### Zasady
 
@@ -210,7 +212,7 @@ docs/
 ├── 07-realizacja/     raporty T-NR.md, escalations/ (bez DoD.md: stan realizacji jest w issue)
 ├── 08-qa/
 ├── wydanie/           techniczna/, produktowa/
-├── status.md
+├── Projekt.md
 ├── decyzje.md
 ├── metryki.md
 ├── konfiguracja.md
@@ -222,7 +224,7 @@ Każdy folder etapu ma `DoD.md`. W katalogu głównym repo leżą `CHANGELOG.md`
 
 ## Pliki wspólne i konflikty
 
-Pliki wspólne (`status.md`, `decyzje.md`, `metryki.md`, `06-zadania/index.md`, `backlog-drobne.md`,
+Pliki wspólne (`Projekt.md`, `decyzje.md`, `metryki.md`, `06-zadania/index.md`, `backlog-drobne.md`,
 `CHANGELOG.md`) aktualizuje WYŁĄCZNIE orkiestrator, na main, po merge'u zadania (przez shctl,
 `CHANGELOG.md` w `shctl task close`).
 
@@ -372,7 +374,7 @@ staje, gdy na review czeka `max_review_queue` PR (domyślnie 3, w `konfiguracja.
 - Każdy skill czyta tylko pliki z sekcji „Wejście”. `AGENTS.md` jest krótki (do ok. 150 linii) i
   jest jedynym plikiem instrukcji. `CLAUDE.md` tylko go importuje i dodaje krótkie wskazówki dla
   Claude.
-- Orkiestrator po każdym kamieniu milowym zapisuje w `status.md` punkt przekazania i proponuje
+- Orkiestrator po każdym kamieniu milowym zapisuje w `Projekt.md` punkt przekazania i proponuje
   właścicielowi restart sesji (`/clear` + „wznów”). Stan jest w plikach, więc nic nie ginie.
 
 - **Jedna sesja = jeden projekt.** Sesja orkiestratora prowadzi jeden projekt. Polecenie bez
@@ -384,7 +386,7 @@ Polecenie właściciela „STOP” (albo `shctl stop-all`) zatrzymuje wszystkich
 zachowuje worktree i zapisuje stan w `/Users/Shared/sh/stan/NAZWA.json`.
 
 Wznowienie: właściciel uruchamia nową sesję orkiestratora (`sh-start.sh` albo `claude` w panelu) i
-pisze „wznów”. Orkiestrator odtwarza stan ze `status.md` i `/Users/Shared/sh/stan/NAZWA.json`. shctl nie wznawia
+pisze „wznów”. Orkiestrator odtwarza stan z `Projekt.md` i `/Users/Shared/sh/stan/NAZWA.json`. shctl nie wznawia
 sam.
 
 ## Dostępy i środowiska
@@ -437,7 +439,7 @@ Kroki opisuje README szablonu.
 6. Właściciel uruchamia `scripts/deploy-prod.sh vX.Y.Z`:
    sprawdzenie tagu i CI, wdrożenie podglądowe tego commita, lista migracji, potwierdzenie, backup
    bazy prod, migracje prod, `vercel promote`, smoke test, `vercel rollback` przy błędzie.
-7. Orkiestrator aktualizuje `status.md` i `metryki.md`.
+7. Orkiestrator aktualizuje `Projekt.md` i `metryki.md`.
 
 „Ta sama wersja” oznacza ten sam commit. Vercel przy promocji preview buduje go od nowa ze zmiennymi
 prod, więc powstaje nowe wdrożenie. Skrypt ma `--dry-run` i `--target staging` do prób, także

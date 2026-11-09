@@ -71,8 +71,10 @@ orkiestrator proponuje, Ty decydujesz.
 2. **Realizacja:** worker, CI, review Codexa, maks. 3 iteracje.
 3. **Odbiór:** sprawdzasz i akceptujesz, potem merge, wpis w `CHANGELOG.md`.
 
-Ustawienie `auto_merge_S` w `docs/konfiguracja.md` projektu domyślnie ma `false`, więc odbiór
-robisz Ty. Przy `true` orkiestrator zamyka sam i tylko informuje.
+Ustawienie `odbior_S` w `docs/konfiguracja.md` projektu domyślnie ma `reczny`, więc odbiór robisz
+Ty: wpisujesz „odbieram #NR”. Przy `auto_bez_zmian_widocznych` zlecenie bez zmian widocznych dla
+użytkownika (np. aktualizacja zależności) zamyka się samo po PASS i zielonym CI, a Ty dostajesz
+powiadomienie. Gdy coś czeka na Ciebie dłużej niż 4 h, serwer przypomina pushem (8–22).
 
 ### Etapy trybu M
 

@@ -16,7 +16,7 @@ zadania_init() {
   [ -n "$wspolny" ] || die "$E_BRAK" "$ROOT nie jest repozytorium git"
   ROOT_G="$(dirname "$wspolny")"
   KONFIG="$ROOT_G/docs/konfiguracja.md"
-  ST="$ROOT_G/docs/status.md"
+  ST="$(plik_projektu "$ROOT_G")"
   [ -f "$KONFIG" ] || die "$E_BRAK" "brak $KONFIG"
   ustal_etapy
   ROOT="$ROOT_G"
@@ -121,6 +121,8 @@ ustaw_status() {
   local nr="$1" j="$2" cel="$3" e zdejmij=""
   for e in $STATUSY; do [ "$e" = "$cel" ] || zdejmij="$zdejmij $e"; done
   zmien_etykiety "$nr" "$j" "$cel" "$zdejmij"
+  # Zmiana statusu zadania to zmiana stanu projektu: widok docs/Projekt.md od razu ją pokazuje.
+  odswiez_projekt || true
 }
 
 # Numery zależności z sekcji „### Zależności” treści issue (format formularza i task create).

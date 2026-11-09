@@ -26,7 +26,7 @@ jak_launchd() {
 
 @test "launchd: obsidian-sync.sh z PATH=/usr/bin:/bin pobiera nowy commit" {
   git clone -q "$T/remote.git" "$T/inny"
-  echo zdalny >>"$T/inny/docs/status.md"
+  echo zdalny >>"$T/inny/docs/Projekt.md"
   git -C "$T/inny" commit -qam zdalny
   git -C "$T/inny" push -q origin HEAD:main
 

@@ -164,3 +164,14 @@ YAML
   [[ "$stderr" == *"stack to nazwa"* ]] || false
   [[ "$stderr" == *"skille to lista"* ]] || false
 }
+
+@test "create: zlecenie S bez zmian widocznych dostaje etykiete widoczne:nie" {
+  printf -- '- {id: S-1, tytul: Aktualizacja zaleznosci, cel: Bez zmian dla uzytkownika., kryteria: [testy zielone], tryb: S, widoczne: false}\n- {id: S-2, tytul: Zla wartosc, cel: x, kryteria: [y], widoczne: nie}\n' >"$T/s.yaml"
+  run --separate-stderr "$SHCTL" task create --plik "$T/s.yaml" --json
+  [ "$status" -eq 2 ]
+  [[ "$stderr" == *"widoczne to true albo false"* ]] || false
+  printf -- '- {id: S-1, tytul: Aktualizacja zaleznosci, cel: Bez zmian dla uzytkownika., kryteria: [testy zielone], tryb: S, widoczne: false}\n' >"$T/s.yaml"
+  run --separate-stderr "$SHCTL" task create --plik "$T/s.yaml" --json
+  [ "$status" -eq 0 ]
+  [ "$(etykiety "$(numer_dla S-1)")" = "runner:local,status:todo,tryb:S,typ:feature,widoczne:nie,wykonawca:claude" ]
+}

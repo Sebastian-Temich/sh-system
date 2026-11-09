@@ -1,4 +1,5 @@
-# shctl status show: podsumowanie dla właściciela. Tylko odczyt.
+# shctl status show: podsumowanie dla właściciela. Tylko odczyt. Tekst zaczyna się od „Gdzie jesteśmy”
+# i „Czeka na Ciebie” z docs/Projekt.md (sync-status.sh), JSON ma je w polach gdzie i czeka.
 # shellcheck shell=bash
 
 zadania_z_github() {
@@ -29,16 +30,16 @@ zadania_ze_statusu() {
 }
 
 komenda_main() {
-  local zadania zrodlo=github esk etap wstrzym f
+  local zadania zrodlo=github esk etap wstrzym f gdzie czeka czeka_txt
   [ "${1:-}" != show ] || shift
   while [ $# -gt 0 ]; do opcja_wspolna "$@"; shift "$ZJEDZONE"; done
   znajdz_projekt
-  [ -f "$ST" ] || die "$E_BRAK" "brak docs/status.md"
+  [ -f "$ST" ] || die "$E_BRAK" "brak docs/Projekt.md (ani dawnego docs/status.md)"
 
   etap="$(opis_etapu)"
   zadania="$(zadania_z_github || true)"
   if [ -z "$zadania" ]; then
-    zrodlo=status.md
+    zrodlo="$(basename "$ST")"
     zadania="$(zadania_ze_statusu)"
   fi
 
@@ -57,7 +58,19 @@ komenda_main() {
     [ -n "$wstrzym" ] || wstrzym='[]'
   fi
 
+  gdzie="$(czytaj_sekcje "$ST" "Gdzie jesteśmy")"
+  czeka_txt="$(czytaj_sekcje "$ST" "Czeka na Ciebie")"
+  czeka="$(yq --front-matter=extract -o=json '.czeka // []' "$ST" 2>/dev/null | jq -c . 2>/dev/null || echo '[]')"
+  [ -n "$czeka" ] || czeka='[]'
   if [ "$JSON" -eq 0 ]; then
+    if [ -n "$gdzie" ]; then
+      echo "Gdzie jesteśmy"
+      printf '%s\n' "$gdzie"
+      echo
+      echo "Czeka na Ciebie"
+      printf '%s\n' "${czeka_txt:-Nic.}"
+      echo
+    fi
     echo "Projekt: $PROJEKT (tryb $(tryb), etap wdrożenia $(fm_get "$KONFIG" etap_wdrozenia))"
     echo "Etap:"
     printf '%s\n' "$etap" | sed 's/^/  /'
@@ -66,6 +79,6 @@ komenda_main() {
     jq -r 'if length == 0 then "Wstrzymania: brak" else "Wstrzymania:", (.[] | "  " + .) end' <<<"$wstrzym"
   fi
   wynik_json "$(jq -nc --arg p "$PROJEKT" --arg t "$(tryb)" --arg e "$etap" --arg z "$zrodlo" \
-    --argjson d "$zadania" --argjson s "$esk" --argjson w "$wstrzym" \
-    '{projekt:$p, tryb:$t, etap:$e, zadania:$d, zrodlo_zadan:$z, eskalacje:$s, wstrzymania:$w}')"
+    --argjson d "$zadania" --argjson s "$esk" --argjson w "$wstrzym" --arg g "$gdzie" --argjson c "$czeka" \
+    '{projekt:$p, tryb:$t, etap:$e, gdzie:$g, czeka:$c, zadania:$d, zrodlo_zadan:$z, eskalacje:$s, wstrzymania:$w}')"
 }

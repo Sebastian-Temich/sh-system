@@ -14,7 +14,7 @@
 DRYRUN_NAZWA="${SHCTL_DRYRUN_NAZWA:-sh-dryrun}"
 
 # Pliki, które reset zapisuje po task create; poza nimi drzewo main musi być równe baseline.
-PLIKI_PRZEBIEGU="docs/metryki.md docs/06-zadania/index.md docs/status.md"
+PLIKI_PRZEBIEGU="docs/metryki.md docs/06-zadania/index.md docs/Projekt.md docs/status.md"
 
 # Artefakty przebiegu w commicie baseline, po jednym w linii; pusto, gdy baseline jest czysty.
 artefakty_baseline() {
@@ -188,7 +188,12 @@ komenda_main() {
     nr_przebiegu="$(nastepny_przebieg "$metryki")"
     dopisz_przebieg "$metryki" "$nr_przebiegu" "$baseline"
     podmien_plik "$metryki" "$ROOT_G/docs/metryki.md"
-    for t in $PLIKI_PRZEBIEGU; do [ ! -e "$ROOT_G/$t" ] || git -C "$ROOT_G" add -- "$t"; done
+    # status.md znika po pierwszej synchronizacji nowym sync-status.sh (Projekt.md): usunięcie też do commita.
+    for t in $PLIKI_PRZEBIEGU; do
+      if [ -e "$ROOT_G/$t" ] || git -C "$ROOT_G" ls-files --error-unmatch -- "$t" >/dev/null 2>&1; then
+        git -C "$ROOT_G" add -A -- "$t"
+      fi
+    done
     if ! git -C "$ROOT_G" diff --cached --quiet; then
       git -C "$ROOT_G" commit -qm "reset-dryrun: przebieg $nr_przebiegu od baseline ${baseline:0:7}" ||
         die "$E_WYKONANIE" "commit metryk przebiegu nie powiódł się"

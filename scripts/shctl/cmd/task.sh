@@ -40,7 +40,7 @@ argument_nr() {
 JQ_WALIDACJA='
 def tekst: type == "string" and length > 0;
 def pola: ["id","tytul","cel","kryteria","pliki","testy","zaleznosci","typ","tryb","db_migracja","milestone","waga",
-  "kategoria","stack","skille"];
+  "kategoria","stack","skille","widoczne"];
 def kategorie: ["frontend","backend","baza","integracje","bezpieczenstwo","testy","ci","ai-dane","refaktoryzacja"];
 def nazwa: type == "string" and test("^[a-z0-9][a-z0-9._:-]*$");
 ([.[].id]) as $ids
@@ -60,6 +60,8 @@ def nazwa: type == "string" and test("^[a-z0-9][a-z0-9._:-]*$");
           else "\($kto): typ: feature, bug, qa, docs albo cr" end),
         (if ($z.tryb // "") | IN("", "S", "M") then empty else "\($kto): tryb S albo M (L od etapu B)" end),
         (if ($z.db_migracja // false) | type == "boolean" then empty else "\($kto): db_migracja to true albo false" end),
+        (if ($z.widoczne // true) | type == "boolean" then empty
+          else "\($kto): widoczne to true albo false (false: bez zmian widocznych dla użytkownika)" end),
         (if ($z.milestone // "") | type == "string" then empty else "\($kto): milestone to tekst" end),
         (if ($z.kategoria // "") | . == "" or IN(kategorie[]) then empty
           else "\($kto): kategoria: \(kategorie | join(", "))" end),
@@ -148,11 +150,7 @@ aktualizuj_mape() {
   podmien_plik "$t" "$plik"
 }
 
-uruchom_sync_status() {
-  local s="$ROOT_G/scripts/sync-status.sh"
-  [ -f "$s" ] || { uwaga "brak scripts/sync-status.sh"; return 1; }
-  (cd "$ROOT_G" && bash "$s" --repo "$SLUG" >/dev/null) || { uwaga "scripts/sync-status.sh zakończył się błędem"; return 1; }
-}
+uruchom_sync_status() { odswiez_projekt; }
 
 milestone_istniejace() {
   gh api "repos/$SLUG/milestones?state=all&per_page=100" --paginate 2>/dev/null | jq -sc 'add // [] | map(.title)' ||
@@ -229,6 +227,7 @@ task_create() {
     etyk="$(jq -r '["status:todo", "runner:local", "wykonawca:claude", "typ:\(.typ // "feature")"]
       + (if (.tryb // "") != "" then ["tryb:\(.tryb)"] else [] end)
       + (if .db_migracja then ["db:migracja"] else [] end)
+      + (if .widoczne == false then ["widoczne:nie"] else [] end)
       + (if (.waga // "") != "" then ["sev:\(.waga)"] else [] end) | join(",")' <<<"$z")"
     utw="$(jq -c --arg i "$id" '. + [$i]' <<<"$utw")"
     if [ "$DRY" -eq 1 ]; then
@@ -790,9 +789,29 @@ issue_propozycji() {
   printf '%s' "$url"
 }
 
+# Odbiór zlecenia S (konfiguracja.md, odbior_S): reczny (domyślnie) wymaga --odbior, czyli odpowiedzi
+# właściciela „odbieram #NR”; auto_bez_zmian_widocznych przepuszcza zlecenie z etykietą widoczne:nie
+# (bez zmian widocznych dla użytkownika) i po merge'u powiadamia. Dawne auto_merge_S: true bez odbior_S
+# działa jak dotąd (bez bramki). Wypisuje: odbior, auto albo brak (nie S).
+tryb_odbioru_s() {
+  local j="$1" o
+  jq -e '[.labels[].name] | index("tryb:S")' <<<"$j" >/dev/null || { echo brak; return 0; }
+  o="$(konf odbior_S "")"
+  if [ -z "$o" ]; then
+    [ "$(konf auto_merge_S false)" != true ] || { echo auto; return 0; }
+    o=reczny
+  fi
+  case "$o" in
+    reczny) echo odbior ;;
+    auto_bez_zmian_widocznych)
+      if jq -e '[.labels[].name] | index("widoczne:nie")' <<<"$j" >/dev/null; then echo auto; else echo odbior; fi ;;
+    *) die "$E_BRAK" "konfiguracja.md: odbior_S='$o', dozwolone reczny albo auto_bez_zmian_widocznych" ;;
+  esac
+}
+
 task_close() {
   local nr j pr prn prst head ci rev kat label raport dec uw prop prop_url="" tytul tryb_z iter czas esk f
-  local bledy=0 d_n=0 u_n=0 r_n=0 metr=false chlog=false st_rev rev_plik pyt uw_m pz
+  local bledy=0 d_n=0 u_n=0 r_n=0 metr=false chlog=false st_rev rev_plik pyt uw_m pz odb
   argument_nr "$@"
   nr="$NR_ARG"
   zadania_init
@@ -818,6 +837,10 @@ task_close() {
     rev="$(review_dla_heada "$prn" "$head")"
     st_rev="$(jq -r '.werdykt // "brak"' <<<"${rev:-null}")"
     [ "$st_rev" = PASS ] || die "$E_ODMOWA" "PR #$prn nie ma werdyktu PASS dla commita ${head:0:7} (jest: $st_rev)"
+    odb="$(tryb_odbioru_s "$j")"
+    if [ "$odb" = odbior ] && [ "${ODBIOR:-0}" -eq 0 ]; then
+      die "$E_ODMOWA" "zlecenie S #$nr czeka na odbiór właściciela (odbior_S=$(konf odbior_S reczny)); po jego „odbieram #${nr}” powtórz z --odbior"
+    fi
     if worktree_tego_repo "$kat"; then
       [ -z "$(git -C "$kat" status --porcelain)" ] || die "$E_ODMOWA" "$kat ma niezacommitowane zmiany"
       [ "$(git -C "$kat" rev-parse HEAD)" = "$head" ] || die "$E_ODMOWA" "$kat ma commity spoza PR #$prn (HEAD różny od PR)"
@@ -909,6 +932,10 @@ task_close() {
   fi
 
   [ "$bledy" -eq 0 ] || die "$E_WYKONANIE" "#$nr zamknięte z błędami ($bledy, szczegóły wyżej); powtórz komendę, wykonane kroki zostaną pominięte"
+  if [ "${odb:-}" = auto ] && [ "$DRY" -eq 0 ]; then
+    powiadom default "Zmergowano zlecenie S: $PROJEKT" "#$nr $tytul (PR #$prn): bez zmian widocznych, PASS i zielone CI" \
+      "https://github.com/$SLUG/pull/$prn" white_check_mark || uwaga "powiadomienie o merge'u #$nr nie wyszło"
+  fi
   info "#$nr: zamknięte (PR #$prn)"
   wynik_json "$(jq -nc --argjson n "$nr" --argjson p "$prn" --argjson d "$d_n" --argjson u "$u_n" --argjson r "$r_n" \
     --argjson m "$metr" --argjson c "$chlog" --arg pr "$prop_url" --argjson k "$KROKI" \
@@ -1175,17 +1202,20 @@ komenda_main() {
   # Podkomenda to pierwszy argument niebędący opcją ani jej wartością.
   SUB=""
   ANULUJ=0
+  ODBIOR=0
   for a in "$@"; do
     case "$poprz" in
       --projekt | --plik | --testy | --powod | --timeout) reszta+=("$a") ;;
       *)
         if [ "$a" = --anuluj ]; then ANULUJ=1
+        elif [ "$a" = --odbior ]; then ODBIOR=1
         elif [ -z "$SUB" ] && [ "${a#-}" = "$a" ]; then SUB="$a"; else reszta+=("$a"); fi
         ;;
     esac
     poprz="$a"
   done
   [ "$ANULUJ" -eq 0 ] || [ "$SUB" = close ] || die "$E_UZYCIE" "--anuluj tylko z shctl task close NR"
+  [ "$ODBIOR" -eq 0 ] || [ "$SUB" = close ] || die "$E_UZYCIE" "--odbior tylko z shctl task close NR"
   set -- ${reszta[@]+"${reszta[@]}"}
   case "$SUB" in
     create) task_create "$@" ;;

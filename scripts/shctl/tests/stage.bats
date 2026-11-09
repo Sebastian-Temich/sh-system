@@ -6,27 +6,27 @@ setup() { wspolny_setup; projekt_demo; }
 dod() { echo "docs/$1/DoD.md"; }
 zaznacz() { sed -i.bak 's/^- \[ \]/- [x]/' "$(dod "$1")"; rm -f "$(dod "$1").bak"; }
 
-@test "start ustawia status i status.md" {
+@test "start ustawia status, dziennik w Projekt.md i odswieza widok" {
   run "$SHCTL" stage start 04-plan --notatka "pierwsza"
   [ "$status" -eq 0 ]
   [ "$(fm "$(dod 04-plan)" status)" = in-progress ]
-  grep -q '`04-plan`: in-progress$' docs/status.md
-  grep -q '04-plan`: in-progress, pierwsza' docs/status.md
+  grep -q -- '--repo test-owner/demo' "$T/sync.calls"
+  grep -q '04-plan`: in-progress, pierwsza' docs/Projekt.md
 }
 
 @test "start jest idempotentny" {
   "$SHCTL" stage start 04-plan --notatka n
-  cp docs/status.md "$T/przed"
+  cp docs/Projekt.md "$T/przed"
   run "$SHCTL" stage start 04-plan --notatka n --json
   [ "$status" -eq 0 ]
   [ "$(jq -r .wynik.zmiana <<<"$output")" = false ]
-  cmp docs/status.md "$T/przed"
+  cmp docs/Projekt.md "$T/przed"
 }
 
 @test "kolejna notatka przy tym samym statusie trafia do dziennika" {
   "$SHCTL" stage start 04-plan
   "$SHCTL" stage start 04-plan --notatka "czeka na dostęp"
-  grep -q 'czeka na dostęp' docs/status.md
+  grep -q 'czeka na dostęp' docs/Projekt.md
 }
 
 @test "--dry-run nic nie zmienia" {
