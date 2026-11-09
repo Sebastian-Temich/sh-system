@@ -3,7 +3,22 @@
 
 # Etapy z DoD.md (tryb M). Tryb L z osobnymi etapami jest odłożony (proces-v1.md). Stan realizacji
 # jest w issue, więc 07-realizacja nie ma DoD (katalog zostaje na raporty i eskalacje).
-ETAPY="00-intake 04-architektura 05-plan 06-zadania 08-qa wydanie"
+# Zestaw zależy od wersja_procesu w docs/konfiguracja.md projektu: 2 (SH-lite F3a) ma jeden etap
+# 04-plan, a brak pola (wersja 1, projekty sprzed migracji) osobne 04-architektura i 05-plan.
+ETAPY_V1="00-intake 04-architektura 05-plan 06-zadania 08-qa wydanie"
+ETAPY_V2="00-intake 04-plan 06-zadania 08-qa wydanie"
+ETAPY="$ETAPY_V2"
+WERSJA_PROCESU=2
+
+# Ustawia WERSJA_PROCESU i ETAPY z KONFIG.
+ustal_etapy() {
+  WERSJA_PROCESU="$(yq --front-matter=extract '.wersja_procesu // 1' "$KONFIG" 2>/dev/null || echo 1)"
+  case "$WERSJA_PROCESU" in
+    1) ETAPY="$ETAPY_V1" ;;
+    2) ETAPY="$ETAPY_V2" ;;
+    *) die "$E_UZYCIE" "$KONFIG: wersja_procesu='$WERSJA_PROCESU', dozwolone 1 albo 2" ;;
+  esac
+}
 
 ROOT=""
 ST=""
@@ -29,6 +44,7 @@ znajdz_projekt() {
   ST="$ROOT/docs/status.md"
   [ -f "$KONFIG" ] || die "$E_BRAK" "brak $KONFIG"
   wymagaj yq jq git
+  ustal_etapy
 }
 
 fm_get() { yq --front-matter=extract ".$2 // \"\"" "$1"; }

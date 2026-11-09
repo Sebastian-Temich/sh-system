@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-11-09 (SH-lite F3a: scalenie procesu)
+
+- Etapy `04-architektura` i `05-plan` scalone w `04-plan`: jeden `docs/04-plan/plan.md` (krótka architektura z punktami wejścia funkcji i plan kamieni) i jedno `DoD.md`; ADR w `docs/04-plan/adr/`. Szablon: `_szablony/plan.md` z sekcją „Architektura”, bez `architektura.md`; `06-zadania` zostaje. Wersja procesu w `docs/konfiguracja.md` projektu (`wersja_procesu: 2`); projekt bez pola (wersja 1) ma stare etapy, a shctl (`ETAPY`) i `check-dod.sh` obsługują obie do czasu migracji.
+- Skille `sh-architekt` i `sh-zadania` scalone w `sh-plan` (etapy `04-plan` i `06-zadania`): grube zadania (jedna funkcja albo strona to jedno zadanie), kryterium podpięcia każdej funkcji do punktu wejścia lub routingu, konkretne pliki designu. Dokumenty etapów (`sh-intake`, `sh-plan`, `sh-qa`) powstają w worktree `wt/NAZWA/stage-ETAP`.
+- `sh-orkiestrator`: nigdy nie przełącza gałęzi w głównych klonach; zmiany zadania i etapu ogląda przez `git -C WORKTREE …`, `gh pr diff` i `gh pr view` (sekcja „Gałęzie i worktree” z przykładami). Lista orkiestratora: deny `git switch *` także bez `-C`, allow `git -C * worktree add|remove|prune` (bez `--force`).
+- `zadania.yaml`: pola `kategoria` (frontend, backend, baza, integracje, bezpieczenstwo, testy, ci, ai-dane, refaktoryzacja), `stack` i `skille`, w issue jako sekcja „Warstwy skilli” ze znacznikiem `shctl:warstwy`. `task dispatch` składa listę skilli workera: bazowe + kategoria + stack + skille zadania + skille projektu (`plugin/warstwy-skilli.yaml`); brakujący skill to ostrzeżenie i `skille_brak`, bez przerwania dispatchu. Same skille warstw: faza 7.
+- `shctl stage` zwięźlej (jedna komenda `start|review|iter|done|escalate` z tabelą przejść, 150 → 104 linie). `task cancel` → `task close NR --anuluj`; `task cancel` działa jako alias z ostrzeżeniem do następnej wersji.
+- Propozycje dla systemu: zamiast zbiorczego PR z pustymi commitami jedno issue miesiąca w `sh-system` (etykieta `propozycja`, tytuł „Propozycje RRRR-MM”), każda propozycja to komentarz dopisywany przez `task close`. Propozycje z PR #46 przeniesione do issue 2026-11.
+
 ## 2026-11-09 (SH-lite F2: usunięcie nieużywanych elementów)
 
 - Etapy `01-brief`, `02-design`, `03-wymagania` i `DoD.md` etapu `07-realizacja` usunięte z procesu i szablonu; tryb L odłożony. `ETAPY` w shctl: `00-intake 04-architektura 05-plan 06-zadania 08-qa wydanie`. `shctl skrzynka przyjmij` domyślnie do `docs/00-intake/zrodla` (gałąź `stage/00-intake`).

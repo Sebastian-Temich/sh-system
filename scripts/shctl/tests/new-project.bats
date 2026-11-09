@@ -17,7 +17,7 @@ K() { echo "$SH_DIR/projekty/demo/$1"; }
   [ "$(fm "$(K docs/konfiguracja.md)" data)" = "$(date +%F)" ]
   [ "$(fm "$(K docs/konfiguracja.md)" blok_portow)" = 55121-55129 ]
   grep -q '^| 1 | demo |' "$SH_DIR/porty.md"
-  [ "$(fm "$(K docs/04-architektura/DoD.md)" status)" = todo ]
+  [ "$(fm "$(K docs/04-plan/DoD.md)" status)" = todo ]
   grep -q '`00-intake`: todo (następny)' "$(K docs/status.md)"
   grep -qx 'Aplikacja testowa' "$(K docs/00-intake/zrodlo.md)"
   [[ "$output" == *"Synchronizację robi serwer co 5 minut"* ]] || false

@@ -134,3 +134,31 @@ WT() { echo "$SH_DIR/wt/demo/$1"; }
   [ "$status" -eq 0 ]
   [ "$(jq -r '.powod, .zadania["12"].label' "$SH_DIR/stan/demo.json" | tr '\n' ' ')" = "stop-all worker:demo:12 " ]
 }
+
+@test "dispatch: warstwy skilli bazowe+kategoria+stack+zadanie+projekt, brakujacy skill pominiety" {
+  export SH_SKILLE_PLUGINU="$T/plugin-skille" SH_WARSTWY_SKILLI="$T/warstwy.yaml"
+  mkdir -p "$SH_SKILLE_PLUGINU/sh-baza" "$SH_SKILLE_PLUGINU/sh-kat-frontend" "$SH_SKILLE_PLUGINU/sh-stack-nextjs"
+  for s in sh-baza sh-kat-frontend sh-stack-nextjs; do echo "# $s" >"$SH_SKILLE_PLUGINU/$s/SKILL.md"; done
+  printf 'bazowe: [sh-baza]\nkategoria:\n  frontend: [sh-kat-frontend]\nstack: {}\n' >"$SH_WARSTWY_SKILLI"
+  mkdir -p .claude/skills/projekt-ui
+  echo "# projekt-ui" >.claude/skills/projekt-ui/SKILL.md
+  git add .claude/skills && git commit -qm "skill projektu" && git push -q origin main
+  w="$(jq -nc '{kategoria:"frontend", stack:["nextjs","supabase"], skille:["sh-dodatkowy"]}' | base64 | tr -d '\n')"
+  issue 12 "Strona" "status:todo" "$(printf '### Cel\n\nx\n\n<!-- shctl:warstwy %s -->\n' "$w")"
+  run --separate-stderr "$SHCTL" task dispatch 12 --json
+  echo "$output $stderr"
+  [ "$status" -eq 0 ]
+  [ "$(jq -r '.wynik.skille | join(",")' <<<"$output")" = "sh-baza,sh-kat-frontend,sh-stack-nextjs,projekt-ui" ]
+  [ "$(jq -r '.wynik.skille_brak | join(",")' <<<"$output")" = "sh-stack-supabase,sh-dodatkowy" ]
+  [[ "$stderr" == *"brak skilla sh-stack-supabase"* ]] || false
+  grep -q "Zrealizuj issue #12 skillem sh-worker. Przed pracą wczytaj skille: sh-baza, sh-kat-frontend, sh-stack-nextjs, projekt-ui." "$CLAUDE_ATRAPA/calls"
+}
+
+@test "dispatch: issue bez warstw i projekt bez skilli to polecenie bez listy" {
+  export SH_SKILLE_PLUGINU="$T/pusto" SH_WARSTWY_SKILLI="$T/brak.yaml"
+  issue 12 "Zadanie" "status:todo"
+  run --separate-stderr "$SHCTL" task dispatch 12 --json
+  [ "$status" -eq 0 ]
+  [ "$(jq -r '.wynik.skille | length' <<<"$output")" -eq 0 ]
+  grep -q "Zrealizuj issue #12 skillem sh-worker.$" "$CLAUDE_ATRAPA/calls"
+}

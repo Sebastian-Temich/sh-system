@@ -8,6 +8,8 @@ setup() {
   pr_workera 12 20
 }
 
+propozycje_sys() { jq -r '.[] | select(.repo == "test-owner/sh-system") | (.comments // [])[].body' "$GH_ATRAPA/issues.json"; }
+
 pass() {
   wynik_codex PASS '[{"waga":"drobne","plik":"src/a.ts","linia":3,"opis":"literówka w komentarzu"}]'
   "$SHCTL" review run 20 >/dev/null
@@ -65,13 +67,14 @@ pass() {
   grep -qF '| review PR #20 | literówka w komentarzu (`src/a.ts:3`) | otwarta |' docs/backlog-drobne.md
   grep -qE '^\| #12 Zadanie 12 \| M \| [0-9h ]*[0-9]+min \| 1 \| 1 \| 0 \| PR #20 \|$' docs/metryki.md
   [ "$(czytaj() { awk '/^## Niewydane/{w=1;next} w' CHANGELOG.md | grep .; }; czytaj)" = "- #12: Zadanie 12 (PR #20)" ]
-  [ "$(jq -r '.wynik.propozycje' <<<"$output")" = "https://github.com/test-owner/sh-system/pull/21" ]
-  git -C "$T/sys.git" log --format=%B main..propozycje-2026-11 | grep -q 'shctl mógłby sam uruchamiać lint'
-  git -C "$T/sys.git" log --format=%B main..propozycje-2026-11 | grep -q '<!-- propozycje:demo:T-12 -->'
-  [ "$(jq -r '.[] | select(.number == 21) | .title' "$GH_ATRAPA/prs.json")" = "Propozycje $(date +%Y-%m)" ]
-  [ -z "$(git -C "$SH_SYSTEM_DIR" status --porcelain)" ]
+  n="$(jq -r '.[] | select(.repo == "test-owner/sh-system") | .number' "$GH_ATRAPA/issues.json")"
+  [ "$(jq -r '.wynik.propozycje' <<<"$output")" = "https://github.com/test-owner/sh-system/issues/$n" ]
+  [ "$(jq -r --argjson n "$n" '.[] | select(.number == $n) | .title, [.labels[].name][0]' "$GH_ATRAPA/issues.json" | tr '\n' ' ')" = "Propozycje 2026-11 propozycja " ]
+  propozycje_sys | grep -q 'shctl mógłby sam uruchamiać lint'
+  propozycje_sys | grep -q '<!-- propozycje:demo:T-12 -->'
+  ! grep -q '^pr create .*test-owner/sh-system' "$GH_ATRAPA/calls" || false
+  [ -z "$(git -C "$T/sys.git" branch --list 'propozycje-*')" ]
   [ ! -e "$SH_DIR/wt/demo/12" ]
-  [ ! -e "$SH_DIR/wt/demo/sys-propozycje-demo-12" ]
   [ -z "$(git branch --list 'task/*')" ]
   [ "$(etykiety_paneli)" = "" ]
   [ "$(stan_issue 12)" = CLOSED ]
@@ -89,7 +92,8 @@ pass() {
   [ "$status" -eq 0 ]
   for f in docs/decyzje.md docs/backlog-drobne.md docs/metryki.md CHANGELOG.md; do cmp "$f" "$T/$(basename "$f")"; done
   [ "$(grep -c '^pr merge' "$GH_ATRAPA/calls")" -eq 1 ]
-  [ "$(grep -c '^pr create' "$GH_ATRAPA/calls")" -eq 1 ]
+  [ "$(grep -c '^issue create .*test-owner/sh-system' "$GH_ATRAPA/calls")" -eq 1 ]
+  [ "$(grep -c '^issue comment' "$GH_ATRAPA/calls")" -eq 1 ]
 }
 
 @test "close: niezacommitowane zmiany w worktree to odmowa przed merge" {
@@ -128,7 +132,7 @@ pass() {
   [ "$(grep -c '^| #12 ' docs/metryki.md)" -eq 1 ]
 }
 
-@test "close: propozycje kolejnego zadania dopisane do otwartego PR miesiaca, bez nowego PR" {
+@test "close: propozycje kolejnego zadania to kolejny komentarz w issue miesiaca, bez nowego issue" {
   pass
   "$SHCTL" task close 12 >/dev/null
   zadanie_w_toku 13
@@ -138,23 +142,21 @@ pass() {
   run --separate-stderr "$SHCTL" task close 13 --json
   echo "$output $stderr"
   [ "$status" -eq 0 ]
-  [ "$(jq -r '.wynik.propozycje' <<<"$output")" = "https://github.com/test-owner/sh-system/pull/21" ]
-  [ "$(grep -c '^pr create .*test-owner/sh-system' "$GH_ATRAPA/calls")" -eq 1 ]
-  git -C "$T/sys.git" log --format=%B main..propozycje-2026-11 | grep -q '<!-- propozycje:demo:T-12 -->'
-  git -C "$T/sys.git" log --format=%B main..propozycje-2026-11 | grep -q '<!-- propozycje:demo:T-13 -->'
-  [ "$(git -C "$T/sys.git" log --format=%s main..propozycje-2026-11 | wc -l | tr -d ' ')" -eq 2 ]
+  [ "$(grep -c '^issue create .*test-owner/sh-system' "$GH_ATRAPA/calls")" -eq 1 ]
+  propozycje_sys | grep -q '<!-- propozycje:demo:T-12 -->'
+  propozycje_sys | grep -q '<!-- propozycje:demo:T-13 -->'
+  [ "$(propozycje_sys | grep -c '^\*\*Propozycje: demo T-1[23]\*\*')" -eq 2 ]
 }
 
-@test "close: po scaleniu PR miesiaca nowy PR od main" {
+@test "close: po zamknieciu issue miesiaca nowe issue" {
   pass
   "$SHCTL" task close 12 >/dev/null
-  jq 'map(if .number == 21 then .state = "MERGED" else . end)' "$GH_ATRAPA/prs.json" >"$T/x" && mv "$T/x" "$GH_ATRAPA/prs.json"
+  jq 'map(if .repo == "test-owner/sh-system" then .state = "CLOSED" else . end)' "$GH_ATRAPA/issues.json" >"$T/x" && mv "$T/x" "$GH_ATRAPA/issues.json"
   zadanie_w_toku 13
   pr_workera 13 30
   wynik_codex PASS '[]'
   "$SHCTL" review run 30 >/dev/null
   run --separate-stderr "$SHCTL" task close 13 --json
   [ "$status" -eq 0 ]
-  [ "$(grep -c '^pr create .*test-owner/sh-system' "$GH_ATRAPA/calls")" -eq 2 ]
-  ! git -C "$T/sys.git" log --format=%B main..propozycje-2026-11 | grep -q 'T-12 -->' || false
+  [ "$(grep -c '^issue create .*test-owner/sh-system' "$GH_ATRAPA/calls")" -eq 2 ]
 }

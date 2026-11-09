@@ -57,7 +57,7 @@ Zadanie trzy razy nie przeszło review. Etykieta `iter:3` zostaje, a zadania nie
    - „E-004: podziel zadanie na dwa mniejsze”;
    - „E-004: wytnij funkcję eksportu z zakresu, przenieś do backlogu”.
 3. Orkiestrator zamyka eskalację Twoją odpowiedzią i działa według niej. Odpowiedź „zadanie
-   niewykonalne” albo „rezygnujemy” kończy zadanie przez `shctl task cancel` (issue „not planned”).
+   niewykonalne” albo „rezygnujemy” kończy zadanie przez `shctl task close --anuluj` (issue „not planned”).
 
 Eskalowane zadanie nie zajmuje miejsca workera: w tym czasie startują inne zadania. Jego panel w herdr
 ma etykietę `eskalacja:PROJEKT:NR` i możesz go przeczytać.

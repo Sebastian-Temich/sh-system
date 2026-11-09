@@ -89,6 +89,12 @@ case "$k1 $k2" in
       --argjson d "$(lista_etykiet ${rem[@]+"${rem[@]}"})" --arg b "$body" \
       --argjson ub "$([ -n "$body_file" ] && echo true || echo false)"
     ;;
+  "issue comment")
+    n="${poz[0]}"
+    zapisz issues 'map(if .repo == $r and .number == $n then .comments = ((.comments // []) + [{body: $b}]) else . end)' \
+      --arg r "$repo" --argjson n "$n" --arg b "$body"
+    echo "https://github.com/$repo/issues/$n#issuecomment-$(nastepny)"
+    ;;
   "issue close")
     n="${poz[0]}"
     zapisz issues 'map(if .repo == $r and .number == $n then .state = "CLOSED"

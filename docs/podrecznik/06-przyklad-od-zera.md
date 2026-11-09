@@ -98,18 +98,19 @@ etapu), potem merge. Etap `00-intake` ma `done`.
 
 **W Obsidianie:** `docs/00-intake/specyfikacja.md`, a w `decyzje.md` Twoja akceptacja.
 
-## 3. Architektura i plan, drugi checkpoint
+## 3. Plan, drugi checkpoint
 
-`sh-architekt` pisze na gałęzi `stage/04-architektura`:
+`sh-plan` pisze w worktree etapu na gałęzi `stage/04-plan`:
 
-- `architektura.md`: moduły (strony, formularz, wysyłka e-mail), tabela zgłoszeń z RLS, środowiska;
+- `plan.md`, sekcja „Architektura”: moduły z punktami wejścia (strony `/`, `/oferta`, `/kontakt`,
+  formularz, wysyłka e-mail) i plikami designu, tabela zgłoszeń z RLS, środowiska;
 - ADR „Dane osobowe w formularzu kontaktowym”: retencja, brak danych w logach, testy uprawnień;
-- `plan.md` z kamieniami, Twoimi zadaniami ręcznymi i scenariuszami odbioru.
+- w tym samym `plan.md` kamienie, Twoje zadania ręczne i scenariusze odbioru.
 
 **Orkiestrator (po PASS):**
 
 ```text
-strona-firmowa: architektura i plan czekają na akceptację, PR #3.
+strona-firmowa: plan czeka na akceptację, PR #3.
 Kamienie: M1 Szkielet, M2 Podstrony i treści, M3 Formularz kontaktowy, M4 Dokumentacja wydania.
 Twoje zadania ręczne:
 - podłączenie repo do Vercel, przed pierwszym PR z podglądem,
@@ -120,7 +121,7 @@ Zakres autoryzacji: M1–M4, Resend plan darmowy, do odbioru zlecenia.
 shctl doctor 2026-11-03T09:12Z: wszystko ok.
 ```
 
-Push: „Czeka na Twoją akceptację: strona-firmowa / 04-architektura” z linkiem do PR #3.
+Push: „Czeka na Twoją akceptację: strona-firmowa / 04-plan” z linkiem do PR #3.
 
 **Ty:**
 
@@ -133,7 +134,8 @@ bez pytania, jeśli mieszczą się w tej zgodzie.
 
 ## 4. Zadania
 
-`sh-zadania` pisze `docs/06-zadania/zadania.yaml`, Codex robi review, orkiestrator merguje.
+`sh-plan` pisze `docs/06-zadania/zadania.yaml` (jedna strona albo funkcja to jedno zadanie, z
+kategorią, stackiem i kryterium podpięcia do routingu), Codex robi review, orkiestrator merguje.
 Potem `shctl task create` zakłada issue na GitHubie.
 
 **Orkiestrator:**

@@ -33,10 +33,10 @@ Orkiestrator ── sh-intake ──► specyfikacja (M) albo jedno zadanie (S)
         │                            │
         │                 Ty: akceptacja specyfikacji (M)
         ▼
-   sh-architekt ──► architektura i plan kamieni milowych (M)
+   sh-plan ──► plan: krótka architektura i kamienie milowe (M)
         │                 Ty: akceptacja planu = zgoda na realizację
         ▼
-   sh-zadania ──► zadania jako issue na GitHubie (M)
+   sh-plan ──► zadania jako issue na GitHubie (M)
         ▼
 ┌─ pętla realizacji, dla każdego zadania ───────────────────────┐
 │ shctl task dispatch → worker: kod i testy → PR → CI           │
@@ -79,7 +79,7 @@ robisz Ty. Przy `true` orkiestrator zamyka sam i tylko informuje.
 | Nr | Etap | Co powstaje | Checkpoint |
 |---|---|---|---|
 | 1 | Specyfikacja | `docs/00-intake/specyfikacja.md` | **Twoja akceptacja** |
-| 2 | Architektura i plan, zadania | `docs/04-architektura/`, `docs/05-plan/plan.md`, issue | **Twoja akceptacja** planu |
+| 2 | Plan i zadania | `docs/04-plan/plan.md`, `docs/06-zadania/zadania.yaml`, issue | **Twoja akceptacja** planu |
 | 3 | Realizacja | Kod, testy, raporty `T-NR.md` | Nie, działa sama |
 | 4 | QA po kamieniu | `docs/08-qa/raport-MN.md`, zadania z błędami | Nie |
 | 5 | Odbiór i dokumentacja | `docs/wydanie/` | **Twój odbiór** |

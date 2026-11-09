@@ -37,9 +37,8 @@ Użycie: shctl KOMENDA [argumenty] [--dry-run] [--json] [--projekt NAZWA]
   task ready
   task dispatch NR
   task iter NR
-  task close NR
+  task close NR [--anuluj [--powod "..."]]   (task cancel NR: alias do następnej wersji)
   task resume-check NR [--testy "..."] [--bez-testow]
-  task cancel NR [--powod "..."]
   task wait NR [--timeout SEKUNDY]
   pr check PR [--czekaj] [--timeout SEKUNDY]
   review run PR [--timeout SEKUNDY]

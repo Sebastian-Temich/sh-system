@@ -46,7 +46,7 @@ esk() { "$SHCTL" escalate --dotyczy "#$1" --powod "$2" --potrzebne "decyzja" --j
   run --separate-stderr "$SHCTL" task dispatch 12
   [ "$status" -eq 4 ]
   [[ "$stderr" == *"max_local"* ]] || false
-  "$SHCTL" task cancel 13 >/dev/null
+  "$SHCTL" task close 13 --anuluj >/dev/null
   run --separate-stderr "$SHCTL" task dispatch 12 --json
   echo "$output $stderr"
   [ "$status" -eq 0 ]

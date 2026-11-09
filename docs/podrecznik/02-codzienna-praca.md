@@ -64,7 +64,7 @@ pytania i zakres zgody.
 | ETAP w tytule | Co akceptujesz |
 |---|---|
 | `00-intake` | Specyfikację |
-| `04-architektura` | Architekturę i plan, czyli zgodę na realizację |
+| `04-plan` | Plan (krótka architektura i kamienie), czyli zgodę na realizację |
 | `wydanie` | Odbiór na stagingu |
 | `#NR` | Odbiór zadania trybu S |
 | `podniesienie trybu` | Propozycję zmiany trybu, np. S na M (to eskalacja z numerem `E-NNN`) |
@@ -107,7 +107,7 @@ klienta.
 
 1. Wrzuć pliki (także w podfolderach albo jako ZIP).
 2. Napisz w czacie: „materiały w skrzynce dla NAZWA”. Domyślnie trafią do
-   `docs/00-intake/zrodla/`; inne miejsce podaj wprost, np. „do 04-architektura/zrodla”.
+   `docs/00-intake/zrodla/`; inne miejsce podaj wprost, np. „do 04-plan/zrodla”.
 3. Orkiestrator otwiera PR z plikami i podaje, co przyjęto, a co odrzucono. Po zielonym CI merguje
    go sam: bez review Codexa i bez Twojej akceptacji (Twoja decyzja w [[decyzje-systemu]]).
 4. Po merge'u przyjęte pliki znikają ze skrzynki i trafiają do jej podfolderu
@@ -164,7 +164,7 @@ v1 plik zostaje do migracji.
 |---|---|
 | `docs/status.md` | Bieżący etap i „Punkt przekazania” po kamieniu |
 | `docs/00-intake/specyfikacja.md` | Co budujemy: wymagania `W-n` |
-| `docs/05-plan/plan.md` | Kamienie, scenariusze odbioru, Twoje zadania ręczne |
+| `docs/04-plan/plan.md` | Krótka architektura, kamienie, scenariusze odbioru, Twoje zadania ręczne |
 | `docs/decyzje.md` | Wszystkie decyzje, także Twoje zgody |
 | `docs/06-zadania/index.md` | Lista zadań i ich stan |
 | `docs/07-realizacja/T-NR.md` | Raport workera z zadania |

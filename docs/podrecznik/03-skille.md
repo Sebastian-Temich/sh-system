@@ -13,8 +13,7 @@ czeka na Ciebie.
 |---|---|---|---|---|
 | `sh-orkiestrator` | Prowadzi projekty, rozmawia z Tobą | Start sesji orkiestratora i Twoje polecenia | Panel `orkiestrator` | S, M |
 | `sh-intake` | Specyfikacja albo zlecenie S | Orkiestrator | Sesja orkiestratora | S, M |
-| `sh-architekt` | Architektura i plan | Orkiestrator po akceptacji specyfikacji | Sesja orkiestratora | M |
-| `sh-zadania` | Zadania (issue) z planu | Orkiestrator po akceptacji planu | Sesja orkiestratora | M |
+| `sh-plan` | Plan (krótka architektura i kamienie), potem zadania (issue) | Orkiestrator po akceptacji specyfikacji i planu | Sesja orkiestratora | M |
 | `sh-worker` | Kod i testy jednego zadania | `shctl task dispatch` i `shctl task iter` | Panel `worker:PROJEKT:NR` | S, M |
 | `sh-review` | Niezależne review | `shctl review run` (Codex) | Panel `review:PROJEKT:NR` | S, M |
 | `sh-qa` | QA po kamieniu milowym | Orkiestrator | Sesja orkiestratora | M |
@@ -81,47 +80,33 @@ czeka na nie: pisze dalej z propozycją jako założeniem, a Ty rozstrzygasz w c
 review czeka Twoja akceptacja specyfikacji. Zlecenie na tryb L nazywa wprost i proponuje M z
 ograniczonym zakresem albo czekanie na etap B.
 
-## sh-architekt
+## sh-plan
 
-**Cel:** z zaakceptowanej specyfikacji robi architekturę i plan, które akceptujesz jednym
-checkpointem.
+**Cel:** z zaakceptowanej specyfikacji robi plan (etap `04-plan`), który akceptujesz jednym
+checkpointem, a z zaakceptowanego planu zadania (etap `06-zadania`), które worker zrobi bez dopytywania.
 
-**Kiedy działa:** po Twojej akceptacji specyfikacji (tylko tryb M).
+**Kiedy działa:** po Twojej akceptacji specyfikacji, potem po akceptacji planu (tylko tryb M).
 
-**Czyta:** specyfikację, `decyzje.md`, `konfiguracja.md`, stack w `AGENTS.md`, istniejące ADR,
-szablony.
+**Czyta:** specyfikację i materiały ze skrzynki (design), `decyzje.md`, `konfiguracja.md`, stack w
+`AGENTS.md`, istniejące ADR, szablony, istniejące issue.
 
-**Tworzy** (gałąź `stage/04-architektura`, jeden PR):
+**Tworzy** (każdy etap w osobnym worktree `wt/PROJEKT/stage-ETAP` i PR):
 
-- `docs/04-architektura/architektura.md`: moduły, model danych, integracje, bezpieczeństwo,
-  środowiska, testy;
-- ADR (`docs/04-architektura/adr/`) dla ważnych decyzji i każdego obszaru ryzyka;
-- `docs/05-plan/plan.md`: kamienie milowe jako działające kawałki (pierwszy to szkielet projektu),
-  zadania z zależnościami, **Twoje zadania ręczne** z terminem „przed czym”, 5–10 scenariuszy
+- `docs/04-plan/plan.md`: krótka architektura (moduły z punktem wejścia i plikami designu każdej
+  funkcji, model danych, bezpieczeństwo, środowiska), kamienie milowe jako działające kawałki
+  (pierwszy to szkielet projektu), **Twoje zadania ręczne** z terminem „przed czym”, 5–10 scenariuszy
   odbioru, zakres autoryzacji, gotowość środowiska (`shctl doctor`), jeden następny krok;
-- uzupełniony stack w `AGENTS.md`.
+- ADR (`docs/04-plan/adr/`) dla ważnych decyzji i każdego obszaru ryzyka; uzupełniony stack w
+  `AGENTS.md`;
+- `docs/06-zadania/zadania.yaml`: grube zadania (jedna funkcja albo strona to jedno zadanie), każde z
+  kryterium podpięcia do punktu wejścia lub routingu, wskazanymi plikami designu, kategorią i stackiem
+  (z nich `shctl task dispatch` dobiera skille workera). `T1` to zawsze szkielet, ostatnie zadanie to
+  dokumentacja wydania;
+- po merge'u PR zadań: issue i kamienie (milestones) przez `shctl task create` oraz tabela zadań.
 
-**Zatrzymuje się na Ciebie:** akceptacja architektury i planu. To Twoja zgoda na całą realizację.
-
-## sh-zadania
-
-**Cel:** zamienia zatwierdzony plan w zadania, które worker zrobi bez dopytywania.
-
-**Kiedy działa:** po Twojej akceptacji planu (tylko tryb M).
-
-**Czyta:** plan, specyfikację, architekturę, ADR, `konfiguracja.md`, stack w `AGENTS.md`, istniejące
-issue.
-
-**Tworzy:**
-
-- faza 1: `docs/06-zadania/zadania.yaml` na gałęzi `stage/06-zadania` i PR. Zadania po ok. 4 h
-  pracy agenta, ze sprawdzalnymi kryteriami, listą plików, komendą testów, zależnościami i kamieniem.
-  `T1` to zawsze szkielet projektu, ostatnie zadanie to dokumentacja wydania;
-- faza 2, po merge'u: issue i kamienie (milestones) na GitHubie przez `shctl task create` oraz tabela
-  zadań dla Ciebie.
-
-**Zatrzymuje się na Ciebie:** nie wymaga akceptacji, bo plan już ją ma. Pokazuje Ci tabelę zadań i
-Twoje zadania ręczne, które blokują pracę. Ponad 15 zadań to eskalacja.
+**Zatrzymuje się na Ciebie:** akceptacja planu, czyli zgoda na całą realizację. Zadania nie wymagają
+akceptacji; dostajesz tabelę zadań i Twoje zadania ręczne, które blokują pracę. Ponad 15 zadań to
+eskalacja.
 
 ## sh-worker
 

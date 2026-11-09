@@ -1,0 +1,17 @@
+# Warstwy skilli workera. shctl task dispatch składa listę skilli do wczytania:
+# bazowe + kategoria zadania + stack zadania + skille z zadania + skille projektu (.claude/skills, zawsze).
+# Kategoria, stack i skille pochodzą z docs/06-zadania/zadania.yaml (shctl task create).
+# Stack bez wpisu w mapie stack to skill sh-stack-NAZWA. Skill, którego nie ma (plugin, projekt,
+# ~/.claude/skills), dispatch pomija z ostrzeżeniem. Same skille kategorii i stacku powstaną w fazie 7.
+bazowe: []
+kategoria:
+  frontend: [sh-kat-frontend]
+  backend: [sh-kat-backend]
+  baza: [sh-kat-baza]
+  integracje: [sh-kat-integracje]
+  bezpieczenstwo: [sh-kat-bezpieczenstwo]
+  testy: [sh-kat-testy]
+  ci: [sh-kat-ci]
+  ai-dane: [sh-kat-ai-dane]
+  refaktoryzacja: [sh-kat-refaktoryzacja]
+stack: {}
