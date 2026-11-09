@@ -36,7 +36,7 @@ Robisz:
 
 - review PR zadania (gałąź `task/NR-slug`, `Closes #NR`) i review etapu (gałąź `stage/ETAP`);
 - w iteracji 2+ najpierw weryfikację zgłoszeń 🔴 i 🟡 z poprzedniego review;
-- zgłoszenia z wagą i miejscem, werdykt i krótkie podsumowanie.
+- zgłoszenia z wagą, przyczyną i miejscem, werdykt i krótkie podsumowanie.
 
 Nie robisz:
 
@@ -84,7 +84,7 @@ to w raporcie.
 ## Wyjście
 
 - `codex/sh-review.schema.json` (Codex): ostatnia wiadomość to wyłącznie JSON `{"werdykt",
-  "podsumowanie", "zgloszenia": [{"waga", "plik", "linia", "opis"}]}`; `plik` pusty i `linia` 0, gdy
+  "podsumowanie", "zgloszenia": [{"waga", "przyczyna", "plik", "linia", "opis"}]}`; `plik` pusty i `linia` 0, gdy
   zgłoszenie nie dotyczy miejsca; komentarz w PR z tego JSON pisze shctl
 - `gh pr comment PR` (Claude Code): jeden komentarz w PR w formacie `sh-system/templates/review.md`
   (szkielet w kroku 9 Procedury)
@@ -110,8 +110,13 @@ werdykcie orkiestrator wywołuje `shctl task iter NR` albo `shctl task close NR`
 4. Review PR: sprawdź po kolei punkty z „Review PR” (niżej). Review etapu: punkty z „Review etapu”.
 5. Każdemu problemowi nadaj wagę według „Kryteriów review”, w iteracji 3 z regułą dla nowych
    istotnych. Gdy waha się między dwiema wagami, wybierz niższą i napisz dlaczego.
-6. Zapisz zgłoszenie w jednej linii: miejsce (`ścieżka` albo `ścieżka:linia`, gdy dotyczy pliku) i
-   opis po polsku: co jest źle i co poprawić. Jedno zgłoszenie to jeden problem.
+6. Zapisz zgłoszenie w jednej linii: przyczynę, miejsce (`ścieżka` albo `ścieżka:linia`, gdy dotyczy
+   pliku) i opis po polsku: co jest źle i co poprawić. Jedno zgłoszenie to jeden problem. Przyczyna to
+   źródło problemu, nie miejsce: `wymaganie` (luka, sprzeczność albo niejasność w specyfikacji, karcie
+   funkcji lub issue), `kod` (implementacja odbiega od jasnego wymagania), `test` (brak testu, test
+   nie sprawdza kryterium, test niestabilny), `design` (brak albo niespójność designu, stan bez
+   ekranu). Przy wahaniu wybierz to, co trzeba poprawić, żeby problem nie wrócił. Podsumowanie trafia
+   do „Przyczyn uwag” w `docs/metryki.md` (`shctl task close`).
 7. Ustal werdykt: `FAIL` wtedy i tylko wtedy, gdy jest choć jedno 🔴 albo 🟡, inaczej `PASS`.
 8. Napisz podsumowanie: 1–3 zdania po polsku; w iteracji 2+ zaczynasz od „Z iteracji N-1: naprawione
    X z Y.”.
@@ -128,9 +133,9 @@ werdykcie orkiestrator wywołuje `shctl task iter NR` albo `shctl task close NR`
 
    ### Zgłoszenia
 
-   - 🔴 krytyczne `ścieżka:linia`: opis
-   - 🟡 istotne `ścieżka`: opis
-   - ⚪ drobne: opis
+   - 🔴 krytyczne (przyczyna: kod) `ścieżka:linia`: opis
+   - 🟡 istotne (przyczyna: test) `ścieżka`: opis
+   - ⚪ drobne (przyczyna: design): opis
    ```
 
    Bez zgłoszeń sekcja ma jedną linię `Brak.`. Zgłoszenia w kolejności 🔴, 🟡, ⚪.
@@ -228,7 +233,8 @@ skilla. W etapie A tego nie robisz.
 - [ ] Tryb, iteracja i commit ustalone; review dotyczy bieżącego `headRefOid`
 - [ ] W iteracji 2+ każde zgłoszenie 🔴 i 🟡 z iteracji N-1 sprawdzone i rozliczone w podsumowaniu
 - [ ] Review PR: każde kryterium z issue ocenione; review etapu: każde pole `DoD.md` ocenione
-- [ ] Każde zgłoszenie ma wagę, miejsce (gdy dotyczy pliku) i opis poprawki, w jednej linii
+- [ ] Każde zgłoszenie ma wagę, przyczynę (wymaganie, kod, test, design), miejsce (gdy dotyczy pliku)
+  i opis poprawki, w jednej linii
 - [ ] W iteracji 3 nowe istotne zgłoszone jako ⚪ z dopiskiem „(iteracja 3, istotne)”; w iteracji 2
       etapu dokumentowego istotne jako ⚪ z dopiskiem „(do decyzje.md)”
 - [ ] Werdykt FAIL wtedy i tylko wtedy, gdy jest 🔴 albo 🟡
@@ -306,7 +312,7 @@ Orkiestrator: `shctl review run 31` dla zadania #14 z etykietą `iter:2`.
 4. Odpowiedź Codexa:
 
    ```json
-   {"werdykt":"FAIL","podsumowanie":"Z iteracji 1: naprawione 1 z 1. Nowa poprawka loguje e-mail klienta.","zgloszenia":[{"waga":"krytyczne","plik":"src/koszyk/koszyk.ts","linia":57,"opis":"console.log wypisuje obiekt klienta z e-mailem; usuń log albo zostaw samo id."},{"waga":"drobne","plik":"src/koszyk/koszyk.ts","linia":52,"opis":"nazwa tmp mało czytelna."}]}
+   {"werdykt":"FAIL","podsumowanie":"Z iteracji 1: naprawione 1 z 1. Nowa poprawka loguje e-mail klienta.","zgloszenia":[{"waga":"krytyczne","przyczyna":"kod","plik":"src/koszyk/koszyk.ts","linia":57,"opis":"console.log wypisuje obiekt klienta z e-mailem; usuń log albo zostaw samo id."},{"waga":"drobne","przyczyna":"kod","plik":"src/koszyk/koszyk.ts","linia":52,"opis":"nazwa tmp mało czytelna."}]}
    ```
 
 Wynik: shctl pisze komentarz „## Review Codex: FAIL” w PR #31, orkiestrator wywołuje `shctl task iter 14`.

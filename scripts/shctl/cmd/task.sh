@@ -658,6 +658,61 @@ dopisz_metryke() {
   podmien_plik "$t" "$plik"
 }
 
+# Przyczyny uwag review (templates/review.md): wiersz w tabeli „| Źródło | Wymaganie |” w metryki.md,
+# na końcu ostatniej takiej tabeli. Bez niej (projekt sprzed F4) shctl wstawia sekcję „## Przyczyny uwag”
+# zaraz pod ostatnią tabelą metryk („| Zlecenie |”), a bez niej na końcu pliku.
+NAGLOWEK_PRZYCZYN='| Źródło | Wymaganie | Kod | Test | Design | Bez przyczyny |'
+dopisz_przyczyny() {
+  local plik="$1" t
+  [ -f "$plik" ] || die "$E_BRAK" "brak $plik"
+  t="$(tmp_plik)"
+  WIERSZ="$2" NAGL="$NAGLOWEK_PRZYCZYN" awk '
+    { l[NR] = $0 }
+    $0 == ENVIRON["NAGL"] { h = NR }
+    /^\| Zlecenie \|/ { m = NR }
+    END {
+      nowa = 0
+      if (h) k = h
+      else if (m) { k = m; nowa = 1 }
+      else { k = NR; nowa = 1 }
+      if (k) while (k < NR && l[k + 1] ~ /^\|/) k++
+      if (NR == 0) k = 0
+      for (i = 1; i <= NR; i++) {
+        print l[i]
+        if (i == k) {
+          if (nowa) printf "\n## Przyczyny uwag\n\n%s\n|---|---|---|---|---|---|\n", ENVIRON["NAGL"]
+          print ENVIRON["WIERSZ"]
+        }
+      }
+      if (k == 0) {
+        printf "## Przyczyny uwag\n\n%s\n|---|---|---|---|---|---|\n", ENVIRON["NAGL"]
+        print ENVIRON["WIERSZ"]
+      }
+    }' "$plik" >"$t"
+  podmien_plik "$t" "$plik"
+}
+
+# Zgłoszenia ze wszystkich review PR (ostatni komentarz dla każdego commita) policzone według przyczyny:
+# {wymaganie, kod, test, design, brak, razem}.
+przyczyny_pr() {
+  local j
+  j="$(gh pr view "$1" --repo "$SLUG" --json comments 2>/dev/null)" || j='{"comments":[]}'
+  jq -c "$JQ_PARSUJ_REVIEW"'
+    [.comments[].body | select(contains("<!-- shctl:review head="))
+      | (capture("<!-- shctl:review head=(?<h>[0-9a-f]+) ").h) as $h
+      | if test("<!-- shctl:review-dane [A-Za-z0-9+/=]+ -->")
+        then capture("<!-- shctl:review-dane (?<d>[A-Za-z0-9+/=]+) -->").d | @base64d | fromjson
+        else parsuj_review($h) end
+      | {head: $h, zgloszenia}]
+    | [group_by(.head)[] | last.zgloszenia[]] as $z
+    | {wymaganie: ([$z[] | select(.przyczyna == "wymaganie")] | length),
+       kod: ([$z[] | select(.przyczyna == "kod")] | length),
+       test: ([$z[] | select(.przyczyna == "test")] | length),
+       design: ([$z[] | select(.przyczyna == "design")] | length),
+       brak: ([$z[] | select((.przyczyna // "") == "")] | length),
+       razem: ($z | length)}' <<<"$j" 2>/dev/null || echo '{"razem":0}'
+}
+
 przenies_decyzje() {
   local tekst="$1" zr="$2" p d l n=0
   while IFS= read -r l; do
@@ -737,7 +792,7 @@ issue_propozycji() {
 
 task_close() {
   local nr j pr prn prst head ci rev kat label raport dec uw prop prop_url="" tytul tryb_z iter czas esk f
-  local bledy=0 d_n=0 u_n=0 r_n=0 metr=false chlog=false st_rev rev_plik
+  local bledy=0 d_n=0 u_n=0 r_n=0 metr=false chlog=false st_rev rev_plik pyt uw_m pz
   argument_nr "$@"
   nr="$NR_ARG"
   zadania_init
@@ -808,11 +863,21 @@ task_close() {
       [ -n "$f" ] || f="$(jq -r '.createdAt // ""' <<<"$pr")"
       czas="$( [ -n "$f" ] && czas_trwania "$f" || echo -)"
       esk=0
+      pyt=0
       for f in "$ROOT_G"/docs/07-realizacja/escalations/E-[0-9]*.md; do
         [ -e "$f" ] || continue
-        [ "$(fm_get "$f" dotyczy)" != "#$nr" ] || esk=$((esk + 1))
+        [ "$(fm_get "$f" dotyczy)" = "#$nr" ] || continue
+        # Pytanie workera (escalate --typ pytanie) nie jest porażką: liczone osobno w „Uwagach”.
+        if [ "$(fm_get "$f" typ)" = pytanie ]; then pyt=$((pyt + 1)); else esk=$((esk + 1)); fi
       done
-      dopisz_metryke "$ROOT_G/docs/metryki.md" "| #$nr $(komorka "$tytul") | $tryb_z | $czas | 1 | $iter | $esk | PR #$prn |"
+      uw_m="PR #$prn"
+      [ "$pyt" -eq 0 ] || uw_m="$uw_m, pytania: $pyt"
+      dopisz_metryke "$ROOT_G/docs/metryki.md" "| #$nr $(komorka "$tytul") | $tryb_z | $czas | 1 | $iter | $esk | $uw_m |"
+      pz="$(przyczyny_pr "$prn")"
+      if [ "$(jq -r '.razem // 0' <<<"$pz")" -gt 0 ]; then
+        dopisz_przyczyny "$ROOT_G/docs/metryki.md" "$(jq -r --arg z "review PR #$prn (#$nr $(komorka "$tytul"))" \
+          '"| \($z) | \(.wymaganie) | \(.kod) | \(.test) | \(.design) | \(.brak) |"' <<<"$pz")"
+      fi
       metr=true
     fi
     ! wpis_changelog "- #$nr: $(komorka "$tytul") (PR #$prn)" "$nr" || chlog=true

@@ -17,9 +17,9 @@ PODSUMOWANIE
 
 ### Zgłoszenia
 
-- 🔴 krytyczne `ŚCIEŻKA:LINIA`: OPIS
-- 🟡 istotne `ŚCIEŻKA`: OPIS
-- ⚪ drobne: OPIS
+- 🔴 krytyczne (przyczyna: PRZYCZYNA) `ŚCIEŻKA:LINIA`: OPIS
+- 🟡 istotne (przyczyna: PRZYCZYNA) `ŚCIEŻKA`: OPIS
+- ⚪ drobne (przyczyna: PRZYCZYNA): OPIS
 ```
 
 | Element | Reguła |
@@ -31,7 +31,8 @@ PODSUMOWANIE
 | `PODSUMOWANIE` | 1–3 zdania po polsku |
 | `### Zgłoszenia` | Każde zgłoszenie w jednej linii; bez zgłoszeń jedna linia `Brak.` |
 
-Zgłoszenie: `- IKONA WAGA` i opcjonalnie miejsce w backtickach, potem `: ` i opis w jednej linii.
+Zgłoszenie: `- IKONA WAGA`, przyczyna `(przyczyna: P)`, opcjonalnie miejsce w backtickach, potem `: `
+i opis w jednej linii.
 
 | Ikona | Waga | Skutek |
 |---|---|---|
@@ -40,6 +41,17 @@ Zgłoszenie: `- IKONA WAGA` i opcjonalnie miejsce w backtickach, potem `: ` i op
 | ⚪ | `drobne` | Nie blokuje, `task close` przenosi je do `backlog-drobne.md` |
 
 Miejsce: `` `ścieżka` `` albo `` `ścieżka:linia` ``; bez miejsca od razu `: OPIS`.
+
+| Przyczyna | Kiedy |
+|---|---|
+| `wymaganie` | Luka, sprzeczność albo niejasność w specyfikacji, karcie funkcji lub issue |
+| `kod` | Implementacja odbiega od jasnego wymagania |
+| `test` | Brak testu, test nie sprawdza kryterium albo jest niestabilny |
+| `design` | Brak albo niespójność designu, stan ekranu bez projektu |
+
+`shctl task close` sumuje przyczyny wszystkich review PR (ostatni komentarz dla każdego commita) w
+tabeli „Przyczyny uwag” w `docs/metryki.md`. Komentarz bez przyczyny (sprzed SH-lite F4) shctl czyta,
+a zgłoszenie liczy jako „bez przyczyny”.
 
 ## Reguły dla shctl
 
@@ -66,7 +78,7 @@ Formularz działa, ale hasło trafia do logów, a walidacja e-maila nie ma testu
 
 ### Zgłoszenia
 
-- 🔴 krytyczne `src/auth/login.ts:42`: hasło trafia do logu; usuń je z komunikatu.
-- 🟡 istotne `src/auth/login.test.ts`: brak testu dla błędnego e-maila z kryterium 2.
-- ⚪ drobne: nazwa `x` w `validate` mało czytelna.
+- 🔴 krytyczne (przyczyna: kod) `src/auth/login.ts:42`: hasło trafia do logu; usuń je z komunikatu.
+- 🟡 istotne (przyczyna: test) `src/auth/login.test.ts`: brak testu dla błędnego e-maila z kryterium 2.
+- ⚪ drobne (przyczyna: kod): nazwa `x` w `validate` mało czytelna.
 <!-- przyklad:end -->

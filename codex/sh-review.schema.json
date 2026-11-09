@@ -12,9 +12,10 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["waga", "plik", "linia", "opis"],
+        "required": ["waga", "przyczyna", "plik", "linia", "opis"],
         "properties": {
           "waga": { "type": "string", "enum": ["krytyczne", "istotne", "drobne"] },
+          "przyczyna": { "type": "string", "enum": ["wymaganie", "kod", "test", "design"] },
           "plik": { "type": "string" },
           "linia": { "type": "integer" },
           "opis": { "type": "string" }

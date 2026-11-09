@@ -46,8 +46,8 @@ komenda_main() {
   for f in "$ROOT"/docs/07-realizacja/escalations/E-[0-9]*.md; do
     [ -e "$f" ] || continue
     [ "$(fm_get "$f" status)" = otwarta ] || continue
-    esk="$(jq -c --arg i "$(basename "$f" .md)" --arg d "$(fm_get "$f" dotyczy)" --arg p "$(fm_get "$f" powod)" \
-      '. + [{id:$i, dotyczy:$d, powod:$p}]' <<<"$esk")"
+    esk="$(jq -c --arg i "$(basename "$f" .md)" --arg d "$(fm_get "$f" dotyczy)" --arg p "$(fm_get "$f" powod)" --arg t "$(fm_get "$f" typ)" \
+      '. + [{id:$i, typ:(if $t == "" then "blokada" else $t end), dotyczy:$d, powod:$p}]' <<<"$esk")"
   done
 
   # Format limity.md: docs/shctl.md (wpisy właściciela albo orkiestratora); bierzemy pozycje listy i wiersze tabeli bez nagłówka.

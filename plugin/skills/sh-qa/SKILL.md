@@ -116,7 +116,10 @@ shctl escalate --dotyczy 08-qa --powod "..." --potrzebne "..." --opcje "A;B"
    `niespełnione` z dowodem (test, komenda, krok scenariusza). Sprawdź też sekrety
    (`gitleaks git --redact --no-banner .`, gdy jest zainstalowany) i dane osobowe w logach aplikacji
    z przebiegu testów.
-9. Każdemu problemowi nadaj wagę według „Kryteriów review” (niżej, część „Waga błędów”). Błąd 🔴 albo
+9. Każdemu problemowi nadaj wagę według „Kryteriów review” (niżej, część „Waga błędów”) i przyczynę:
+   `wymaganie` (luka albo sprzeczność w specyfikacji lub karcie funkcji), `kod`, `test` (brak testu
+   albo test nie sprawdza kryterium), `design` (brak lub niespójność designu). Przyczyna trafia do
+   tabeli „Zgłoszenia”, na początek pozycji „Drobnych uwag” i do celu issue błędu. Błąd 🔴 albo
    🟡 zapisz w `docs/08-qa/zadania-MN.yaml` według „Pliku błędów” i w tabeli „Zgłoszenia” raportu, z
    tym samym ID. Zgłoszenie ⚪ zapisz tylko jako pozycję listy w „Drobnych uwagach” raportu: bez ID i
    bez issue.
@@ -138,8 +141,8 @@ shctl escalate --dotyczy 08-qa --powod "..." --potrzebne "..." --opcje "A;B"
 16. Sprawdź „DoD” i przekaż orkiestratorowi: werdykt, numery issue z wyniku `mapa` z wagami, commit
     `index.md` na `main` i liczbę pozycji „Drobnych uwag”. Orkiestrator przenosi je do
     `docs/backlog-drobne.md` jak `shctl task close` uwagi z raportu zadania: wiersz
-    `| DATA | QA MN | uwaga | otwarta |` na pozycję, bez dublowania. Komendy shctl na to nie ma, więc
-    robi to ręcznie. Kolejny kamień startuje według „Autoryzacji i kamieni milowych” w procesie.
+    `| DATA | QA MN | uwaga | otwarta |` na pozycję, bez dublowania, a wiersz „Przyczyn” raportu do
+    tabeli „Przyczyny uwag” w `docs/metryki.md`. Komendy shctl na to nie ma, więc robi to ręcznie. Kolejny kamień startuje według „Autoryzacji i kamieni milowych” w procesie.
 
 ### Raport
 
@@ -151,8 +154,9 @@ shctl escalate --dotyczy 08-qa --powod "..." --potrzebne "..." --opcje "A;B"
 | `Zakres` | Kamień, zamknięte issue (`#NR tytuł`), pominięte („not planned”), przepływy i scenariusze |
 | `Wyniki testów` | Wiersze: E2E chromium, E2E webkit, Integracja, Testy QA (`e2e/qa/`); wynik `pass`/`fail` z liczbami i komendą, niestabilne testy w „Uwagach” |
 | `Zgodność z wymaganiami` | Każde `W-n` kamienia: wynik i dowód |
-| `Zgłoszenia` | Tylko 🔴 i 🟡: `| QA-MN-k | waga | opis z krokami odtworzenia |`; bez nich jeden wiersz `| brak | | |` |
-| `Drobne uwagi` | Zgłoszenia ⚪, jedna pozycja listy na uwagę (z kontynuacją w kolejnych liniach); bez uwag jedna pozycja `brak` |
+| `Zgłoszenia` | Tylko 🔴 i 🟡: `| QA-MN-k | waga | przyczyna | opis z krokami odtworzenia |`; bez nich jeden wiersz `| brak | | | |` |
+| `Drobne uwagi` | Zgłoszenia ⚪, jedna pozycja listy na uwagę, zaczyna się od `(przyczyna: P)` (z kontynuacją w kolejnych liniach); bez uwag jedna pozycja `brak` |
+| `Przyczyny` | Jeden wiersz `| QA MN | wymaganie | kod | test | design | bez przyczyny |` z liczbą zgłoszeń wszystkich wag |
 | `Werdykt` | `PASS` albo `FAIL` i jedno zdanie uzasadnienia |
 
 Logów z sekretami i danymi osobowymi nie wklejasz: krótki fragment z zamaskowanymi wartościami.
@@ -212,6 +216,7 @@ Tryb L jest odłożony. Etap B doda testy na stagingu i raport dla klienta. W et
 - [ ] `shctl task create --dry-run` przechodzi; po merge'u issue założone (albo brak błędów)
 - [ ] Testy błędów oznaczone `test.fixme`, CI na PR zielone
 - [ ] Werdykt raportu zgodny z wagami: FAIL tylko przy 🔴 lub 🟡
+- [ ] Każde zgłoszenie (także ⚪) ma przyczynę: wymaganie, kod, test albo design; sekcja „Przyczyny” je sumuje
 - [ ] Brak sekretów i danych osobowych w raporcie, testach i PR
 - [-] Review PASS (nie dotyczy: raport QA nie ma review etapu, merge po zielonym CI)
 

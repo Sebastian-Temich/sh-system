@@ -186,6 +186,14 @@ shctl escalate --dotyczy "#9" --powod "brak klucza testowego Resend" --potrzebne
 Z `--akceptacja` to propozycja do Twojej akceptacji (dziś: podniesienie trybu), a push ma tytuł
 „Czeka na Twoją akceptację: PROJEKT / podniesienie trybu” zamiast „Eskalacja”.
 
+Z `--typ pytanie` to pytanie workera o UX albo regułę biznesową (push „Pytanie E-NNN: PROJEKT”).
+Zadanie zostaje w toku, worker robi części niezależne, a pytanie nie liczy się jako iteracja ani
+eskalacja. Odpowiadasz orkiestratorowi, a on przekazuje odpowiedź workerowi.
+
+```sh
+shctl escalate --dotyczy "#9" --typ pytanie --powod "W-4: komunikat po 429" --potrzebne "treść komunikatu" --opcje "Za dużo prób, spróbuj za 10 minut (proponowana);Formularz chwilowo niedostępny" --projekt strona-firmowa
+```
+
 ### escalate close
 
 Zamyka eskalację Twoją odpowiedzią i przywraca poprzedni status.

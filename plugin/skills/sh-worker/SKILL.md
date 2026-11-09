@@ -37,6 +37,8 @@ Nie robisz:
   zależności, `db:migracja`, iteracja z etykiety `iter:N`
 - `AGENTS.md`: „Stack (kontrakt)”, komendy, zasady gałęzi, migracji i sekretów
 - `docs/00-intake/specyfikacja.md`: wymagania `W-n`, które przywołuje issue
+- `docs/00-intake/funkcje/W-n.md`: karta funkcji z issue: przebieg, stany ekranu, dane, reguły,
+  przypadki brzegowe i kryteria `W-n/Kn`
 - `docs/04-plan/plan.md`, sekcja „Architektura” (projekt v1: `docs/04-architektura/architektura.md`):
   moduły, punkty wejścia, model danych, testy
 - skille z polecenia startowego („Przed pracą wczytaj skille: …”): warstwy bazowe, kategorii, stacku
@@ -62,9 +64,13 @@ to w raporcie.
 ## Komendy shctl
 
 ```sh
+shctl escalate --dotyczy "#NR" --typ pytanie --powod "..." --potrzebne "..." --opcje "A;B"
 shctl escalate --dotyczy "#NR" --powod "..." --potrzebne "..." --opcje "A;B"
 ```
 
+- `escalate --typ pytanie`: niejasność UX albo reguły biznesowej (sekcja „Pytania”). Nie zmienia
+  statusu issue, nie zwalnia slotu, nie jest iteracją ani porażką; pracujesz dalej nad częściami
+  niezależnymi.
 - `escalate`: tylko w sytuacjach z sekcji „Eskalacja”. To jedyna komenda shctl w profilu workera.
   Dispatch, iterację, review i zamknięcie wywołuje orkiestrator. Z worktree shctl zapisuje eskalację
   w głównej kopii projektu na `main` (jedna numeracja E-NNN), nie w twoim worktree: nie commitujesz
@@ -160,6 +166,23 @@ w prostej formie. Odmowa nie pyta, tylko kosztuje wywołanie. Dlatego:
 5. Uzupełnij raport: w „Co zrobiono” podsekcja `### Iteracja N` z listą zgłoszeń i poprawek.
 6. Dalej kroki 7–13 Procedury.
 
+### Pytania
+
+Przy niejasności UX (stan ekranu, komunikat, kolejność kroków, zachowanie przy błędzie) albo reguły
+biznesowej, której nie rozstrzyga karta, issue, design ani `decyzje.md`, nie zgadujesz i nie piszesz
+decyzji w raporcie:
+
+1. `shctl escalate --dotyczy "#NR" --typ pytanie --powod "W-n: KRÓTKO CO NIEJASNE" --potrzebne "PYTANIE"
+   --opcje "A (proponowana);B"`. Jedno wywołanie na jedno pytanie; propozycję dajesz pierwszą.
+2. Pracujesz dalej nad częściami niezależnymi (inne kryteria, testy, reszta przebiegu). Miejsce zależne
+   od odpowiedzi zostawiasz z testem oznaczonym `skip` z numerem E-NNN, bez wymyślonej treści.
+3. Gdy nie ma już nic niezależnego, kończysz turę z PR-em (jeśli jest) i opisem w „Ryzykach”:
+   „czeka na E-NNN”. Odpowiedź przyjdzie od orkiestratora jako polecenie w panelu.
+4. Po odpowiedzi wdrażasz ją, zdejmujesz `skip` i zapisujesz w „Decyzjach”: `PYTANIE (E-NNN) →
+   ODPOWIEDŹ WŁAŚCICIELA`.
+
+Pytanie nie jest eskalacją z sekcji „Eskalacja” i nie liczy się w metrykach jako eskalacja.
+
 ### Migracje
 
 - Nowy plik w `supabase/migrations/`; istniejących migracji nie zmieniasz.
@@ -218,6 +241,7 @@ lokalnego Supabase i `.env.local`. W etapie A tego nie robisz: zawsze Claude, lo
 ## DoD
 
 - [ ] Kryteria akceptacji z issue spełnione, każde z testem albo komendą wskazaną w raporcie
+- [ ] Niejasność UX lub reguły biznesowej jako `shctl escalate --typ pytanie`, nie zgadnięta decyzja
 - [ ] Lint, typy, testy i „Komenda testów” z issue zielone lokalnie; CI zielone na PR
 - [ ] Raport `docs/07-realizacja/T-NR.md` ma wszystkie sekcje „Raportu”
 - [ ] Zmiany tylko w plikach z „Zakresu” issue albo z decyzją w raporcie
@@ -234,7 +258,8 @@ lokalnego Supabase i `.env.local`. W etapie A tego nie robisz: zawsze Claude, lo
 - 🔴 krytyczne: sekret w diffie; niespełnione kryterium akceptacji; migracja niezgodna wstecz albo
   zmiana istniejącej migracji; edycja pliku wspólnego; zmiana konfiguracji produkcji albo
   `deploy-prod`; luka bezpieczeństwa (brak RLS, brak walidacji wejścia, dane osobowe w logach).
-- 🟡 istotne: kryterium bez testu; błąd logiki; zmiany poza „Zakresem” bez decyzji w raporcie; w
+- 🟡 istotne: kryterium bez testu; błąd logiki; zgadnięta reguła biznesowa albo treść UX spoza karty
+  i issue bez pytania (`--typ pytanie`); zmiany poza „Zakresem” bez decyzji w raporcie; w
   iteracji 2+ zmiany poza zgłoszeniami z review; brak raportu albo sekcji raportu; nowa zmienna bez
   wpisu w `.env.example`; PR bez `Closes #NR`; zmiana portów w `supabase/config.toml` (poza
   ustawieniem bloku w zadaniu szkieletu).
@@ -244,7 +269,7 @@ Wynik review ma format `sh-system/templates/review.md`.
 
 ## Eskalacja
 
-Eskalujesz tylko, gdy: potrzebny jest sekret, dostęp albo płatna usługa (klucz testowy, konto, dostęp
+Pytanie o UX albo regułę biznesową to nie eskalacja: sekcja „Pytania”. Eskalujesz tylko, gdy: potrzebny jest sekret, dostęp albo płatna usługa (klucz testowy, konto, dostęp
 do usługi); potrzebna jest decyzja właściciela (decyzja nieodwracalna, sprzeczne wymagania, zakres
 spoza issue); widzisz ryzyko bezpieczeństwa lub prawne; znajdujesz sekret w repo. Trzecią iterację bez
 PASS eskaluje `shctl task iter`, nie ty.

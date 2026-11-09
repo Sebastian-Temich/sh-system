@@ -70,13 +70,20 @@ dotychczasową specyfikację i decyzje.
 
 **Tworzy:**
 
+- na początku: listę startową `docs/00-intake/lista-startowa.md`, czyli wszystko, co musisz założyć
+  albo dostarczyć (konta, dostępy, domeny, klucze testowe, materiały), z instrukcją przy każdej
+  pozycji. Realizacja nie startuje, dopóki lista nie jest kompletna;
 - tryb M: `docs/00-intake/specyfikacja.md` na gałęzi `stage/00-intake` i PR. W specyfikacji: cel,
   użytkownicy, zakres i „Poza zakresem”, wymagania `W-n` z kryteriami Given/When/Then, typ projektu,
-  stack z alternatywą, hosting, design, Twoje kroki ręczne, ryzyka, szacunek poglądowy;
+  stack z alternatywą, hosting, design, Twoje kroki ręczne, ryzyka, szacunek poglądowy. Do tego karta
+  każdej funkcji `docs/00-intake/funkcje/W-n.md`: przebieg krok po kroku, stany ekranu, dane, reguły,
+  przypadki brzegowe, kryteria i założenia;
 - tryb S: plik zlecenia w `/Users/Shared/sh/stan/zlecenia/` i jedno issue z etykietą `tryb:S`.
 
-**Zatrzymuje się na Ciebie:** najwyżej 3 pytania blokujące, każde z proponowaną odpowiedzią. Nie
-czeka na nie: pisze dalej z propozycją jako założeniem, a Ty rozstrzygasz w checkpoincie. Po
+**Zatrzymuje się na Ciebie:** brief (cel, zakres, lista funkcji, tryb) do zatwierdzenia, potem
+pytania tylko o luki w kartach, paczkami po 5–7, od najważniejszych dla architektury, każde z
+proponowaną odpowiedzią. Odpowiedź „zdecyduj sam” zapisuje założenie na karcie i w decyzjach; w
+checkpoincie dostajesz listę założeń do potwierdzenia. W trybie S najwyżej 3 pytania. Po
 review czeka Twoja akceptacja specyfikacji. Zlecenie na tryb L nazywa wprost i proponuje M z
 ograniczonym zakresem albo czekanie na etap B.
 

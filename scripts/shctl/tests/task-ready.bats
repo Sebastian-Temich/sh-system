@@ -140,3 +140,18 @@ gotowe() { jq -r '[.wynik.gotowe[].nr] | join(",")' <<<"$output"; }
   SHCTL_READY_PAUZA=1 run --separate-stderr "$SHCTL" task ready --czekaj --timeout 600 --json
   [ "$(jq -r '.wynik.limit_czasu, .wynik.czekano_s' <<<"$output" | tr '\n' ' ')" = "false 0 " ]
 }
+
+@test "ready i dispatch: niekompletna lista startowa wstrzymuje realizacje" {
+  issue 1 "Gotowe" "status:todo"
+  mkdir -p docs/00-intake
+  printf '# Lista startowa\n\n```\n- [ ] w bloku kodu nie liczy sie\n```\n\n- [x] konto Vercel\n- [-] domena (nie dotyczy: alias)\n- [ ] klucz testowy Resend\n' >docs/00-intake/lista-startowa.md
+  run --separate-stderr "$SHCTL" task ready --json
+  [ "$(jq -r '.wynik.blokady[] | select(.rodzaj == "lista_startowa") | .opis' <<<"$output")" = "lista startowa: 1 pozycji bez potwierdzenia (docs/00-intake/lista-startowa.md)" ]
+  run --separate-stderr "$SHCTL" task dispatch 1
+  [ "$status" -eq 4 ]
+  [[ "$stderr" == *"lista startowa"* ]] || false
+  sed -i.bak 's/- \[ \] klucz/- [x] klucz/' docs/00-intake/lista-startowa.md
+  run --separate-stderr "$SHCTL" task ready --json
+  [ "$(jq -r '[.wynik.blokady[] | select(.rodzaj == "lista_startowa")] | length' <<<"$output")" = 0 ]
+  [ "$(gotowe)" = "1" ]
+}
