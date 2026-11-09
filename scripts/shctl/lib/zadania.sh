@@ -33,7 +33,7 @@ konf() {
 }
 
 # Tag baseline projektu wzorcowego: baseline_tag z docs/konfiguracja.md albo najnowszy z baseline-*
-# (i dawnego baseline) według daty commita. Pusto i kod 1, gdy brak.
+# (i dawnego baseline) według daty commita, przy tej samej sekundzie nowsza nazwa. Pusto i kod 1, gdy brak.
 najnowszy_baseline() {
   local t
   t="$(konf baseline_tag "")"
@@ -42,7 +42,7 @@ najnowszy_baseline() {
     printf '%s' "$t"
     return 0
   fi
-  t="$(git -C "$ROOT_G" for-each-ref --sort=-creatordate --format='%(refname:short)' 'refs/tags/baseline' 'refs/tags/baseline-*' | head -1)"
+  t="$(git -C "$ROOT_G" for-each-ref --sort=-refname --sort=-creatordate --format='%(refname:short)' 'refs/tags/baseline' 'refs/tags/baseline-*' | head -1)"
   [ -n "$t" ] || return 1
   printf '%s' "$t"
 }
