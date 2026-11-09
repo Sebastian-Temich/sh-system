@@ -22,8 +22,8 @@ Robisz:
   klucze testowe, limity i płatności usług, materiały) jedną listą z instrukcją;
 - piszesz specyfikację: wymagania jako historyjki z priorytetem i kryteriami Given/When/Then, stack z
   alternatywą, hosting, design, ryzyka i szacunek poglądowy;
-- po zatwierdzeniu briefu (cel, zakres, lista `W-N`, tryb) piszesz kartę każdej funkcji użytkowej
-  (`docs/00-intake/funkcje/W-N.md`) i pytasz właściciela tylko o luki według „Kart funkcji i pytań”;
+- po zatwierdzeniu briefu (cel, zakres, lista `W-NN`, tryb) piszesz kartę każdej funkcji użytkowej
+  (`docs/00-intake/funkcje/W-NN.md`) i pytasz właściciela tylko o luki według „Kart funkcji i pytań”;
 - po akceptacji właściciela wpisujesz stack do „Stack (kontrakt)” w `AGENTS.md` przez PR etapu;
 - w trybie S zakładasz issue zlecenia przez `shctl task create`;
 - pytania zadajesz paczkami według „Kart funkcji i pytań” (tryb S: najwyżej 3), każde z proponowaną
@@ -66,7 +66,7 @@ to w raporcie.
 Tryb M (gałąź `stage/00-intake`, PR do `main`):
 
 - `docs/00-intake/specyfikacja.md`: kopia `docs/_szablony/specyfikacja.md` (Write), raz na zlecenie
-- `docs/00-intake/funkcje/W-N.md`: karta każdej funkcji użytkowej, kopia
+- `docs/00-intake/funkcje/W-NN.md`: karta każdej funkcji użytkowej, kopia
   `docs/_szablony/karta-funkcji.md`, pełna albo skrócona według „Skali”
 - `docs/00-intake/lista-startowa.md`: pozycje listy startowej (pola `- [ ]`, zaznacza orkiestrator po
   potwierdzeniu właściciela)
@@ -111,7 +111,7 @@ shctl escalate --dotyczy 00-intake --powod "..." --potrzebne "..." --opcje "A;B"
    projekt to M. Zlecenie na tryb L (nowy produkt, MVP, duża przebudowa, więcej niż 15 zadań) mówisz
    o tym wprost i proponujesz M z ograniczonym zakresem albo czekanie na etap B (sekcja „Tryb L i
    etap B”). Zapisz uzasadnienie jednym zdaniem. Dla S przejdź do „Tryb S”.
-5. Brief: pokaż właścicielowi cel, zakres, „Poza zakresem”, listę `W-N` z priorytetami (które dostaną
+5. Brief: pokaż właścicielowi cel, zakres, „Poza zakresem”, listę `W-NN` z priorytetami (które dostaną
    kartę pełną, które skróconą, które „bez karty”) i tryb. Brief zatwierdza właściciel w rozmowie; jego
    poprawki wpisujesz od razu. Tryb S: brief to jedno zdanie celu w odpowiedzi, bez czekania.
 6. Załóż worktree etapu bez przełączania gałęzi głównego klonu:
@@ -122,13 +122,13 @@ shctl escalate --dotyczy 00-intake --powod "..." --potrzebne "..." --opcje "A;B"
    przywołujesz odnośnikiem (`zrodlo.md`, wiersz `decyzje.md`), a nie kopią. Zapisz
    `lista-startowa.md` z kroku 1.
    Po zatwierdzeniu briefu napisz karty funkcji i zadaj pytania według „Kart funkcji i pytań”
-   (niżej). Odpowiedzi wpisujesz do kart; „zdecyduj sam” to założenie w „Założeniach modelu” karty.
+   (niżej). Odpowiedzi wpisujesz do kart; „zdecyduj sam” to wiersz w „Do potwierdzenia” karty.
    Przed commitem `bash scripts/check-dod.sh` przechodzi: żadnej karty z luką (`[?]`, `?`, TODO).
 8. Ustaw w `docs/konfiguracja.md` `tryb_procesu` i `hosting` z `zaakceptowany: false`.
 9. Zaznacz w `docs/00-intake/DoD.md` spełnione pola Dokumentacji, Funkcjonalności i Checklist jakości.
    Pól Checkpointu nie ruszasz.
 10. Commit `00-intake: specyfikacja`, push i `gh pr create --base main --head stage/00-intake`. Opis PR:
-    tryb z uzasadnieniem, obszary ryzyka na `tak`, czas zlecenia w UTC, „Założenia do potwierdzenia”
+    tryb z uzasadnieniem, obszary ryzyka na `tak`, czas zlecenia w UTC, zbiorczą listę „Do potwierdzenia”
     (lista z kart, do checkpointu), stan listy startowej i „Decyzje do rejestru” w postaci
     `co / dlaczego / cofnięcie` (tryb, hosting, każde założenie „zdecyduj sam”).
 11. Przekaż orkiestratorowi numer PR: review etapu (`sh-review`), potem akceptacja właściciela.
@@ -150,17 +150,26 @@ startuje, dopóki jest w niej pole `- [ ]` (`shctl task ready` i `task dispatch`
   baza, e-mail, płatności, sklepy), dostępy i uprawnienia (repo, panel, ochrona podglądów), domeny i
   DNS, klucze testowe i zmienne (nazwa zmiennej, nie wartość), limity i płatności usług (billing CI,
   plan usługi, limity wysyłki), materiały (design, teksty, logotypy, dane firmy).
-- Każda pozycja: co, po co (`W-N`), jak (kroki dla właściciela w panelu usługi), gdzie wpisać
+- Każda pozycja: co, po co (`W-NN`), jak (kroki dla właściciela w panelu usługi), gdzie wpisać
   (`.env.local` w repo głównym, panel usługi, GitHub) i jak sprawdzimy, że działa.
 - Pytasz o rzeczy zewnętrzne raz, na początku, nie w trakcie realizacji. Pozycję, której właściciel nie
   potrzebuje, oznacza się `- [-] … (nie dotyczy: powód)`.
 
 ### Karty funkcji i pytań
 
-Karta (`docs/_szablony/karta-funkcji.md`) opisuje funkcję tak, żeby worker nie zgadywał: wejście,
-przebieg krok po kroku, stany ekranu (pusty, ładowanie lub postęp, sukces, częściowy sukces, błędy),
-dane wejścia i wyjścia, reguły biznesowe, przypadki brzegowe, kryteria `W-N/Kn` w Given/When/Then, poza
-zakresem i założenia modelu.
+Karta (`docs/_szablony/karta-funkcji.md`) opisuje funkcję tak, żeby worker nie zgadywał, w dwóch
+częściach:
+
+- **Dla właściciela** (czyta ją właściciel w checkpoincie): opis w jednym akapicie prostym językiem,
+  przebieg z perspektywy użytkownika, stany ekranu (pusty, w trakcie, sukces, częściowy sukces, błędy)
+  z tekstami, które zobaczy użytkownik, reguły biznesowe i na końcu „Do potwierdzenia” (założenia z
+  proponowanymi odpowiedziami). Bez kodów HTTP, atrybutów, nazw pól z kodu i backticków
+  (`check-dod.sh` to sprawdza).
+- **Dla wykonawcy**: wejście (trasa), pola i walidacja, kody odpowiedzi i logi, dostępność, przypadki
+  brzegowe, kryteria `W-NN/Kn` w Given/When/Then, odwołania do designu i ADR, poza zakresem.
+
+Numeracja wymagań jest dwucyfrowa i jedna wszędzie: `W-01`, `W-02` … w specyfikacji, nazwie i polu
+`wymaganie` karty, zadaniach i kryteriach (`W-01/K1`).
 
 1. Napisz szkic każdej karty z tego, co wiesz. Czego nie wiesz, zaznacz `[?]` w miejscu luki.
 2. Design w `docs/00-intake/zrodla/`: zmapuj każdy krok przebiegu na ekran (plik i ramka) i każdy
@@ -169,11 +178,11 @@ zakresem i założenia modelu.
 4. Pytasz tylko o luki i niejasności, nigdy o to, co wynika ze zlecenia, specyfikacji, designu albo
    `decyzje.md`. Paczka ma 5–7 pytań, kolejność według wpływu na architekturę: model danych i
    integracje, uprawnienia i dane osobowe, reguły biznesowe, przebieg i stany, teksty. Każde pytanie ma
-   numer, kartę (`W-N`), proponowaną odpowiedź i jednozdaniowy skutek wyboru. Następną paczkę wysyłasz po
+   numer, kartę (`W-NN`), proponowaną odpowiedź i jednozdaniowy skutek wyboru. Następną paczkę wysyłasz po
    odpowiedzi na poprzednią; ostatnia może być krótsza.
 5. Odpowiedź wpisujesz do karty i usuwasz `[?]`. Odpowiedź „zdecyduj sam” (także dla całej paczki)
-   oznacza proponowaną odpowiedź jako założenie: wiersz w „Założeniach modelu” karty ze statusem
-   „do potwierdzenia”, wiersz w „Założeniach do potwierdzenia” specyfikacji i pozycja w „Decyzjach do
+   oznacza proponowaną odpowiedź jako założenie: wiersz w „Do potwierdzenia” karty ze statusem
+   „do potwierdzenia”, wiersz w zbiorczej liście „Do potwierdzenia” specyfikacji i pozycja w „Decyzjach do
    rejestru” PR (orkiestrator zapisuje ją w `decyzje.md` przez `shctl decision add`).
 6. Luka, o którą nie pytasz (drobna, odwracalna), też staje się założeniem. Karta w PR nie ma luk.
 
@@ -188,9 +197,10 @@ Lista kontrolna kompletności karty:
 - [ ] Reguły biznesowe ponumerowane, bez „zwykle” i „w razie potrzeby”
 - [ ] Przypadki brzegowe: podwójne wysłanie, wolna sieć i timeout, wartości graniczne, brak JS,
   dostępność, telefon
-- [ ] Kryteria `W-N/Kn` w Given/When/Then, każde sprawdzalne testem albo z dopiskiem „(ręcznie: dlaczego)”
+- [ ] Kryteria `W-NN/Kn` w Given/When/Then, każde sprawdzalne testem albo z dopiskiem „(ręcznie: dlaczego)”
 - [ ] Poza zakresem nazwane wprost
-- [ ] Każde założenie ma powód i status
+- [ ] Część „Dla właściciela” zrozumiała bez wiedzy technicznej: teksty ekranów, bez kodów i atrybutów
+- [ ] Każde założenie w „Do potwierdzenia” ma proponowaną odpowiedź i status
 
 ### Skala
 
@@ -236,7 +246,7 @@ zgłoszeniem.
 - **Cel i kontekst:** problem, dla kogo, rezultat biznesowy, sytuacja wyjściowa.
 - **Użytkownicy:** grupy, ich potrzeby i uprawnienia.
 - **Zakres:** „W zakresie” i „Poza zakresem”; rzeczy odłożone nazwij wprost.
-- **Wymagania:** `W-1`, `W-2`, … jako historyjki „Jako ROLA chcę DZIAŁANIE, aby CEL” z priorytetem
+- **Wymagania:** `W-01`, `W-02`, … jako historyjki „Jako ROLA chcę DZIAŁANIE, aby CEL” z priorytetem
   (musi, powinno, może) i kryteriami Given/When/Then. Bez „szybko”, „intuicyjnie”, „łatwo”.
 - **Typ projektu:** typ i tabela konsekwencji z „Typów projektu”.
 - **Stack:** rekomendacja, alternatywa i uzasadnienie. Domyślnie kontrakt z `AGENTS.md`; odstępstwo
@@ -249,11 +259,12 @@ zgłoszeniem.
 - **Ryzyka:** tabela z „Listy ryzyk”; przy `tak` i `do ustalenia` zapowiedź „ADR w 04-plan: TEMAT”.
 - **Szacunek poglądowy:** liczba zadań, czas kalendarzowy i czas właściciela (checkpointy, kroki
   ręczne). To orientacja, nie wycena.
-- **Karty funkcji:** tabela `W-N` → karta, rodzaj i ekrany z designu.
+- **Karty funkcji:** tabela `W-NN` → karta, rodzaj i ekrany z designu.
 - **Lista startowa:** odnośnik do `lista-startowa.md`.
 - **Tryb procesu:** tryb i uzasadnienie w jednym zdaniu oraz czas zlecenia w UTC.
-- **Założenia do potwierdzenia:** wszystkie założenia z kart i specyfikacji; checkpoint specyfikacji
-  pokazuje je właścicielowi do potwierdzenia albo zmiany.
+- **Do potwierdzenia:** zbiorcza lista wierszy „Do potwierdzenia” z kart i założeń specyfikacji, z
+  proponowanymi odpowiedziami; checkpoint specyfikacji pokazuje ją właścicielowi razem z częściami
+  „Dla właściciela” kart.
 
 ## Tryby
 
@@ -322,7 +333,8 @@ Tryb L jest odłożony. W etapie A tego nie robisz.
 - [ ] Każda funkcja użytkowa ma kartę (pełną albo skróconą według „Skali”) bez luk; `check-dod.sh` przechodzi
 - [ ] Przy designie kroki przebiegu są zmapowane na ekrany, a brakujące stany były pytaniem albo założeniem
 - [ ] Pytania tylko o luki, paczki 5–7 (tryb S: najwyżej 3), według wpływu na architekturę, każde z proponowaną odpowiedzią
-- [ ] Każde „zdecyduj sam” jest założeniem na karcie, w „Założeniach do potwierdzenia” i w „Decyzjach do rejestru”
+- [ ] Każde „zdecyduj sam” jest wierszem „Do potwierdzenia” karty, zbiorczej listy w specyfikacji i „Decyzji do rejestru”
+- [ ] Karty mają części „Dla właściciela” i „Dla wykonawcy”; numeracja `W-01`, `W-02` … wszędzie
 - [ ] Cel i kontekst, użytkownicy, zakres i „Poza zakresem” są opisane
 - [ ] Stack ma rekomendację, alternatywę i uzasadnienie; hosting jest w `konfiguracja.md`
 - [ ] Design mówi, co właściciel dostarcza do `docs/00-intake/zrodla/`
@@ -346,8 +358,9 @@ Tryb L jest odłożony. W etapie A tego nie robisz.
   kontraktem `AGENTS.md` bez uzasadnienia; brak kroków ręcznych właściciela przy kontach lub płatnych usługach;
   rzecz zewnętrzna (konto, klucz, domena, limit usługi) bez pozycji w `lista-startowa.md` albo pozycja
   bez instrukcji; karta bez stanów ekranu albo bez mapowania na design, gdy design jest; kryterium
-  karty niesprawdzalne bez dopisku „(ręcznie: …)”; założenie z karty poza „Założeniami do
-  potwierdzenia”; w trybie S więcej niż 3 pytania; pytanie bez proponowanej odpowiedzi; obszar ryzyka na `tak` albo `do ustalenia` bez
+  karty niesprawdzalne bez dopisku „(ręcznie: …)”; wiersz „Do potwierdzenia” karty poza zbiorczą listą
+  w specyfikacji; kod HTTP, atrybut albo nazwa pola z kodu w części „Dla właściciela”; numeracja
+  wymagań inna niż `W-01`, `W-02` …; w trybie S więcej niż 3 pytania; pytanie bez proponowanej odpowiedzi; obszar ryzyka na `tak` albo `do ustalenia` bez
   zapowiedzi „ADR w 04-plan”; architektura, ADR albo plan w specyfikacji lub PR intake;
   skopiowana treść zlecenia zamiast odnośnika; brak czasu zlecenia w UTC.
 - ⚪ drobne: styl, nazewnictwo, kolejność wymagań.
@@ -396,12 +409,12 @@ Polecenie: „Nowe zlecenie dla projektu `sklep`: klienci zamawiają kawę onlin
 2. Typ: web. Ryzyka: płatności `tak`, dane osobowe `tak`, auth `tak`. Tryb M: nowy projekt z
    płatnościami i danymi klientów.
 3. Lista startowa od razu: konto Stripe w trybie testowym (klucze do `.env.local`), Vercel z bypassem
-   ochrony podglądów, Supabase w UE, logotyp i zdjęcia kaw. Brief (W-1…W-4, tryb M) zatwierdzony.
-   Paczka 1 (6 pytań, od modelu danych): „Q1 W-3: zamówienie gościa bez konta? Propozycja: tak, e-mail
+   ochrony podglądów, Supabase w UE, logotyp i zdjęcia kaw. Brief (W-01…W-04, tryb M) zatwierdzony.
+   Paczka 1 (6 pytań, od modelu danych): „Q1 W-03: zamówienie gościa bez konta? Propozycja: tak, e-mail
    wymagany; skutek: brak tabeli kont w M1”. Odpowiedź na Q4–Q6: „zdecyduj sam” → założenia Z1–Z3.
 4. Worktree `/Users/Shared/sh/wt/sklep/stage-00-intake` na `stage/00-intake`, w nim `specyfikacja.md` z szablonu.
-5. Karty: W-2 i W-3 pełne, W-1 i W-4 skrócone, bez `[?]`. Specyfikacja: W-1 katalog, W-2 koszyk,
-   W-3 płatność (musi), W-4 konto klienta (powinno), np. „Given
+5. Karty: W-02 i W-03 pełne, W-01 i W-04 skrócone, bez `[?]`. Specyfikacja: W-01 katalog, W-02 koszyk,
+   W-03 płatność (musi), W-04 konto klienta (powinno), np. „Given
    koszyk z 2 kawami, when klient płaci kartą testową, then zamówienie ma status opłacone”. Stack:
    Next.js (alternatywa: Vite + React). Szacunek: 11 zadań, 2 tygodnie, 3 godziny właściciela.
 6. `konfiguracja.md`: `tryb_procesu: M`, `hosting.zaakceptowany: false`. PR „00-intake:

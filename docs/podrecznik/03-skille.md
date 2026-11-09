@@ -74,16 +74,17 @@ dotychczasową specyfikację i decyzje.
   albo dostarczyć (konta, dostępy, domeny, klucze testowe, materiały), z instrukcją przy każdej
   pozycji. Realizacja nie startuje, dopóki lista nie jest kompletna;
 - tryb M: `docs/00-intake/specyfikacja.md` na gałęzi `stage/00-intake` i PR. W specyfikacji: cel,
-  użytkownicy, zakres i „Poza zakresem”, wymagania `W-n` z kryteriami Given/When/Then, typ projektu,
+  użytkownicy, zakres i „Poza zakresem”, wymagania `W-NN` z kryteriami Given/When/Then, typ projektu,
   stack z alternatywą, hosting, design, Twoje kroki ręczne, ryzyka, szacunek poglądowy. Do tego karta
-  każdej funkcji `docs/00-intake/funkcje/W-n.md`: przebieg krok po kroku, stany ekranu, dane, reguły,
-  przypadki brzegowe, kryteria i założenia;
+  każdej funkcji `docs/00-intake/funkcje/W-NN.md` (W-01, W-02 …): na górze część „Dla właściciela”
+  (opis, przebieg, stany ekranu z tekstami, reguły, do potwierdzenia), na dole część dla wykonawcy
+  (pola, kody odpowiedzi, dostępność, kryteria, design);
 - tryb S: plik zlecenia w `/Users/Shared/sh/stan/zlecenia/` i jedno issue z etykietą `tryb:S`.
 
 **Zatrzymuje się na Ciebie:** brief (cel, zakres, lista funkcji, tryb) do zatwierdzenia, potem
 pytania tylko o luki w kartach, paczkami po 5–7, od najważniejszych dla architektury, każde z
 proponowaną odpowiedzią. Odpowiedź „zdecyduj sam” zapisuje założenie na karcie i w decyzjach; w
-checkpoincie dostajesz listę założeń do potwierdzenia. W trybie S najwyżej 3 pytania. Po
+checkpoincie dostajesz tylko części kart „Dla właściciela” i zbiorczą listę „Do potwierdzenia”. W trybie S najwyżej 3 pytania. Po
 review czeka Twoja akceptacja specyfikacji. Zlecenie na tryb L nazywa wprost i proponuje M z
 ograniczonym zakresem albo czekanie na etap B.
 
@@ -177,7 +178,7 @@ konfigurację Playwright i testy E2E, poprzednie raporty QA.
 
 **Tworzy** (gałąź `stage/08-qa`, PR):
 
-- `docs/08-qa/raport-MN.md`: wyniki E2E w chromium i webkit, testy integracyjne, zgodność z `W-n`;
+- `docs/08-qa/raport-MN.md`: wyniki E2E w chromium i webkit, testy integracyjne, zgodność z `W-NN`;
 - testy przepływów w `e2e/qa/`;
 - błędy 🔴 i 🟡 jako nowe zadania `typ:qa` (po merge'u, przez `shctl task create`), drobne tylko w
   raporcie.

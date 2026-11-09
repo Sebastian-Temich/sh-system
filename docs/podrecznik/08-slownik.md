@@ -37,13 +37,13 @@ Wróć do: [[00-start-tutaj]]
 | **Review** | Niezależna ocena pracy przez inny model (Codex). Review PR dla zadań, review etapu dla dokumentów |
 | **Skrzynka** | Folder `SH/Skrzynka/NAZWA` w vaulcie na Twoje materiały. Orkiestrator przenosi je do repo przez PR (`shctl skrzynka przyjmij`) |
 | **Skill** | Instrukcja roli agenta, np. `sh-worker`. Dostarcza je plugin `software-house` |
-| **Specyfikacja** | `docs/00-intake/specyfikacja.md`: cel, zakres, wymagania `W-n`, stack, hosting, ryzyka |
+| **Specyfikacja** | `docs/00-intake/specyfikacja.md`: cel, zakres, wymagania `W-NN`, stack, hosting, ryzyka |
 | **Staging** | Wdrożenie gałęzi `main` pod stałym adresem i osobna baza testowa. Tu robisz odbiór |
 | **shctl** | Program z mechaniką procesu, wywoływany przez agentów |
 | **Strażnik orkiestratora** | Skrypt bez AI (`sh-watchdog.sh`), który co 5 minut sprawdza orkiestratora i podnosi go, gdy padnie |
 | **Szkielet** | Pierwsze zadanie projektu (`T1`): struktura repo, CI, testy, baza lokalna. Do jego zamknięcia nic innego nie startuje |
 | **Tryb S / M / L** | Skala procesu: S szybki (1–3 zadania), M średni (4–15 zadań), L pełny (etap B, jeszcze niedostępne) |
-| **W-n** | Numer wymagania w specyfikacji, np. `W-3` |
+| **W-NN** | Numer wymagania w specyfikacji, np. `W-03` |
 | **Worker** | Agent realizujący jedno zadanie w osobnej kopii roboczej |
 | **Worktree (kopia robocza)** | Osobny katalog z kopią repo na jednej gałęzi, np. `/Users/Shared/sh/wt/PROJEKT/12`. Dzięki temu workerzy sobie nie przeszkadzają |
 | **Zadanie właściciela** | Krok ręczny z planu dla Ciebie: konto, domena, klucz, płatna usługa |

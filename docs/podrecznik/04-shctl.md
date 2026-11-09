@@ -191,7 +191,7 @@ Zadanie zostaje w toku, worker robi części niezależne, a pytanie nie liczy si
 eskalacja. Odpowiadasz orkiestratorowi, a on przekazuje odpowiedź workerowi.
 
 ```sh
-shctl escalate --dotyczy "#9" --typ pytanie --powod "W-4: komunikat po 429" --potrzebne "treść komunikatu" --opcje "Za dużo prób, spróbuj za 10 minut (proponowana);Formularz chwilowo niedostępny" --projekt strona-firmowa
+shctl escalate --dotyczy "#9" --typ pytanie --powod "W-04: komunikat po 429" --potrzebne "treść komunikatu" --opcje "Za dużo prób, spróbuj za 10 minut (proponowana);Formularz chwilowo niedostępny" --projekt strona-firmowa
 ```
 
 ### escalate close

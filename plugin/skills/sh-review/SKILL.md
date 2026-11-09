@@ -43,7 +43,7 @@ Nie robisz:
 - `git diff BAZA...HEAD` i `git log --oneline BAZA..HEAD`: zakres zmian; `BAZA` to merge-base z `main`
 - `AGENTS.md`: „Stack (kontrakt)”, zasady gałęzi, migracji i sekretów
 - `docs/konfiguracja.md`: `tryb_procesu`, `etap_wdrozenia`, `playwright_version`, `playwright_workers`
-- `docs/00-intake/specyfikacja.md`: wymagania `W-n` z kryteriami
+- `docs/00-intake/specyfikacja.md`: wymagania `W-NN` z kryteriami
 - `docs/04-plan/plan.md` i `docs/04-plan/adr/` (projekt v1: `docs/04-architektura/`): moduły, punkty
   wejścia, model danych, decyzje
 
@@ -183,8 +183,8 @@ werdykcie orkiestrator wywołuje `shctl task iter NR` albo `shctl task close NR`
    `tylko-tryb:L` pomijasz poza trybem L. Pól Checkpointu (review, akceptacja właściciela) autor nie
    zaznacza.
 2. Dokumenty etapu: kompletne według „Kryteriów review” skilla etapu, sprawdzalne, bez placeholderów.
-3. Spójność z poprzednimi dokumentami: każde wymaganie `W-n` ze specyfikacji ma pokrycie w kolejnym
-   dokumencie (plan, zadania, raport QA); identyfikatory `W-n`, `T-n`, `ADR-NNN` i
+3. Spójność z poprzednimi dokumentami: każde wymaganie `W-NN` ze specyfikacji ma pokrycie w kolejnym
+   dokumencie (plan, zadania, raport QA); identyfikatory `W-NN`, `T-n`, `ADR-NNN` i
    kamienie zgadzają się między plikami; etap nie zmienia zatwierdzonego zakresu bez rewizji i
    uzasadnienia w PR.
 4. Ryzyko: obszary ryzyka (auth i RLS, płatności, dane osobowe, AI na danych użytkowników, migracje
@@ -244,7 +244,7 @@ Wagi zgłoszeń, których używasz (format i skutki: `sh-system/templates/review
   decyzji w raporcie; w iteracji 2+ zmiany poza zgłoszeniami; brak raportu albo jego sekcji; PR bez
   `Closes #NR`; zmienna bez wpisu w `.env.example`; zmiana portów w `supabase/config.toml` poza
   zadaniem szkieletu; niezgodność ze stackiem bez ADR (inny menedżer pakietów, inna wersja
-  Playwright, framework spoza kontraktu). W review etapu: wymaganie `W-n` bez pokrycia, niesprawdzalne
+  Playwright, framework spoza kontraktu). W review etapu: wymaganie `W-NN` bez pokrycia, niesprawdzalne
   kryterium, niespójne identyfikatory, brak sekcji wymaganej przez skill etapu, puste pole `DoD.md`
   bez notatki, błędny frontmatter.
 - ⚪ drobne (nie blokuje, trafia do `backlog-drobne.md`): nazewnictwo, styl, komentarze, literówki,

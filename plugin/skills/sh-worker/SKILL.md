@@ -36,9 +36,9 @@ Nie robisz:
 - `gh issue view NR --json number,title,body,labels,milestone`: cel, kryteria, pliki, komenda testów,
   zależności, `db:migracja`, iteracja z etykiety `iter:N`
 - `AGENTS.md`: „Stack (kontrakt)”, komendy, zasady gałęzi, migracji i sekretów
-- `docs/00-intake/specyfikacja.md`: wymagania `W-n`, które przywołuje issue
-- `docs/00-intake/funkcje/W-n.md`: karta funkcji z issue: przebieg, stany ekranu, dane, reguły,
-  przypadki brzegowe i kryteria `W-n/Kn`
+- `docs/00-intake/specyfikacja.md`: wymagania `W-NN`, które przywołuje issue
+- `docs/00-intake/funkcje/W-NN.md`: karta funkcji z issue: przebieg, stany ekranu, dane, reguły,
+  przypadki brzegowe i kryteria `W-NN/Kn`
 - `docs/04-plan/plan.md`, sekcja „Architektura” (projekt v1: `docs/04-architektura/architektura.md`):
   moduły, punkty wejścia, model danych, testy
 - skille z polecenia startowego („Przed pracą wczytaj skille: …”): warstwy bazowe, kategorii, stacku
@@ -172,7 +172,7 @@ Przy niejasności UX (stan ekranu, komunikat, kolejność kroków, zachowanie pr
 biznesowej, której nie rozstrzyga karta, issue, design ani `decyzje.md`, nie zgadujesz i nie piszesz
 decyzji w raporcie:
 
-1. `shctl escalate --dotyczy "#NR" --typ pytanie --powod "W-n: KRÓTKO CO NIEJASNE" --potrzebne "PYTANIE"
+1. `shctl escalate --dotyczy "#NR" --typ pytanie --powod "W-NN: KRÓTKO CO NIEJASNE" --potrzebne "PYTANIE"
    --opcje "A (proponowana);B"`. Jedno wywołanie na jedno pytanie; propozycję dajesz pierwszą.
 2. Pracujesz dalej nad częściami niezależnymi (inne kryteria, testy, reszta przebiegu). Miejsce zależne
    od odpowiedzi zostawiasz z testem oznaczonym `skip` z numerem E-NNN, bez wymyślonej treści.
@@ -311,7 +311,7 @@ Polecenie w panelu `worker:sklep:14`: „Zrealizuj issue #14 skillem sh-worker.�
    `pnpm test src/koszyk && pnpm test:e2e e2e/koszyk.spec.ts`, bez `db:migracja`.
 3. Testy `koszyk.test.ts` i `koszyk.spec.ts`, potem kod. `pnpm lint`, `pnpm typecheck`, `pnpm test` i
    komenda z issue: zielone.
-4. Raport `T-14.md`; decyzja „Gdzie trzymać koszyk gościa? → localStorage, bo W-2 nie wymaga konta”.
+4. Raport `T-14.md`; decyzja „Gdzie trzymać koszyk gościa? → localStorage, bo W-02 nie wymaga konta”.
 5. `git add`, `git commit -q -m "#14: dodaj koszyk"`, `git push -u origin task/14-koszyk`, `gh pr create`
    z `Closes #14`, każde w osobnym wywołaniu: PR #31, `gh pr checks 31 --watch` zielone.
 6. Review Codex: FAIL, 🟡 brak testu usunięcia ostatniej pozycji. Orkiestrator: `shctl task iter 14`.

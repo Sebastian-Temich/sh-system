@@ -258,9 +258,11 @@ potrzebujesz pliku z innej gałęzi, czytasz go przez `git -C … show GAŁĄŹ:
    a FAIL (tylko 🔴) sprawia, że `stage iter` sam otwiera eskalację (`"eskalowano":true`). Etap
    `wydanie`: eskalacja po 3. FAIL.
 4. PASS w `00-intake` i `04-plan`: powiadomienie „Czeka na Twoją akceptację” (`notify.sh`), potem
-   pokaż mu PR, tryb, ryzyka i zakres autoryzacji. Checkpoint specyfikacji pokazuje listę „Założeń do
-   potwierdzenia” (z kart funkcji) jako numerowaną listę do potwierdzenia albo zmiany oraz stan listy
-   startowej; zmiana założenia to poprawka karty w tym samym PR. Akceptację zapisz przez
+   pokaż mu PR, tryb, ryzyka i zakres autoryzacji. Checkpoint specyfikacji pokazuje właścicielowi
+   tylko części „Dla właściciela” kart funkcji (`docs/00-intake/funkcje/W-NN.md`, od `## Dla
+   właściciela` do `## Dla wykonawcy`) i zbiorczą listę „Do potwierdzenia” ze specyfikacji jako
+   numerowaną listę z proponowanymi odpowiedziami, do potwierdzenia albo zmiany, oraz stan listy
+   startowej. Części „Dla wykonawcy” nie pokazujesz. Zmiana odpowiedzi to poprawka karty w tym samym PR. Akceptację zapisz przez
    `shctl decision add --rola wlasciciel`. Zmiana po akceptacji (stack w `AGENTS.md`) to nowy commit,
    nowe review i ponowne powiadomienie.
 5. Merge: tylko zielone CI i PASS dla bieżącego commita, przez `gh pr merge PR --squash
@@ -273,7 +275,7 @@ potrzebujesz pliku z innej gałęzi, czytasz go przez `git -C … show GAŁĄŹ:
    --cofniecie "poprawka w kolejnym etapie albo zadaniu"`, pozostałe zgłoszenia ⚪ do
    `backlog-drobne.md`. Commit i push.
 7. Po akceptacji planu: rejestr autoryzacji `shctl decision add --rola wlasciciel --co "Autoryzacja
-   planu PR #N" --dlaczego "kto: właściciel w PR #N; na co: kamienie M1–MK; zakres: W-n, dostępy,
+   planu PR #N" --dlaczego "kto: właściciel w PR #N; na co: kamienie M1–MK; zakres: W-NN, dostępy,
    płatne usługi z planu; do kiedy: odbiór zlecenia" --cofniecie "polecenie właściciela; zadania
    niezależne trwają"`.
 
@@ -331,7 +333,7 @@ QA) to nowa pozycja listy, nie eskalacja.
 1. Wszystkie zadania planu i QA ostatniego kamienia zamknięte: PR `stage/wydanie` z polami `DoD.md`,
    review etapu jak w „Etapach dokumentowych”.
 2. Po PASS review etapu `wydanie`: powiadomienie „Czeka na Twoją akceptację” (`notify.sh`). Pokaż właścicielowi: scenariusze odbioru
-   z planu i kryteria `W-n` do sprawdzenia, link do podglądu
+   z planu i kryteria `W-NN` do sprawdzenia, link do podglądu
    (wdrożenie preview z `gh pr checks` albo alias staging z `docs/wydanie/techniczna/`), decyzje z
    `decyzje.md` do przejrzenia, liczbę pozycji `backlog-drobne.md`.
 3. Odbiór zapisz przez `shctl decision add --rola wlasciciel`, potem merge, Checkpoint i

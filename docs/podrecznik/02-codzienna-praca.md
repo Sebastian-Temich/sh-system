@@ -158,7 +158,7 @@ v1 plik zostaje do migracji.
 | Plik | Po co zaglądać |
 |---|---|
 | `docs/status.md` | Bieżący etap i „Punkt przekazania” po kamieniu |
-| `docs/00-intake/specyfikacja.md` | Co budujemy: wymagania `W-n` |
+| `docs/00-intake/specyfikacja.md` | Co budujemy: wymagania `W-NN` |
 | `docs/04-plan/plan.md` | Krótka architektura, kamienie, scenariusze odbioru, Twoje zadania ręczne |
 | `docs/decyzje.md` | Wszystkie decyzje, także Twoje zgody |
 | `docs/06-zadania/index.md` | Lista zadań i ich stan |
