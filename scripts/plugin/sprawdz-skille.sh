@@ -107,7 +107,10 @@ for f in "$REPO"/plugin/skills/*/SKILL.md; do
   grep -q '^- `' <<<"$(sekcja "$f" "Wejście")" || blad "$wz: Wejście bez listy ścieżek w backtickach"
   grep -q '^- `' <<<"$(sekcja "$f" "Wyjście")" || blad "$wz: Wyjście bez listy ścieżek w backtickach"
   grep -qE '^[0-9]+\. ' <<<"$(sekcja "$f" "Procedura")" || blad "$wz: Procedura bez kroków numerowanych"
-  grep -qxF -- "$POLE_REVIEW" <<<"$(sekcja "$f" "DoD")" || blad "$wz: DoD bez pola „$POLE_REVIEW”"
+  # Wynik bez review (raport QA, SH-lite F1) ma pole „nie dotyczy” z powodem zamiast pola review.
+  grep -qxF -- "$POLE_REVIEW" <<<"$(sekcja "$f" "DoD")" ||
+    grep -qE '^- \[-\] Review PASS \(nie dotyczy: [^)]+\)$' <<<"$(sekcja "$f" "DoD")" ||
+    blad "$wz: DoD bez pola „$POLE_REVIEW”"
   grep -q '🔴' <<<"$(sekcja "$f" "Kryteria review")" || blad "$wz: Kryteria review bez wag 🔴🟡⚪"
   grep -q 'shctl escalate' <<<"$(sekcja "$f" "Eskalacja")" || blad "$wz: Eskalacja bez wywołania shctl escalate"
 

@@ -182,3 +182,11 @@ ZGL='[{"waga":"istotne","plik":"src/a.ts","linia":4,"opis":"brak walidacji"},{"w
   [ "$status" -eq 0 ]
   [ ! -e "$SH_DIR/stan/review/demo-pr20.lock" ]
 }
+
+@test "review etapu: raport QA (stage/08-qa) bez review etapu to odmowa" {
+  jq 'map(if .number == 20 then .closingIssuesReferences = [] | .headRefName = "stage/08-qa" else . end)' "$GH_ATRAPA/prs.json" >"$T/x" && mv "$T/x" "$GH_ATRAPA/prs.json"
+  run --separate-stderr "$SHCTL" review run 20
+  [ "$status" -eq 4 ]
+  [[ "$stderr" == *"raport QA (08-qa) nie ma review etapu"* ]] || false
+  [ ! -s "$CODEX_ATRAPA/calls" ]
+}

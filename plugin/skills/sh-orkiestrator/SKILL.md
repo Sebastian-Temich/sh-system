@@ -128,8 +128,8 @@ shctl stop-all
 - `review run`: kod 4 przy limicie Codexa oznacza, że PR czeka w `status:review`; bierzesz inne zadania.
   Kod 4 „review PR #N już trwa”: inne wywołanie robi to review; nie uruchamiasz drugiego, czekasz na
   komentarz z wynikiem.
-- `task iter` i `stage iter`: `"eskalowano":true` po 3. FAIL; eskalację otworzył shctl, informujesz
-  właściciela. Eskalacja zadania zwalnia slot: panel dostaje etykietę `eskalacja:NAZWA:NR`.
+- `task iter` i `stage iter`: `"eskalowano":true` po 3. FAIL (etap dokumentowy: po 2.); eskalację
+  otworzył shctl, informujesz właściciela. Eskalacja zadania zwalnia slot: panel dostaje etykietę `eskalacja:NAZWA:NR`.
 - `pr check --czekaj`: zawsze przed czekaniem na CI. Kod 4 z „konflikt z main” oznacza, że CI nie
   wystartuje: polecasz rozwiązanie konfliktu autorowi gałęzi (worker przez `herdr agent prompt`, skill
   etapu w swojej sesji), nie czekasz i nie diagnozujesz CI.
@@ -203,7 +203,10 @@ shctl stop-all
    rozwiązanie konfliktu na gałęzi etapu), przy zielonym CI `shctl review run PR` (tryb etapu).
 3. FAIL: `shctl stage iter ETAP` (iteracja i `in-progress` na `main`, commit i push), skill poprawia
    wyłącznie zgłoszenia na gałęzi PR, wracasz do kroku 2. Gałąź `stage/ETAP` nigdy nie zmienia
-   frontmattera `DoD.md`. Po 3. FAIL `stage iter` sam otwiera eskalację (`"eskalowano":true`).
+   frontmattera `DoD.md`. Etapy `00-intake`, `04-architektura`, `05-plan` i `06-zadania` mają
+   najwyżej jedną iterację poprawek: review w iteracji 2 daje istotne uwagi jako ⚪ „(do decyzje.md)”,
+   a FAIL (tylko 🔴) sprawia, że `stage iter` sam otwiera eskalację (`"eskalowano":true`). Etap
+   `wydanie`: eskalacja po 3. FAIL.
 4. PASS w `00-intake` i `04-architektura`: `shctl checkpoint ETAP` (powiadomienie właściciela), potem
    pokaż mu PR, tryb, ryzyka, otwarte pytania i zakres autoryzacji. Akceptację zapisz przez
    `shctl decision add --rola wlasciciel`. Zmiana po akceptacji (stack w `AGENTS.md`) to nowy commit,
@@ -212,8 +215,11 @@ shctl stop-all
    --match-head-commit SHA` (brak komendy shctl, propozycja w `sh-system/docs/propozycje.md`).
 6. Na `main`: zaznacz pola Checkpointu w `DoD.md` (review: tylko z komentarzem PASS z `shctl review
    run`; akceptacja: tylko z wierszem `wlasciciel` w `decyzje.md`), `shctl stage done ETAP`, każdą
-   pozycję „Decyzji do rejestru” z opisu PR przez `shctl decision add --rola ROLA_SKILLA`, zgłoszenia ⚪
-   z review do `backlog-drobne.md`. Commit i push.
+   pozycję „Decyzji do rejestru” z opisu PR przez `shctl decision add --rola ROLA_SKILLA`, każdą uwagę
+   ⚪ „(do decyzje.md)” z review iteracji 2 przez `shctl decision add --rola review --co "UWAGA"
+   --dlaczego "przyjęte bez kolejnej iteracji review (limit 1 iteracji etapu), PR #N"
+   --cofniecie "poprawka w kolejnym etapie albo zadaniu"`, pozostałe zgłoszenia ⚪ do
+   `backlog-drobne.md`. Commit i push.
 7. Po akceptacji planu: rejestr autoryzacji `shctl decision add --rola wlasciciel --co "Autoryzacja
    planu PR #N" --dlaczego "kto: właściciel w PR #N; na co: kamienie M1–MK; zakres: W-n, dostępy,
    płatne usługi z planu; do kiedy: odbiór zlecenia" --cofniecie "polecenie właściciela; zadania
@@ -243,8 +249,10 @@ shctl stop-all
 
 ### Kamień milowy
 
-1. Wszystkie zadania kamienia poza `typ:qa` zamknięte: uruchom `sh-qa` dla kamienia (etap `08-qa`,
-   przebieg jak w „Etapach dokumentowych”, bez akceptacji właściciela).
+1. Wszystkie zadania kamienia poza `typ:qa` zamknięte: uruchom `sh-qa` dla kamienia (etap `08-qa`).
+   Bez review etapu i bez akceptacji właściciela: `shctl stage review 08-qa`, `shctl pr check PR
+   --czekaj`, sprawdzasz werdykt raportu względem wag, przy zielonym CI merge (`gh pr merge PR --squash
+   --match-head-commit SHA`) i `shctl stage done 08-qa` w QA ostatniego kamienia.
 2. Po merge'u: issue błędów z `shctl task create` (krok `sh-qa`) trafiają do pętli, „Drobne uwagi”
    raportu do `backlog-drobne.md`, commit i push.
 3. Kolejny kamień startuje sam, gdy QA jest zakończone, błędy są issue, nie ma otwartej eskalacji

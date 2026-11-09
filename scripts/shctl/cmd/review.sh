@@ -151,6 +151,9 @@ review_run() {
   nr="$(jq -r '.closingIssuesReferences[0].number // (.headRefName | capture("^task/(?<n>[0-9]+)").n // "")' <<<"$pr")"
   [ -n "$nr" ] || etap="$(jq -r '.headRefName | capture("^stage/(?<e>[a-z0-9][a-z0-9-]*)$").e // ""' <<<"$pr")"
   [ -n "$nr$etap" ] || die "$E_ODMOWA" "PR #$prn nie wskazuje zadania ani etapu (Closes #NR, gałąź task/NR- albo stage/ETAP)"
+  if [ "$etap" = 08-qa ]; then
+    die "$E_ODMOWA" "PR #$prn: raport QA (08-qa) nie ma review etapu; merge po zielonym CI (SH-lite F1)"
+  fi
   if [ -n "$etap" ] && [ ! -f "$ROOT_G/docs/$etap/DoD.md" ]; then
     die "$E_ODMOWA" "PR #$prn: etap $etap nie ma docs/$etap/DoD.md"
   fi

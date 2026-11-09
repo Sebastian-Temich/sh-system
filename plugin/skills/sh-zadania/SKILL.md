@@ -174,8 +174,8 @@ od niego zależą. Kryteria, z wartościami wpisanymi wprost:
 - lint, sprawdzanie typów i testy jednostkowe działają, każde z co najmniej jednym testem;
 - Playwright `@playwright/test` w wersji `playwright_version` (np. 1.61.1, wersja dokładna, bez `^`),
   `workers: playwright_workers` (1), chromium i webkit, headless, jeden test smoke strony startowej;
-- `.github/workflows/ci.yml` ma prawdziwe komendy lint, typów, testów i E2E zamiast placeholderów;
-  zadania `gitleaks`, `check-dod` i `testy-skryptow` zostają;
+- `.github/workflows/ci.yml` ma prawdziwe komendy lint, typów i testów zamiast placeholderów; joby
+  `gitleaks`, `check-dod` i `e2e` z szablonu zostają (e2e wymaga skryptu `test:e2e` w `package.json`);
 - Supabase local: `supabase init`, potem `supabase/config.toml` z portami bloku `blok_portow` (np. 55121–55129), wszystkie
   porty z tabeli `/Users/Shared/sh/porty.md`, także `shadow_port` i `inspector_port`; `supabase start` i
   `supabase db reset` przechodzą;

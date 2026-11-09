@@ -94,7 +94,7 @@ shctl escalate --dotyczy 00-intake --powod "..." --potrzebne "..." --opcje "A;B"
    runnera i kroki ręczne właściciela.
 3. Oceń obszary ryzyka z „Listy ryzyk” (niżej): każde `tak`, `nie` albo `do ustalenia`.
 4. Wybierz tryb. S tylko dla drobnej zmiany w działającym projekcie: 1–3 zadania, bez zmian modelu
-   danych i bez obszaru ryzyka. Obszar ryzyka na `tak` albo `do ustalenia` to minimum M z ADR. Nowy
+   danych i bez obszaru ryzyka. Obszar ryzyka na `tak` albo `do ustalenia` to minimum M i zapowiedź ADR (niżej). Nowy
    projekt to M. Zlecenie na tryb L (nowy produkt, MVP, duża przebudowa, więcej niż 15 zadań) mówisz
    o tym wprost i proponujesz M z ograniczonym zakresem albo czekanie na etap B (sekcja „Tryb L i
    etap B”). Zapisz uzasadnienie jednym zdaniem. Dla S przejdź do „Tryb S”.
@@ -129,6 +129,12 @@ shctl escalate --dotyczy 00-intake --powod "..." --potrzebne "..." --opcje "A;B"
 | Upload plików, integracje zewnętrzne | Walidacja wejścia, obsługa błędów i timeoutów |
 | Płatne usługi, sekrety, nowe konta | Krok ręczny właściciela; bez zgody nie wchodzi do planu |
 
+**ADR w intake (jedno kryterium, E-001).** „ADR” w tabeli to ADR, który pisze `sh-architekt` w
+`04-architektura`. Intake nie pisze ADR. W tabeli ryzyk specyfikacji przy każdym obszarze na `tak` albo
+`do ustalenia` wpisuje „ADR w 04-architektura: TEMAT” wraz z ustaleniami wejściowymi (co wiadomo, co
+architekt ma rozstrzygnąć). Review `00-intake` sprawdza tylko tę zapowiedź; brak pliku ADR nie jest
+zgłoszeniem.
+
 ### Typy projektu
 
 | Typ | Narzędzia testowe | Ograniczenia runnera | Kroki ręczne właściciela |
@@ -155,7 +161,7 @@ shctl escalate --dotyczy 00-intake --powod "..." --potrzebne "..." --opcje "A;B"
   (makiety, zrzuty, logotypy, teksty).
 - **Kroki ręczne właściciela:** konta, domeny, sklepy, płatne usługi, publikacja. Każdy stanie się
   zadaniem właściciela w planie.
-- **Ryzyka:** tabela z „Listy ryzyk”.
+- **Ryzyka:** tabela z „Listy ryzyk”; przy `tak` i `do ustalenia` zapowiedź „ADR w 04-architektura: TEMAT”.
 - **Szacunek poglądowy:** liczba zadań, czas kalendarzowy i czas właściciela (checkpointy, kroki
   ręczne). To orientacja, nie wycena.
 - **Tryb procesu:** tryb i uzasadnienie w jednym zdaniu, założenia, najwyżej 3 otwarte pytania z
@@ -216,7 +222,7 @@ istniejących projektów. W etapie A tego nie robisz.
 
 - [ ] Typ projektu jest rozpoznany, z konsekwencjami dla testów, runnera i kroków właściciela
 - [ ] Tryb ma uzasadnienie w jednym zdaniu; zlecenie na L ma propozycję M albo czekania na etap B
-- [ ] Każdy obszar z „Listy ryzyk” ma ocenę; ryzyko na `tak` albo `do ustalenia` daje minimum M
+- [ ] Każdy obszar z „Listy ryzyk” ma ocenę; ryzyko na `tak` albo `do ustalenia` daje minimum M i zapowiedź „ADR w 04-architektura”
 - [ ] Każde wymaganie to historyjka z priorytetem i kryteriami Given/When/Then
 - [ ] Cel i kontekst, użytkownicy, zakres i „Poza zakresem” są opisane
 - [ ] Stack ma rekomendację, alternatywę i uzasadnienie; hosting jest w `konfiguracja.md`
@@ -239,9 +245,11 @@ istniejących projektów. W etapie A tego nie robisz.
 - 🟡 istotne: brak „Poza zakresem”, użytkowników albo priorytetów; stack bez alternatywy lub
   uzasadnienia; typ projektu bez konsekwencji; brak szacunku poglądowego; stack lub hosting sprzeczny z
   kontraktem `AGENTS.md` bez uzasadnienia; brak kroków ręcznych właściciela przy kontach lub płatnych usługach; więcej niż 3
-  pytania albo pytanie bez proponowanej odpowiedzi; architektura, ADR albo plan w specyfikacji;
+  pytania albo pytanie bez proponowanej odpowiedzi; obszar ryzyka na `tak` albo `do ustalenia` bez
+  zapowiedzi „ADR w 04-architektura”; architektura, ADR albo plan w specyfikacji lub PR intake;
   skopiowana treść zlecenia zamiast odnośnika; brak czasu zlecenia w UTC.
 - ⚪ drobne: styl, nazewnictwo, kolejność wymagań.
+- Nie jest zgłoszeniem: brak pliku ADR w `00-intake` (ADR pisze architekt w `04-architektura`).
 
 Wynik review ma format `sh-system/templates/review.md`.
 

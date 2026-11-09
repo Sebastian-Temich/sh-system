@@ -146,11 +146,15 @@ Po FAIL review etapu: podbija `iteracja` w `docs/ETAP/DoD.md` i ustawia `in-prog
 main (`proces-v1.md`, „Pliki wspólne i konflikty”). Gałąź `stage/ETAP` frontmattera nie zmienia, więc
 PR etapu nie ma konfliktu z main. Wymaga otwartego PR z gałęzi `stage/ETAP` i wyniku `review run` FAIL
 dla jego bieżącego commita (inaczej kod 4). Iteracja 0 liczy się jak 1. Powtórka dla tego samego
-review nic nie zmienia (`.etapy[ETAP].iter_review` w `/Users/Shared/sh/stan/NAZWA.json`). FAIL w
-iteracji 3 otwiera eskalację przez `shctl escalate` zamiast podbicia.
+review nic nie zmienia (`.etapy[ETAP].iter_review` w `/Users/Shared/sh/stan/NAZWA.json`). Limit
+iteracji: etapy dokumentowe `00-intake`, `04-architektura`, `05-plan` i `06-zadania` mają najwyżej
+jedną iterację poprawek, więc FAIL w iteracji 2 otwiera eskalację przez `shctl escalate` zamiast
+podbicia (review w iteracji 2 daje istotne uwagi jako ⚪ „(do decyzje.md)”, więc FAIL oznacza 🔴).
+Etap `wydanie`: eskalacja po FAIL w iteracji 3. `08-qa` nie ma review etapu: `stage iter 08-qa` to
+kod 4.
 
 ```json
-{"ok":true,"komenda":"stage","dry_run":false,"wynik":{"etap":"08-qa","pr":35,"iteracja":2,"eskalowano":false,"zmiana":true}}
+{"ok":true,"komenda":"stage","dry_run":false,"wynik":{"etap":"wydanie","pr":35,"iteracja":2,"eskalowano":false,"zmiana":true}}
 ```
 
 ## doc new
@@ -810,7 +814,8 @@ shctl review run PR [--timeout SEKUNDY]
 
 Jedno review naraz dla PR: blokada `/Users/Shared/sh/stan/review/NAZWA-prPR.lock` z PID. Drugie
 wywołanie w trakcie kończy się kodem 4 („review PR #N już trwa”); blokada po martwym procesie jest
-przejmowana. Iteracja review etapu pochodzi z `DoD.md` na main (`stage iter`).
+przejmowana. Iteracja review etapu pochodzi z `DoD.md` na main (`stage iter`). PR z gałęzi
+`stage/08-qa` (raport QA) to kod 4: raport QA nie ma review etapu, merge idzie po zielonym CI.
 
 Zadanie wynika z `Closes #NR` albo gałęzi `task/NR-` (review PR). PR z gałęzi `stage/ETAP` bez
 `Closes` to review etapu: wymaga `docs/ETAP/DoD.md`, nie ma issue ani etykiet, a worktree, panel i

@@ -44,11 +44,22 @@ docelowy_status() {
 
 NOTATKA=""
 
+# Limit iteracji review etapu: dokumenty (00, 04, 05, 06) mają najwyżej jedną iterację poprawek, potem
+# uwagi idą do decyzje.md (SH-lite F1); wydanie zostaje przy limicie zadań.
+maks_iter_etapu() {
+  case "$1" in
+    00-intake | 04-architektura | 05-plan | 06-zadania) echo 2 ;;
+    *) echo "$MAKS_ITERACJI" ;;
+  esac
+}
+
 # Iteracja etapu z DoD.md na main; 0 (przed pierwszym review) liczy się jak 1.
 stage_iter() {
-  local etap="$1" pr prn head stan rev obecna cel wyn esk zmiana=1 st
+  local etap="$1" pr prn head stan rev obecna cel wyn esk zmiana=1 st maks
   zadania_init
   sprawdz_etap "$etap"
+  [ "$etap" != 08-qa ] || die "$E_ODMOWA" "08-qa: raport QA nie ma review etapu, więc nie ma iteracji (merge po zielonym CI)"
+  maks="$(maks_iter_etapu "$etap")"
   pr="$(gh pr list --repo "$SLUG" --head "stage/$etap" --state open --json number,headRefOid --jq '.[0] // empty' 2>/dev/null)" ||
     die "$E_WYKONANIE" "gh pr list nie działa dla $SLUG"
   [ -n "$pr" ] || die "$E_ODMOWA" "brak otwartego PR z gałęzi stage/$etap"
@@ -70,15 +81,15 @@ stage_iter() {
     cel=$((obecna + 1))
   fi
 
-  if [ "$cel" -gt "$MAKS_ITERACJI" ]; then
-    info "$etap: FAIL w iteracji $MAKS_ITERACJI, eskalacja"
-    set -- escalate --projekt "$PROJEKT" --dotyczy "$etap" --powod "$MAKS_ITERACJI iteracje review etapu bez PASS" \
+  if [ "$cel" -gt "$maks" ]; then
+    info "$etap: FAIL w iteracji $maks, eskalacja"
+    set -- escalate --projekt "$PROJEKT" --dotyczy "$etap" --powod "$maks iteracje review etapu bez PASS" \
       --potrzebne "decyzja: dalsze poprawki poza limitem, zmiana zakresu etapu albo inne rozwiązanie (PR #$prn)" --json
     [ "$DRY" -eq 0 ] || set -- "$@" --dry-run
     wyn="$("$SHCTL_DIR/shctl" "$@")" || die "$E_WYKONANIE" "shctl escalate nie powiódł się: $(jq -r '.blad // ""' <<<"$wyn" 2>/dev/null)"
     esk="$(jq -r '.wynik.id' <<<"$wyn")"
     stan_etapu_zapisz "$etap" "$(jq -nc --arg e "$esk" --arg h "$head" --argjson c "$cel" '{eskalacja:$e, iter_review:$h, iter_cel:$c}')"
-    wynik_json "$(jq -nc --arg e "$etap" --argjson p "$prn" --argjson i "$MAKS_ITERACJI" --arg k "$esk" \
+    wynik_json "$(jq -nc --arg e "$etap" --argjson p "$prn" --argjson i "$maks" --arg k "$esk" \
       '{etap:$e, pr:$p, iteracja:$i, eskalacja:$k, eskalowano:true}')"
     return 0
   fi

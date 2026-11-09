@@ -50,7 +50,8 @@ to w raporcie.
 
 - kod, testy i docs obszaru zadania w plikach z „Zakresu” issue
 - `supabase/migrations/RRRRMMDDGGMMSS_slug.sql`: tylko w zadaniu z `db:migracja`, nowy plik
-- `.env.example`: nazwy nowych zmiennych, bez wartości; innych plików `.env*` profil nie pozwala edytować
+- `.env.example`: nazwy nowych zmiennych, bez wartości (edycja dozwolona); innych plików `.env*` profil
+  nie pozwala czytać ani edytować
 - `docs/07-realizacja/T-NR.md`: raport w formacie „Raport” (niżej)
 - gałąź `task/NR-slug` (już istnieje) i PR do `main` z `Closes #NR` i checklistą
   `.github/PULL_REQUEST_TEMPLATE.md`
@@ -77,7 +78,8 @@ shctl escalate --dotyczy "#NR" --powod "..." --potrzebne "..." --opcje "A;B"
    przeczytaj raport i `git log origin/main..HEAD`, potem kontynuuj od brakującego kroku.
 3. Przeczytaj `AGENTS.md`, specyfikację, architekturę i pliki z „Zakresu”. Zapisz kryteria z issue jako
    listę do odhaczenia.
-4. Zrób `git fetch origin` i `git rebase origin/main`, gdy gałąź jest za `main`.
+4. Zrób `git fetch origin`, a gdy gałąź jest za `main`: `git merge --no-edit origin/main`. Nie
+   rebase'ujesz: `rebase --continue` wymaga edytora, a `git -c` jest zablokowane.
 5. Dla każdego kryterium napisz najpierw test, który je sprawdza, potem kod. Zostajesz w plikach z
    „Zakresu”; plik spoza listy zmieniasz tylko, gdy bez niego kryterium jest niewykonalne, i zapisujesz
    to w „Decyzjach”.
@@ -88,7 +90,8 @@ shctl escalate --dotyczy "#NR" --powod "..." --potrzebne "..." --opcje "A;B"
 8. Sprawdź sekrety: `gitleaks git --redact --no-banner .`, gdy jest zainstalowany, i przegląd diffu.
    Sekret znaleziony w repo to eskalacja, nie samodzielne czyszczenie historii.
 9. Napisz raport `docs/07-realizacja/T-NR.md` według „Raportu” (niżej).
-10. Commit `#NR: opis` i `git push -u origin task/NR-slug`.
+10. `git add PLIKI`, potem commit `#NR: opis` (stopka przez drugie `-m`, przykład niżej) i
+    `git push -u origin task/NR-slug`; każda komenda w osobnym wywołaniu.
 11. Gdy PR nie istnieje: `gh pr create --base main --head task/NR-slug --title "#NR: TYTUŁ"
     --body-file PLIK`. Treść według `.github/PULL_REQUEST_TEMPLATE.md`: `Closes #NR`, krótki opis i
     checklista DoD zaznaczona zgodnie z prawdą. Gdy PR istnieje, push go aktualizuje.
@@ -96,9 +99,42 @@ shctl escalate --dotyczy "#NR" --powod "..." --potrzebne "..." --opcje "A;B"
     najwyżej 2 razy. Po drugiej nieudanej naprawie kończysz: przyczynę i wyjście CI opisujesz w
     „Ryzykach”, a dalej decyduje orkiestrator (review albo eskalacja). Nie zmieniasz testów ani CI
     tylko po to, żeby było zielone. Gdy `gh pr checks` nie pokazuje żadnych checków, a PR ma konflikt
-    z main: `git merge origin/main`, rozwiąż konflikt w zakresie zadania, testy, push.
+    z main: `git merge --no-edit origin/main`, rozwiąż konflikt w zakresie zadania, `git add PLIKI`,
+    `git commit --no-edit`, testy, push.
 13. Sprawdź „DoD” i zakończ odpowiedzią dla orkiestratora: numer PR, stan CI, otwarte ryzyka. Dalej
     orkiestrator uruchamia `shctl review run`.
+
+### Komendy Bash
+
+Profil workera (`dontAsk`) przepuszcza rutynowe `git`, `gh`, `pnpm`, `npm`, `npx` i `node`, ale tylko
+w prostej formie. Odmowa nie pyta, tylko kosztuje wywołanie. Dlatego:
+
+- **Jedno wywołanie Bash to jedna komenda.** Bez `&&`, `||`, `;`, potoków do `tail`/`grep`, pętli
+  `for`/`while`/`until`, `$(...)`, heredoców (`<<EOF`), `cd`, `&` w tle, przekierowania do pliku
+  (`> plik`) i zmiennych przed komendą (`X=1 pnpm build`). Kilka kroków to kilka wywołań, niezależne
+  możesz wysłać równolegle.
+- **Pliki czytasz narzędziami Read, Grep i Glob, zmieniasz Edit i Write.** Nie przez `sed`, `cat >`,
+  `python3 -`, `node -e` ani `perl -i`.
+- **Długie czekanie przez komendy z `--watch`** (`gh pr checks NR --watch`, `gh run watch ID`), nie
+  pętlą `until`.
+- **Zmienne środowiska** do komendy dodajesz jako skrypt w `package.json` (np. `"build:e2e"`), a nie
+  prefiksem.
+- **Zablokowane celowo** (deny): sekrety i `.env*` poza `.env.example`, push na `main`/`production`,
+  `push --force`/`-f` i refspec z `+`, `gh api` z `-X`/`--method` albo polami, `gh secret|auth`,
+  `gh repo delete`, `gh pr merge`, `gh issue close|edit`, `git -c`, `git -C`, `git config`. Odmowa
+  deny to granica roli: nie obchodzisz jej inną komendą, tylko opisujesz potrzebę w raporcie albo
+  eskalujesz.
+
+| Zamiast (odmowa) | Tak (osobne wywołania) |
+|---|---|
+| `git add a.ts T-14.md && git commit -m "…" && git push` | `git add a.ts T-14.md` · `git commit -q -m "#14: dodaj koszyk" -m "Co-Authored-By: …"` · `git push -u origin task/14-koszyk` |
+| `git -c core.editor=true rebase --continue` | `git merge --no-edit origin/main` · po konflikcie `git add PLIK` · `git commit --no-edit` |
+| `until gh pr checks 31 \| grep -q .; do sleep 20; done` | `gh pr checks 31 --watch` |
+| `for r in 1 2; do gh run view $r --json conclusion; done` | `gh run view 1 --json conclusion` · `gh run view 2 --json conclusion` |
+| `cd docs/02-design && sed -n 15,40p a.html` | Read `docs/02-design/a.html` (offset 15, limit 25) |
+| `python3 - <<'EOF' … s.replace(…)` | Edit pliku |
+| `ASTRO_ADAPTER=node pnpm build > build.log; tail build.log` | `pnpm build:e2e` (skrypt z env w `package.json`) |
+| `gh api repos/a/b/issues -f title=x` | nie robisz: issue zakłada orkiestrator; potrzebę zapisujesz w raporcie |
 
 ### Iteracja 2+
 
@@ -241,7 +277,8 @@ Polecenie w panelu `worker:sklep:14`: „Zrealizuj issue #14 skillem sh-worker.�
 3. Testy `koszyk.test.ts` i `koszyk.spec.ts`, potem kod. `pnpm lint`, `pnpm typecheck`, `pnpm test` i
    komenda z issue: zielone.
 4. Raport `T-14.md`; decyzja „Gdzie trzymać koszyk gościa? → localStorage, bo W-2 nie wymaga konta”.
-5. Commit `#14: dodaj koszyk`, push, `gh pr create` z `Closes #14`: PR #31, CI zielone.
+5. `git add`, `git commit -q -m "#14: dodaj koszyk"`, `git push -u origin task/14-koszyk`, `gh pr create`
+   z `Closes #14`, każde w osobnym wywołaniu: PR #31, `gh pr checks 31 --watch` zielone.
 6. Review Codex: FAIL, 🟡 brak testu usunięcia ostatniej pozycji. Orkiestrator: `shctl task iter 14`.
 7. „Iteracja 2/3 zadania #14”: test i poprawka tylko tego zgłoszenia, `### Iteracja 2` w raporcie,
    push. PR #31 zaktualizowany.
