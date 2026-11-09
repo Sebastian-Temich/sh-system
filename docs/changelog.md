@@ -13,7 +13,7 @@
 - `shctl review run`: panel review otwiera się w `/Users/Shared/sh/wt/NAZWA` i uruchamia `codex exec -C WORKTREE …`, więc `fnm --use-on-cd` nie pyta o wersję Node z `.nvmrc` (retro iskt-www: panel stał około 50 minut na #44). `task dispatch` robi `fnm install` w worktree workera przy `.nvmrc` albo `.node-version` (bez pytań, limit `SHCTL_FNM_LIMIT`, 300 s); błąd to ostrzeżenie.
 - Worker (`sh-worker`): lokalny Lighthouse tylko z limitem czasu; po przekroczeniu wpis w raporcie i dalsza praca, pełny pomiar w CI albo QA.
 - Nowe `shctl sprzataj [--dry-run]`: usuwa worktree w `/Users/Shared/sh/wt-system/` i `/Users/Shared/sh/wt/` oraz lokalne gałęzie repo w `/Users/Shared/sh` i `/Users/Shared/sh/projekty` tylko przy PR `MERGED` albo `CLOSED`. Bez `--force`: niezacommitowane zmiany, commity spoza head PR, gałąź bieżąca, `main` i gałąź w worktree zostają (`pominiete`). Gałęzie usuwa `git branch -D` w skrypcie (po squash merge `-d` odmawia). JSON: `worktree`, `galezie`, `pominiete[{co,powod}]`.
-- `orkiestrator-settings.json`: `git -C * worktree remove` tylko dla `/Users/Shared/sh/wt/*` i `/Users/Shared/sh/wt-system/*`, nowe deny `worktree remove *..*` (deny `--force`/`-f` bez zmian), allow `shctl sprzataj`.
+- `orkiestrator-settings.json`: `git -C * worktree remove` tylko dla `/Users/Shared/sh/wt/*` i `/Users/Shared/sh/wt-system/*`, nowe deny `worktree remove *..*` oraz `--force` i `-f` w każdym miejscu, z `-C` i bez, allow `shctl sprzataj`.
 
 ## 2026-11-09 (SH-lite F3a: scalenie procesu)
 

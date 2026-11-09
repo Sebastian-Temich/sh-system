@@ -92,6 +92,10 @@ dozwolone() {
   allow 'Bash(shctl sprzataj)' && allow 'Bash(shctl sprzataj *)'
   pasuje 'git -C /Users/Shared/sh/projekty/x worktree remove --force /Users/Shared/sh/wt/x/stage-04-plan'
   pasuje 'git -C /Users/Shared/sh/projekty/x worktree remove /Users/Shared/sh/wt/x/stage-04-plan -f'
+  pasuje 'git -C /Users/Shared/sh/projekty/x worktree remove -f /Users/Shared/sh/wt/x/stage-04-plan'
+  pasuje 'git worktree remove --force /Users/Shared/sh/wt/x/stage-04-plan'
+  pasuje 'git worktree remove -f /Users/Shared/sh/wt/x/stage-04-plan'
+  pasuje 'git worktree remove /Users/Shared/sh/wt/x/stage-04-plan -f'
   pasuje 'git switch stage/04-plan'
   pasuje 'git -C /Users/Shared/sh/projekty/x switch task/12-a'
 }
