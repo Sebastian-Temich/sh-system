@@ -102,7 +102,8 @@ shctl escalate --dotyczy "#NR" --powod "..." --potrzebne "..." --opcje "A;B"
 10. `git add PLIKI`, potem commit `#NR: opis` (stopka przez drugie `-m`, przykład niżej) i
     `git push -u origin task/NR-slug`; każda komenda w osobnym wywołaniu.
 11. Gdy PR nie istnieje: `gh pr create --base main --head task/NR-slug --title "#NR: TYTUŁ"
-    --body-file PLIK`. Treść według `.github/PULL_REQUEST_TEMPLATE.md`: `Closes #NR`, krótki opis i
+    --body-file PLIK`, gdzie PLIK leży w worktree (np. `pr-opis.md`; nie dodajesz go do commita i usuwasz
+    po utworzeniu PR). Plik spoza `/Users/Shared/sh` blokuje hook `gh-plik-hook.sh`. Treść według `.github/PULL_REQUEST_TEMPLATE.md`: `Closes #NR`, krótki opis i
     checklista DoD zaznaczona zgodnie z prawdą. Gdy PR istnieje, push go aktualizuje.
 12. Sprawdź CI: `gh pr checks NR_PR --watch`. Czerwone CI z twojego kodu naprawiasz i wracasz do kroku 7,
     najwyżej 2 razy (commit zmieniający tylko raport nie jest próbą naprawy). Po drugiej nieudanej naprawie kończysz: przyczynę i wyjście CI opisujesz w

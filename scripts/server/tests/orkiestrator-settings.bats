@@ -153,3 +153,7 @@ dozwolone() {
     dozwolone "$k" || { echo "nie dozwolone: $k"; false; }
   done
 }
+
+@test "hook gh-plik-hook.sh na Bash: plik tresci gh tylko z /Users/Shared/sh (gh poza sandboxem)" {
+  jq -e '.hooks.PreToolUse | any(.matcher == "Bash" and (.hooks[0].command == "/Users/Shared/sh/bin/gh-plik-hook.sh || exit 2"))' "$S" >/dev/null
+}

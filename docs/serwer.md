@@ -871,6 +871,10 @@ Ustalenia z testu w sh-dryrun (2026-11-09, nowe sesje w panelach herdr):
   worktree są poza sandboxem, a reszta git w nim (system odmawia `~/Documents`). Dodatkowo deny:
   `--no-index`, `git config`, `blame --contents`, `git -C` poza `/Users/Shared/sh` (`~`, katalog domowy,
   `/tmp`, `/private`, `..` i inne), a `git worktree add` tylko do `/Users/Shared/sh/wt/` i `wt-system/`.
+- **gh też jest poza sandboxem** (token w pęku kluczy), a `--body-file PLIK`, `-F PLIK` i `--notes-file PLIK`
+  wysłałyby na GitHub plik spoza SH. Hook `PreToolUse` `gh-plik-hook.sh` (orkiestrator i profil workera)
+  przepuszcza w `gh pr|issue|release` tylko stdin (`-`) i pliki, które po rozwinięciu `~`, ścieżki względnej,
+  `..` i dowiązań leżą w `/Users/Shared/sh/`; fail-closed (`|| exit 2`). shctl woła `gh` sam, poza hookiem.
 - Nie testowano: `supabase start` (sh-dryrun nie używa Supabase) i `brew install`.
 
 ### Uprawnienia sesji SH
