@@ -266,22 +266,48 @@ task_create() {
 # task ready
 # =========================================================================================
 
+ocena_ready() {
+  local ocena
+  ocena="$(ocen_gotowe "$(wszystkie_issue)" "$(panele_herdr)" "")"
+  jq -c '. + {mozna_dispatch: ((.blokady | length) == 0 and (.kandydaci | length) > 0),
+    gotowe: (if (.blokady | length) == 0 then .kandydaci else [] end)}' <<<"$ocena"
+}
+
+# --czekaj: czeka, aż blokada slotu, kolejki review, dysku albo limitu zejdzie, gdy są kandydaci.
+# Bez kandydatów czekanie nic nie da (zależności zamyka orkiestrator), więc wynik wraca od razu.
 task_ready() {
-  local issues panele ocena wynik
-  while [ $# -gt 0 ]; do opcja_wspolna "$@"; shift "$ZJEDZONE"; done
+  local wynik czekaj=0 timeout=1800 start_s t=0 pauza
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --czekaj) czekaj=1; shift ;;
+      --timeout) timeout="$(wartosc "$@")"; shift 2 ;;
+      *) opcja_wspolna "$@"; shift "$ZJEDZONE" ;;
+    esac
+  done
+  timeout="$(numer "$timeout")"
   zadania_init
   herdr_dziala
-  issues="$(wszystkie_issue)"
-  panele="$(panele_herdr)"
-  ocena="$(ocen_gotowe "$issues" "$panele" "")"
-  wynik="$(jq -c '. + {mozna_dispatch: ((.blokady | length) == 0 and (.kandydaci | length) > 0),
-    gotowe: (if (.blokady | length) == 0 then .kandydaci else [] end)}' <<<"$ocena")"
+  start_s="$(date +%s)"
+  while :; do
+    wynik="$(ocena_ready)"
+    [ "$czekaj" -eq 1 ] || break
+    jq -e '(.blokady | length) > 0 and (.kandydaci | length) > 0' <<<"$wynik" >/dev/null || break
+    t=$(($(date +%s) - start_s))
+    [ "$t" -lt "$timeout" ] || break
+    pauza="${SHCTL_READY_PAUZA:-30}"
+    [ $((timeout - t)) -ge "$pauza" ] || pauza=$((timeout - t))
+    sleep "$pauza"
+  done
+  t=$(($(date +%s) - start_s))
+  wynik="$(jq -c --argjson t "$t" --argjson c "$czekaj" \
+    '. + {czekano_s:$t, limit_czasu:($c == 1 and (.blokady | length) > 0 and (.kandydaci | length) > 0)}' <<<"$wynik")"
   if [ "$JSON" -eq 0 ]; then
     jq -r '
       (if (.blokady | length) > 0 then "Dispatch wstrzymany:", (.blokady[] | "  - \(.opis)") else empty end),
       "Gotowe: " + (if (.gotowe | length) == 0 then "brak" else (.gotowe | map("#\(.nr) \(.tytul)") | join(", ")) end),
       (if (.zablokowane | length) > 0 then "Czekają:", (.zablokowane[] | "  #\(.nr): \(.powody | join("; "))") else empty end),
-      "Sloty: \(.sloty.aktywne)/\(.sloty.max_local), kolejka review: \(.kolejka_review.czeka)/\(.kolejka_review.max), wolne \(.wolne_gb) GB"' <<<"$wynik"
+      "Sloty: \(.sloty.aktywne)/\(.sloty.max_local), kolejka review: \(.kolejka_review.czeka)/\(.kolejka_review.max), wolne \(.wolne_gb) GB"
+        + (if .czekano_s > 0 then ", czekano \(.czekano_s) s" else "" end)' <<<"$wynik"
   fi
   wynik_json "$wynik"
 }
@@ -293,7 +319,7 @@ task_ready() {
 polecenie_workera() {
   local kat="$1" prompt="$2" m c
   m="$(model_workera)"
-  c="cd $(cytuj "$kat") && SH_NOTIFY=1 claude --settings .claude/roles/worker/settings.json"
+  c="cd $(cytuj "$kat") && claude --settings .claude/roles/worker/settings.json"
   [ "$m" = domyslny ] || c="$c --model $(cytuj "$m")"
   printf '%s %s' "$c" "$(cytuj "$prompt")"
 }
@@ -398,6 +424,15 @@ kopiuj_env() {
   printf '%s' "$skop"
 }
 
+# Wersja Node z .nvmrc albo .node-version zainstalowana przed startem panelu: inaczej fnm --use-on-cd
+# w powłoce panelu pyta o instalację i worker stoi (iskt-www #44). Błąd to tylko ostrzeżenie.
+przygotuj_node() {
+  [ -f "$1/.nvmrc" ] || [ -f "$1/.node-version" ] || return 0
+  command -v fnm >/dev/null || return 0
+  (cd "$1" && z_limitem "${SHCTL_FNM_LIMIT:-300}" fnm install --progress=never </dev/null >/dev/null 2>&1) ||
+    uwaga "fnm install w $1 nie powiódł się; panel może pytać o wersję Node"
+}
+
 task_dispatch() {
   local nr j st label panele pane stan issues ocena powody br kat env uruchom=0 cmd start zmiana=0 iter zaufanie esk
   argument_nr "$@"
@@ -459,6 +494,7 @@ task_dispatch() {
     die "$E_BRAK" "brak .claude/roles/worker/settings.json w $kat (szablon projektu)"
   fi
 
+  [ "$DRY" -eq 1 ] || przygotuj_node "$kat"
   zaufanie="$(zaufaj_projektowi)"
   [ "$zaufanie" = false ] || krok "zaufanie folderu Claude Code dla $ROOT_G (~/.claude.json)"
   skille_workera "$j" "$kat"
@@ -489,7 +525,7 @@ task_dispatch() {
     if [ "$uruchom" -eq 1 ]; then
       stan_zapisz "$nr" '{"uruchomiono":false}'
       herdr pane run "$pane" "$cmd" >/dev/null || die "$E_WYKONANIE" "nie można uruchomić claude w panelu $pane"
-      stan_zapisz "$nr" '{"uruchomiono":true}'
+      stan_zapisz "$nr" "$(jq -nc --arg t "$(teraz_utc)" '{uruchomiono:true, polecenie:$t, tura:false}')"
     fi
     ustaw_status "$nr" "$j" status:in-progress
     [ "$(iteracja_issue "$j")" -gt 0 ] || zmien_etykiety "$nr" "$j" iter:1 ""
@@ -509,7 +545,7 @@ task_dispatch() {
 # =========================================================================================
 
 task_iter() {
-  local nr j pr prn head rev stan iter cel label pane kat msg wyn esk wyslano zmiana=1
+  local nr j pr prn head rev stan iter cel label pane kat msg wyn esk wyslano pol zmiana=1
   argument_nr "$@"
   nr="$NR_ARG"
   zadania_init
@@ -560,6 +596,7 @@ task_iter() {
     zmien_etykiety "$nr" "$j" "iter:$cel" "$(jq -r --arg c "iter:$cel" '[.labels[].name | select(startswith("iter:") and . != $c)] | join(" ")' <<<"$j")"
     ustaw_status "$nr" "$(issue_json "$nr")" status:in-progress
     pane="$(panel_po_etykiecie "$(panele_herdr)" "$label")"
+    pol="$(teraz_utc)"
     if [ -n "$pane" ]; then
       herdr pane run "$pane" "$msg" >/dev/null || die "$E_WYKONANIE" "nie można wysłać polecenia do panelu $pane"
     else
@@ -570,7 +607,7 @@ task_iter() {
       herdr pane run "$pane" "$(polecenie_workera "$kat" "$(z_skillami "$msg")")" >/dev/null ||
         die "$E_WYKONANIE" "nie można uruchomić claude w panelu $pane"
     fi
-    stan_zapisz "$nr" "$(jq -nc --arg p "$pane" --arg l "$label" --argjson c "$cel" '{panel:$p, label:$l, iteracja:$c, iter_wyslano:true, uruchomiono:true}')"
+    stan_zapisz "$nr" "$(jq -nc --arg p "$pane" --arg l "$label" --argjson c "$cel" --arg t "$pol" '{panel:$p, label:$l, iteracja:$c, iter_wyslano:true, uruchomiono:true, polecenie:$t, tura:false}')"
   fi
   if [ "$zmiana" -eq 1 ]; then info "#$nr: iteracja $cel, polecenie wysłane do $label"; else info "#$nr: iteracja $cel już wysłana"; fi
   wynik_json "$(jq -nc --argjson n "$nr" --argjson p "$prn" --argjson c "$cel" --arg m "$msg" --argjson z "$zmiana" \
@@ -979,9 +1016,13 @@ task_cancel() {
 
 # Czekanie na workera z limitem czasu i sprawdzeniem stanu. herdr agent wait na panelu idle wraca
 # od razu, a na panelu bez agenta pada, więc najpierw stan, a czekamy tylko na pracującego agenta.
-# Wynik: gotowe (PR z raportem), idle, blocked, brak_agenta, brak_panelu albo pracuje (limit czasu).
+# Po poleceniu (dispatch albo iter zapisują .polecenie w stanie zadania) liczy się tylko nowa tura:
+# agent przeszedł w working (zapamiętane jako .tura), a potem idle, albo w PR jest commit nowszy niż
+# polecenie. Raport z poprzedniej iteracji ani panel idle przed podjęciem polecenia nie kończą czekania.
+# Wynik: gotowe (PR z raportem), idle, blocked, brak_agenta, brak_panelu, pracuje (limit czasu) albo
+# bez_tury (limit czasu, a agent nie podjął polecenia).
 task_wait() {
-  local nr timeout=600 t=0 label pr prn="" raport=false st="" p a krok_s start_s
+  local nr timeout=600 t=0 label pr prn="" raport=false st="" p a krok_s start_s pol tura nowy pj
   local -a reszta=()
   while [ $# -gt 0 ]; do
     case "$1" in
@@ -995,31 +1036,53 @@ task_wait() {
   zadania_init
   herdr_dziala
   label="$(etykieta_workera "$nr")"
+  pol="$(jq -r '.polecenie // ""' <<<"$(stan_zadania "$nr")")"
+  tura="$(jq -r 'if .tura == false then "false" else "true" end' <<<"$(stan_zadania "$nr")")"
+  [ -n "$pol" ] || tura=true
   start_s="$(date +%s)"
   while :; do
     pr="$(pr_zadania "$nr")"
     prn=""
     raport=false
+    nowy=false
     if [ -n "$pr" ] && [ "$(jq -r .state <<<"$pr")" = OPEN ]; then
       prn="$(jq -r .number <<<"$pr")"
-      if gh pr view "$prn" --repo "$SLUG" --json files 2>/dev/null |
-        jq -e --arg f "docs/07-realizacja/T-$nr.md" 'any((.files // [])[]; .path == $f)' >/dev/null; then
-        raport=true
-      fi
+      pj="$(gh pr view "$prn" --repo "$SLUG" --json files,commits 2>/dev/null || echo '{}')"
+      jq -e --arg f "docs/07-realizacja/T-$nr.md" 'any((.files // [])[]; .path == $f)' <<<"$pj" >/dev/null && raport=true
+      # Daty ISO 8601 w UTC porównujemy jako tekst.
+      [ -n "$pol" ] && jq -e --arg p "$pol" '[(.commits // [])[] | .committedDate // ""] | max // "" | . >= $p' <<<"$pj" >/dev/null &&
+        nowy=true
     fi
-    if [ "$raport" = true ]; then st=gotowe; break; fi
+    [ -n "$pol" ] || nowy=true
+    if [ "$raport" = true ] && [ "$nowy" = true ]; then st=gotowe; break; fi
     p="$(jq -c --arg l "$label" '[.[] | select(.label == $l)][0] // null' <<<"$(panele_herdr)")"
     if [ "$p" = null ]; then st=brak_panelu; break; fi
     a="$(jq -r '.agent_status // ""' <<<"$p")"
     case "$(jq -r '.agent // ""' <<<"$p")/$a" in
       /*) st=brak_agenta; break ;;
-      */idle | */done) st=idle; break ;;
+      */working)
+        if [ "$tura" = false ]; then
+          tura=true
+          stan_zapisz "$nr" '{"tura":true}'
+        fi
+        ;;
+      */idle | */done)
+        if [ "$tura" = true ] || [ "$nowy" = true ]; then st=idle; break; fi
+        ;;
       */blocked) st=blocked; break ;;
     esac
     t=$(($(date +%s) - start_s))
-    if [ "$t" -ge "$timeout" ]; then st=pracuje; break; fi
+    if [ "$t" -ge "$timeout" ]; then
+      if [ "$tura" = true ]; then st=pracuje; else st=bez_tury; fi
+      break
+    fi
     krok_s=$((timeout - t))
     [ "$krok_s" -le "${SHCTL_WAIT_KROK:-60}" ] || krok_s="${SHCTL_WAIT_KROK:-60}"
+    if [ "$tura" = false ]; then
+      # Agent jeszcze nie podjął polecenia: agent wait na idle wróciłby od razu.
+      sleep "${SHCTL_WAIT_PAUZA:-5}"
+      continue
+    fi
     # Błąd agent wait (agent zniknął) rozstrzyga następny obieg; pauza chroni przed pętlą bez czekania.
     z_limitem $((krok_s + 10)) herdr agent wait "$(jq -r .pane_id <<<"$p")" --timeout "$((krok_s * 1000))" >/dev/null 2>&1 ||
       sleep "${SHCTL_WAIT_PAUZA:-5}"
@@ -1027,15 +1090,18 @@ task_wait() {
   t=$(($(date +%s) - start_s))
   case "$st" in
     gotowe) krok_s="shctl pr check $prn --czekaj" ;;
-    idle) krok_s="agent czeka bez PR z raportem: polecenie dokończenia (herdr agent prompt)" ;;
+    idle) krok_s="agent czeka bez PR z raportem po poleceniu: polecenie dokończenia (herdr agent prompt)" ;;
     blocked) krok_s="agent pyta albo czeka na zgodę: herdr agent read, pytanie do właściciela w statusie" ;;
     brak_agenta | brak_panelu) krok_s="shctl task resume-check $nr, potem shctl task dispatch $nr" ;;
     pracuje) krok_s="worker pracuje: ponów shctl task wait $nr" ;;
+    bez_tury) krok_s="agent nie podjął polecenia: herdr agent read; gdy czeka na wejście, herdr agent prompt" ;;
   esac
   info "#$nr: $st po ${t} s; dalej: $krok_s"
   wynik_json "$(jq -nc --argjson n "$nr" --arg s "$st" --arg p "$prn" --argjson r "$raport" --argjson t "$t" --arg k "$krok_s" \
+    --arg pol "$pol" --argjson nc "$nowy" \
     '{nr:$n, stan:$s, pr:(if $p == "" then null else ($p | tonumber) end), raport:$r, czekano_s:$t,
-      limit_czasu:($s == "pracuje"), nastepny_krok:$k}')"
+      polecenie:(if $pol == "" then null else $pol end), nowy_commit:$nc,
+      limit_czasu:($s == "pracuje" or $s == "bez_tury"), nastepny_krok:$k}')"
 }
 
 komenda_main() {

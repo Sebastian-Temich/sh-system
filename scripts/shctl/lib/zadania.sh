@@ -32,6 +32,21 @@ konf() {
   case "$v" in "" | null) printf '%s' "$2" ;; *) printf '%s' "$v" ;; esac
 }
 
+# Tag baseline projektu wzorcowego: baseline_tag z docs/konfiguracja.md albo najnowszy z baseline-*
+# (i dawnego baseline) według daty commita. Pusto i kod 1, gdy brak.
+najnowszy_baseline() {
+  local t
+  t="$(konf baseline_tag "")"
+  if [ -n "$t" ]; then
+    git -C "$ROOT_G" rev-parse -q --verify "refs/tags/$t^{commit}" >/dev/null || die "$E_BRAK" "baseline_tag: brak tagu $t"
+    printf '%s' "$t"
+    return 0
+  fi
+  t="$(git -C "$ROOT_G" for-each-ref --sort=-creatordate --format='%(refname:short)' 'refs/tags/baseline' 'refs/tags/baseline-*' | head -1)"
+  [ -n "$t" ] || return 1
+  printf '%s' "$t"
+}
+
 konf_liczba() {
   local v
   v="$(konf "$1" "$2")"

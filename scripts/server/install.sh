@@ -5,14 +5,13 @@
 # /Users/Shared/sh/bin, Brewfile do /Users/Shared/sh/Brewfile, codex/reviewer.config.toml do $CODEX_HOME (~/.codex) i
 # orkiestrator-settings.json do /Users/Shared/sh/.claude/settings.json. Zwykly plik zastepuje tylko, gdy jest identyczny
 # z repo. Roznica to blad: nowsze zmiany trzeba najpierw przeniesc do repo.
-# Wzorce straznika limitow: kopia scripts/server/watchdog-wzorce.txt do /Users/Shared/sh, tylko gdy jej brak.
 # Konfiguracja Maca (max_local): kopia scripts/server/konfiguracja-sh.md do /Users/Shared/sh/konfiguracja.md, gdy jej brak.
 # Plisty: scripts/server/*.plist kopiuje do ~/Library/LaunchAgents tylko przy roznicy
 # i przeladowuje agenta. Niezaladowanego agenta laduje zawsze, takze bez zmiany plisty.
 # Agent z RunAtLoad wystartuje wtedy ponownie. Nieudany bootstrap to kod bledu, komenda
 # do recznego zaladowania i notify.sh high. Flaga /Users/Shared/sh/stan/autostart.off wstrzymuje
 # ladowanie agenta sh-start; plista jest nadal kopiowana, bez dotykania launchd.
-# Tak samo /Users/Shared/sh/stan/obsidian-sync.off dla agenta obsidian-sync (shctl obsidian sync co 5 minut).
+# Tak samo /Users/Shared/sh/stan/obsidian-sync.off dla agenta obsidian-sync (obsidian-sync.sh co 5 minut).
 # Git: globalny core.hooksPath na scripts/server/git-hooks. Inna wartosc to blad, nie nadpisujemy.
 # Logowanie git do github.com: helper gh auth git-credential (bezwzgledna sciezka), gdy go brak.
 # Repo z lokalnym core.hooksPath w SH_DIR i SH_DIR/projekty dostaje ostrzezenie, bo wygrywa on z globalnym.
@@ -162,18 +161,6 @@ done
 
 link "$REPO/scripts/server/Brewfile" "$SH_DIR/Brewfile"
 
-# Wzorce strażnika limitów: kopia robocza do poprawiania na serwerze, nie symlink. Istniejącej
-# nie nadpisujemy; różnicę z repo tylko zgłaszamy.
-wzorce="$SH_DIR/watchdog-wzorce.txt"
-if [ ! -e "$wzorce" ]; then
-  cp "$REPO/scripts/server/watchdog-wzorce.txt" "$wzorce"
-  echo "kopia:   $wzorce"
-elif cmp -s "$wzorce" "$REPO/scripts/server/watchdog-wzorce.txt"; then
-  echo "ok:      $wzorce"
-else
-  echo "UWAGA:   $wzorce rozni sie od scripts/server/watchdog-wzorce.txt (poprawki warto przeniesc do repo)" >&2
-fi
-
 # Konfiguracja Maca: limit workerów wspólny dla projektów. Wartość ustawia właściciel na serwerze.
 konf_sh="$SH_DIR/konfiguracja.md"
 if [ ! -e "$konf_sh" ]; then
@@ -198,10 +185,17 @@ done
 git_hooki
 git_logowanie
 
-# Pliki spoza repo: tylko ostrzezenie, nic nie kasujemy.
+# Dowiązania do plików usuniętych z repo (np. notify-hook.sh) znikają; pliki spoza repo: tylko
+# ostrzeżenie, nic innego nie kasujemy.
 for dst in "$BIN"/*; do
   [ -e "$dst" ] || [ -L "$dst" ] || continue
-  [ -L "$dst" ] || echo "UWAGA:   $dst nie pochodzi z repo" >&2
+  if [ -L "$dst" ]; then
+    case "$(readlink "$dst")" in
+      "$REPO"/*) [ -e "$dst" ] || { rm -f "$dst"; echo "usuniete: $dst (brak celu w repo)"; } ;;
+    esac
+  else
+    echo "UWAGA:   $dst nie pochodzi z repo" >&2
+  fi
 done
 
 exit "$fail"

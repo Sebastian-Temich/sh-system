@@ -25,7 +25,7 @@ Obsidianie.
 | [[02-codzienna-praca]] | Codziennie: czat z orkiestratorem, polecenia, powiadomienia, Obsidian |
 | [[03-skille]] | Gdy chcesz wiedzieć, który agent co robi i kiedy czeka na Ciebie |
 | [[04-shctl]] | Gdy chcesz sam coś sprawdzić w terminalu |
-| [[05-serwer-i-skrypty]] | Gdy chodzi o serwer: autostart, strażnik limitów, synchronizacja, kopie |
+| [[05-serwer-i-skrypty]] | Gdy chodzi o serwer: autostart, strażnik orkiestratora, synchronizacja, kopie |
 | [[06-przyklad-od-zera]] | Pełny przykład: strona firmowa od pomysłu do odbioru |
 | [[07-gdy-cos-nie-dziala]] | Gdy przyszło niepokojące powiadomienie albo coś stoi |
 | [[08-slownik]] | Gdy nie znasz jakiegoś pojęcia |
@@ -44,6 +44,6 @@ Szczegóły techniczne są w dokumentach systemu: [[proces-v1]] (proces), [[shct
    architektury z planem i odbiór. W trybie S: tylko odbiór. Każde takie miejsce przychodzi jako
    push „Czeka na Twoją akceptację” z linkiem do PR. Plus eskalacje, gdy przyjdą.
 4. **Po limicie albo restarcie piszesz „wznów”.** W etapie A nikt nie wznawia pracy za Ciebie.
-   Powiadomienie „Limit … odnowiony” znaczy: możesz napisać „wznów”.
+   Po godzinie odnowienia limitu, którą poda orkiestrator, możesz napisać „wznów”.
 5. **Produkcja należy tylko do Ciebie.** Na serwerze nie ma żadnych kluczy produkcyjnych, a w
    etapie A nie ma wdrożeń produkcyjnych. W razie kłopotów piszesz „STOP”.

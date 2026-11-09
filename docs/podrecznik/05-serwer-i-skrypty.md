@@ -16,7 +16,7 @@ gałąź i PR, nigdy wprost na serwerze.
 | Usługa | Co robi | Kiedy | Log |
 |---|---|---|---|
 | `pl.iskt.softwarehouse.sh-start` | Uruchamia herdr i orkiestratora | Przy logowaniu | `/Users/Shared/sh/logs/sh-start.log` |
-| `pl.iskt.softwarehouse.sh-watchdog` | Strażnik limitów subskrypcji | Co 5 minut i przy logowaniu | `/Users/Shared/sh/logs/watchdog.log` |
+| `pl.iskt.softwarehouse.sh-watchdog` | Strażnik orkiestratora: podnosi go, gdy padnie | Co 5 minut i przy logowaniu | `/Users/Shared/sh/logs/watchdog.log` |
 | `pl.iskt.softwarehouse.obsidian-sync` | Aktualizuje kopie dokumentów w Obsidianie | Co 5 minut i przy logowaniu | `/Users/Shared/sh/logs/obsidian-sync.log` |
 
 Instaluje je `install.sh`. Ręczna zmiana w `~/Library/LaunchAgents` zostanie nadpisana przy
@@ -28,16 +28,15 @@ następnym `install.sh`.
 |---|---|---|
 | Autostart herdr i orkiestratora | `touch /Users/Shared/sh/stan/autostart.off` i `launchctl bootout gui/$(id -u)/pl.iskt.softwarehouse.sh-start` | `rm /Users/Shared/sh/stan/autostart.off` i `/Users/Shared/sh/sh-system/scripts/server/install.sh` |
 | Synchronizacja Obsidiana | `touch /Users/Shared/sh/stan/obsidian-sync.off` (zatrzymanie od razu: `launchctl bootout gui/$(id -u)/pl.iskt.softwarehouse.obsidian-sync`) | `rm /Users/Shared/sh/stan/obsidian-sync.off` i `install.sh` |
-| Strażnik limitów | `launchctl bootout gui/$(id -u)/pl.iskt.softwarehouse.sh-watchdog`; bez flagi, więc działa tylko do następnego `install.sh` | `install.sh` |
+| Strażnik orkiestratora | `launchctl bootout gui/$(id -u)/pl.iskt.softwarehouse.sh-watchdog`; bez flagi, więc działa tylko do następnego `install.sh` | `install.sh` |
 
-Flagi przetrwają restart Maca i kolejne `install.sh`. Ręczne `sh-start.sh` i ręczne
-`shctl obsidian sync` działają także przy fladze.
+Flagi przetrwają restart Maca i kolejne `install.sh`. Ręczne `sh-start.sh` działa także przy fladze.
 
 ## Skrypty serwera
 
 ### sh-start.sh
 
-Przygotowuje workspace `sh` w herdr: panel `orkiestrator` z `SH_NOTIFY=1 claude remote-control --name
+Przygotowuje workspace `sh` w herdr: panel `orkiestrator` z `claude remote-control --name
 sh-orkiestrator --permission-mode auto` i panel `powloka`. Każda sesja, którą otwierasz przez Remote Control,
 startuje w trybie Auto. Uruchamia tylko to, co nie działa, więc można go wywoływać
 wielokrotnie.
@@ -74,11 +73,9 @@ notify.sh default "Test SH" "Działa"
 notify.sh high "Tytuł" "Treść" https://link-po-kliknieciu warning
 ```
 
-Priorytety: `min`, `default`, `high`, `urgent`. Używają go shctl, strażnik limitów i `install.sh`.
-Hook Claude Code (`notify-hook.sh`) wysyła „Claude czeka na zgodę” (pytanie o zgodę) i „Claude
-czeka na Ciebie” (orkiestrator skończył i czeka na wiadomość; workery tego nie wysyłają). W treści
-jest projekt i rola, np. `sh-dryrun / orkiestrator` albo `sh-dryrun / worker #11`. Działa tylko w procesie uruchomionym z `SH_NOTIFY=1`, a tak
-startuje każdy worker z `shctl task dispatch` i orkiestrator z `sh-start.sh`.
+Priorytety: `min`, `default`, `high`, `urgent`. Używają go shctl, strażnik orkiestratora i
+`install.sh`. Hooka Claude Code z pushami „Claude czeka na zgodę” i „Claude czeka na Ciebie” już nie
+ma: workerów pilnuje orkiestrator.
 
 Test: `shctl doctor --test-notify` albo wywołanie jak wyżej.
 
@@ -91,21 +88,15 @@ worktree, konfigurację Claude (`~/.claude`, skille SH) i swój katalog tymczaso
 
 ### sh-watchdog.sh
 
-Strażnik limitów, bez AI. Co 5 minut:
+Strażnik orkiestratora, bez AI. Co 5 minut sprawdza, czy działa orkiestrator (`claude
+remote-control` w `/Users/Shared/sh`). Gdy nie, uruchamia go przez `sh-start.sh` i wysyła push
+„Orkiestrator uruchomiony ponownie”, a gdy to się nie uda, „Orkiestrator nie wstał po restarcie”.
+Flaga `/Users/Shared/sh/stan/autostart.off` wyłącza ten restart. Orkiestrator przeżywa koniec
+przebiegu strażnika (`AbandonProcessGroup` w pliście).
 
-1. usuwa z `/Users/Shared/sh/limity.md` limity, których godzina minęła, i wysyła push „Limit X odnowiony”;
-2. czyta ostatnie linie paneli workspace `sh` i szuka komunikatów o limicie Claude Code i Codexa;
-3. nowy limit zapisuje w `/Users/Shared/sh/limity.md` i wysyła push „Limit X do HH:MM”;
-4. sprawdza, czy działa orkiestrator (`claude remote-control` w `/Users/Shared/sh`); gdy nie, uruchamia go
-   przez `sh-start.sh` i wysyła push „Orkiestrator uruchomiony ponownie”. Flaga
-   `/Users/Shared/sh/stan/autostart.off` wyłącza ten restart. Orkiestrator przeżywa koniec przebiegu
-   strażnika (`AbandonProcessGroup` w pliście).
-
-W etapie A **nie wznawia pracy**: wznawiasz Ty, pisząc „wznów”. Automatyczne wznowienie to etap B
-(jeszcze niedostępne).
-
-Wzorce komunikatów: `/Users/Shared/sh/watchdog-wzorce.txt` (kopia robocza, źródło w repo). Limit Claude
-wstrzymuje nowe zadania, limit Codexa tylko review: PR czekają w kolejce.
+Limitów subskrypcji strażnik już nie śledzi i nie wysyła o nich powiadomień. Wpis w
+`/Users/Shared/sh/limity.md` robi orkiestrator albo Ty. Limit Claude wstrzymuje nowe zadania, limit
+Codexa tylko review: PR czekają w kolejce. Pracę po limicie wznawiasz Ty, pisząc „wznów”.
 
 ```sh
 launchctl kickstart gui/$(id -u)/pl.iskt.softwarehouse.sh-watchdog   # przebieg teraz
@@ -114,13 +105,10 @@ tail -f /Users/Shared/sh/logs/watchdog.log
 
 ### Synchronizacja Obsidiana
 
-Usługa `obsidian-sync` uruchamia co 5 minut `shctl obsidian sync --agent`. W każdej kopii w
-`SH/` robi tylko `git pull --ff-only`. Skrzynek (`SH/Skrzynka/`) nie dotyka, bo nie są kopiami repo. Kopię z lokalnymi zmianami albo
-rozjechaną pomija; gdy problem
-powtórzy się w dwóch przebiegach, wysyła jeden push „Obsidian: klon bez synchronizacji”. Nigdy nie
-nadpisuje Twoich zmian.
-
-Stan: `/Users/Shared/sh/stan/obsidian-sync.json`, a data ostatniej udanej synchronizacji jest w `shctl doctor`.
+Usługa `obsidian-sync` uruchamia co 5 minut `/Users/Shared/sh/bin/obsidian-sync.sh`. W każdej kopii w
+`SH/` robi tylko `git pull --ff-only`. Skrzynek (`SH/Skrzynka/`) nie dotyka, bo nie są kopiami repo.
+Kopia z lokalnymi zmianami albo rozjechana nie aktualizuje się, a powód trafia do
+`/Users/Shared/sh/logs/obsidian-sync.log`. Powiadomień nie ma. Nigdy nie nadpisuje Twoich zmian.
 
 ### install.sh
 
@@ -135,7 +123,7 @@ Robi:
 - symlinki skryptów do `/Users/Shared/sh/bin` i `/Users/Shared/sh/Brewfile`;
 - profil reviewera Codex (`~/.codex/reviewer.config.toml`) i ustawienia sesji orkiestratora
   (`/Users/Shared/sh/.claude/settings.json`);
-- kopię wzorców strażnika, gdy jej brak;
+- usunięcie martwych symlinków w `/Users/Shared/sh/bin` do plików, których nie ma już w repo;
 - LaunchAgenty: kopiuje przy zmianie i przeładowuje, ładuje niezaładowane (z wyjątkiem wyłączonych
   flagą);
 - globalny hook git (niżej).
@@ -212,8 +200,8 @@ Actions”. Zużycie widzisz w GitHubie: Settings → Billing and plans → Usag
 |---|---|
 | `/Users/Shared/sh/logs/shctl.log` | Każde wywołanie shctl: czas, kod, projekt, komenda |
 | `/Users/Shared/sh/logs/sh-start.log` | Start herdr i orkiestratora |
-| `/Users/Shared/sh/logs/watchdog.log` | Przebiegi strażnika limitów (bez treści komunikatów) |
-| `/Users/Shared/sh/logs/obsidian-sync.log` | Synchronizacja kopii, pominięte kopie z powodem |
+| `/Users/Shared/sh/logs/watchdog.log` | Przebiegi strażnika orkiestratora |
+| `/Users/Shared/sh/logs/obsidian-sync.log` | Kopie, których nie udało się zaktualizować, z powodem |
 | `/Users/Shared/sh/logs/herdr-server.log` | Serwer herdr uruchomiony przez `sh-start.sh` |
 | `/Users/Shared/sh/stan/review/PROJEKT-NR/codex.log` | Wyjście Codexa z review |
 
@@ -221,10 +209,8 @@ Actions”. Zużycie widzisz w GitHubie: Settings → Billing and plans → Usag
 
 | Plik | Zawartość |
 |---|---|
-| `/Users/Shared/sh/limity.md` | Aktywne limity subskrypcji |
+| `/Users/Shared/sh/limity.md` | Aktywne limity subskrypcji (wpisuje orkiestrator albo Ty) |
 | `/Users/Shared/sh/konfiguracja.md` | Limit workerów Maca `max_local` (domyślnie 2); zmieniasz go tu, projekt może go tylko obniżyć |
 | `/Users/Shared/sh/porty.md` | Bloki portów baz projektów (rezerwuje `new-project`, zwalniasz ręcznie) |
 | `/Users/Shared/sh/stan/NAZWA.json` | Mapa zadań projektu na panele, stan po STOP |
 | `/Users/Shared/sh/stan/do-usuniecia.md` | Repo testowe do usunięcia przez Ciebie |
-| `/Users/Shared/sh/stan/obsidian-sync.json` | Ostatnia synchronizacja Obsidiana i problemy |
-| `/Users/Shared/sh/stan/skrzynka/NAZWA.json` | Partia materiałów ze skrzynki czekająca na merge PR |

@@ -131,3 +131,22 @@ otwarte() { jq -r '[.[] | select(.state == "OPEN") | .number] | join(",")' "$GH_
   [ "$(otwarte)" = "1,2" ]
   ! grep -qE '^(pr close|issue close)' "$GH_ATRAPA/calls" || false
 }
+
+@test "reset-dryrun: najnowszy tag baseline-RRRRMMDD albo baseline_tag z konfiguracji, bez przesuwania tagow" {
+  # Nowszy baseline jako nowy tag (commit z późniejszą datą).
+  echo nowy >src/baseline.txt && git add -A
+  GIT_COMMITTER_DATE="2030-01-01T00:00:00Z" git commit -qm "nowy baseline"
+  NOWY="$(git rev-parse HEAD)"
+  git tag baseline-20300101 && git push -q origin main baseline-20300101
+  echo zmiana >src/main.txt && git add -A && git commit -qm "po baseline" && git push -q origin main
+  run --separate-stderr "$SHCTL" reset-dryrun --json
+  echo "$output $stderr"
+  [ "$status" -eq 0 ]
+  [ "$(jq -r .wynik.tag <<<"$output")" = baseline-20300101 ]
+  [ "$(git rev-parse baseline)" = "$BASE" ]
+  [ "$(git --git-dir "$T/remote.git" rev-parse refs/tags/baseline)" = "$BASE" ]
+  # Wskazany w konfiguracji tag wygrywa z najnowszym.
+  sed -i.bak 's/^tryb_procesu: M/tryb_procesu: M\nbaseline_tag: baseline/' docs/konfiguracja.md && rm -f docs/konfiguracja.md.bak
+  run --separate-stderr "$SHCTL" reset-dryrun --dry-run --json
+  [ "$(jq -r '.wynik.tag, .wynik.baseline' <<<"$output" | tr '\n' ' ')" = "baseline $BASE " ]
+}

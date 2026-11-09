@@ -239,17 +239,9 @@ MOCK
   [ "$(do_usuniecia)" = "ok:0" ]
 }
 
-@test "Obsidian sync: brak przebiegu, potem data ostatniej udanej, flaga wylaczenia" {
-  mkdir -p "$SH_OBSIDIAN_DIR"
+@test "bez kontroli elementow usunietych w fazach 2 i 3 (Obsidian sync, wzorce, limity)" {
   run --separate-stderr "$SHCTL" doctor --json
-  [ "$(jq -r '.wynik.kontrole | map(select(.nazwa == "Obsidian sync"))[0].stan' <<<"$output")" = uwaga ]
-  "$SHCTL" obsidian sync >/dev/null
-  run --separate-stderr "$SHCTL" doctor --json
-  [ "$(jq -r '.wynik.kontrole | map(select(.nazwa == "Obsidian sync"))[0].stan' <<<"$output")" = ok ]
-  [[ "$(jq -r '.wynik.kontrole | map(select(.nazwa == "Obsidian sync"))[0].szczegoly' <<<"$output")" == "ostatnia udana "20* ]] || false
-  touch "$SH_DIR/stan/obsidian-sync.off"
-  run --separate-stderr "$SHCTL" doctor
-  [[ "$output" == *"wyłączona flagą"* ]] || false
+  [ "$(jq -r '[.wynik.kontrole[].nazwa | select(test("Obsidian sync|wzorc|watchdog|sesj|checkpoint|propozycj"; "i"))] | length' <<<"$output")" -eq 0 ]
 }
 
 # Claude Code blokuje Write/Edit pod segmentem zakończonym kropką (katalog domowy /Users/sebastiant.).

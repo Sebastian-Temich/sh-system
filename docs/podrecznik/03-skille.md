@@ -55,7 +55,7 @@ Twojej akceptacji.
 Po każdym kamieniu proponuje restart sesji (`/clear` i „wznów”).
 
 Na „materiały w skrzynce” przenosi Twoje pliki ze skrzynki do repo (`shctl skrzynka przyjmij`): PR,
-merge po zielonym CI, potem odłożenie plików w skrzynce do `_przeniesione/`.
+merge po zielonym CI i opróżnienie skrzynki, wszystko w jednym kroku.
 
 ## sh-intake
 
@@ -127,9 +127,9 @@ zrobiono, testy, decyzje, drobne uwagi, ryzyka, propozycje dla systemu), PR „C
 
 **Zatrzymuje się na Ciebie:** tylko przez eskalację: potrzebny klucz, dostęp, płatna usługa,
 decyzja spoza zadania, ryzyko, sekret znaleziony w repo. Pracuje dalej nad częściami niezależnymi.
-Gdy worker pyta w panelu o zgodę, dostajesz push „Claude czeka na zgodę” z projektem i numerem
-zadania (`sh-dryrun / worker #11`). Gdy worker skończył turę, push nie przychodzi: pilnuje go
-orkiestrator. Worker czyta tylko pliki swojego worktree, konfigurację Claude i swój katalog
+Gdy worker pyta w panelu o zgodę albo skończył turę, push nie przychodzi: pilnuje go orkiestrator
+(`shctl task wait`). Lokalny Lighthouse uruchamia tylko z limitem czasu; po przekroczeniu zapisuje to w
+raporcie, a pełny pomiar robi CI albo QA. Worker czyta tylko pliki swojego worktree, konfigurację Claude i swój katalog
 tymczasowy.
 
 ## sh-review

@@ -34,17 +34,16 @@ o nas, kontakt) i formularz kontaktowy, który wysyła zgłoszenie na nasz e-mai
 Materiały w skrzynce.
 ```
 
-**Orkiestrator:** `shctl skrzynka przyjmij strona-firmowa`. Pliki przechodzą kontrolę, a ZIP jest
-rozpakowany do `docs/00-intake/zrodla/makiety/`. Powstaje PR #1 z gałęzi `stage/00-intake`. Po
-zielonym CI orkiestrator go merguje i wywołuje komendę jeszcze raz, co odkłada pliki w skrzynce.
+**Orkiestrator:** `shctl skrzynka przyjmij strona-firmowa`. Pliki trafiają bez zmian (ZIP bez
+rozpakowania) do `docs/00-intake/zrodla/`. Powstaje PR #1 z gałęzi `skrzynka/20261103-101500`. Ta
+sama komenda czeka na CI, po zielonym merguje PR i opróżnia skrzynkę.
 
 ```text
-Materiały przyjęte (PR #1): makiety.zip (12 plików), logo.svg, teksty/ (5 plików).
-Odrzucone: makiety.zip:export/podglad.command (plik wykonywalny), zostaje w skrzynce.
+Materiały przyjęte (PR #1): makiety.zip, logo.svg, teksty/ (5 plików). Skrzynka pusta.
 ```
 
-W skrzynce przyjęte pliki leżą teraz w `_przeniesione/20261103/`, a w Obsidianie, po synchronizacji,
-w `SH/Projekty/strona-firmowa/docs/00-intake/zrodla/`. Następnie orkiestrator uruchamia `sh-intake`,
+Skrzynka jest teraz pusta, a pliki są w repo i w Obsidianie, po synchronizacji, w
+`SH/Projekty/strona-firmowa/docs/00-intake/zrodla/`. Następnie orkiestrator uruchamia `sh-intake`,
 który czyta materiały jako dane.
 
 **Orkiestrator odpowiada (przykład):**
@@ -166,15 +165,9 @@ Naraz pracują najwyżej dwaj workerzy na całym Macu (`max_local: 2` w `/Users/
 
 ### Powiadomienia, które mogą przyjść
 
-**Limit:**
-
-```text
-Limit claude
-Limit claude do 19:00. Po odnowieniu napisz orkiestratorowi: wznów
-```
-
-Praca workera stoi. Po odnowieniu przychodzi „Limit claude odnowiony, możesz wznowić”, a Ty piszesz
-„wznów”. Orkiestrator sprawdza przerwane zadanie (`shctl task resume-check`) i decyduje: kontynuuj,
+**Limit:** push o limicie nie przychodzi. Orkiestrator pisze w czacie, że skończył się limit
+Claude do 19:00, i wpisuje go do `/Users/Shared/sh/limity.md`. Praca workera stoi. Po odnowieniu
+piszesz „wznów”. Orkiestrator sprawdza przerwane zadanie (`shctl task resume-check`) i decyduje: kontynuuj,
 rebase albo iteracja od nowa. Przerwanie przez limit nie liczy się jako iteracja.
 
 **Eskalacja:** worker dochodzi do formularza, a klucza testowego Resend nie ma.

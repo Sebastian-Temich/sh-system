@@ -40,7 +40,7 @@ Wróć do: [[00-start-tutaj]]
 | **Specyfikacja** | `docs/00-intake/specyfikacja.md`: cel, zakres, wymagania `W-n`, stack, hosting, ryzyka |
 | **Staging** | Wdrożenie gałęzi `main` pod stałym adresem i osobna baza testowa. Tu robisz odbiór |
 | **shctl** | Program z mechaniką procesu, wywoływany przez agentów |
-| **Strażnik limitów** | Skrypt bez AI, który co 5 minut wykrywa limity i wysyła powiadomienia |
+| **Strażnik orkiestratora** | Skrypt bez AI (`sh-watchdog.sh`), który co 5 minut sprawdza orkiestratora i podnosi go, gdy padnie |
 | **Szkielet** | Pierwsze zadanie projektu (`T1`): struktura repo, CI, testy, baza lokalna. Do jego zamknięcia nic innego nie startuje |
 | **Tryb S / M / L** | Skala procesu: S szybki (1–3 zadania), M średni (4–15 zadań), L pełny (etap B, jeszcze niedostępne) |
 | **W-n** | Numer wymagania w specyfikacji, np. `W-3` |

@@ -116,3 +116,27 @@ gotowe() { jq -r '[.wynik.gotowe[].nr] | join(",")' <<<"$output"; }
   run --separate-stderr "$SHCTL" task ready
   [ "$status" -eq 3 ]
 }
+
+@test "ready --czekaj: czeka na wolny slot, bez petli po stronie orkiestratora" {
+  issue 1 "Gotowe" "status:todo"
+  panel w1:p5 worker:demo:4 claude
+  # Slot zwalnia się w trakcie czekania (panel workera znika).
+  ( sleep 2; jq 'map(select(.pane_id != "w1:p5"))' "$HERDR_ATRAPA/panele.json" >"$T/p.n" && mv "$T/p.n" "$HERDR_ATRAPA/panele.json" ) &
+  SHCTL_READY_PAUZA=1 run --separate-stderr "$SHCTL" task ready --czekaj --timeout 30 --json
+  wait
+  echo "$output $stderr"
+  [ "$status" -eq 0 ]
+  [ "$(gotowe)" = "1" ]
+  [ "$(jq -r '.wynik.limit_czasu' <<<"$output")" = false ]
+  [ "$(jq -r '.wynik.czekano_s' <<<"$output")" -ge 1 ]
+}
+
+@test "ready --czekaj: limit czasu przy zajetym slocie, bez kandydatow wraca od razu" {
+  issue 1 "Gotowe" "status:todo"
+  panel w1:p5 worker:demo:4 claude
+  SHCTL_READY_PAUZA=1 run --separate-stderr "$SHCTL" task ready --czekaj --timeout 2 --json
+  [ "$(jq -r '.wynik.limit_czasu, .wynik.mozna_dispatch' <<<"$output" | tr '\n' ' ')" = "true false " ]
+  zamknij_issue 1
+  SHCTL_READY_PAUZA=1 run --separate-stderr "$SHCTL" task ready --czekaj --timeout 600 --json
+  [ "$(jq -r '.wynik.limit_czasu, .wynik.czekano_s' <<<"$output" | tr '\n' ' ')" = "false 0 " ]
+}

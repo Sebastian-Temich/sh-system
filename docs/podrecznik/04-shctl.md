@@ -51,7 +51,7 @@ shctl status show --projekt strona-firmowa
 zdrowie serwera: narzędzia, logowania gh, codex i claude, logowanie git do GitHuba, Docker, herdr,
 czy w panelu `orkiestrator` działa orkiestrator (ta sama kontrola co przy starcie i w strażniku)
 i czy ma `/Users/Shared/sh/bin` w PATH, powiadomienia, hook git,
-wolne miejsce, porty, kopie w Obsidianie i datę ostatniej synchronizacji, repo testowe do usunięcia.
+wolne miejsce, porty, kopie w Obsidianie (czy są aktualne), repo testowe do usunięcia.
 Stany: `ok`, `uwaga`, `blad`.
 
 ```sh
@@ -69,9 +69,13 @@ miejsca na dysku, pełna kolejka review, limit Claude.
 
 ```sh
 shctl task ready --projekt strona-firmowa
+shctl task ready --czekaj --projekt strona-firmowa   # czeka, aż blokada zejdzie (do 30 minut)
 ```
 
-**Kiedy samemu:** gdy praca stoi, a nie wiesz dlaczego.
+Z `--czekaj` komenda sama czeka na wolne miejsce, kolejkę review, dysk albo koniec limitu, gdy są
+zadania do startu. Bez takich zadań wraca od razu.
+
+**Kiedy samemu:** gdy praca stoi, a nie wiesz dlaczego. Bez `--czekaj`.
 
 ### task resume-check
 
@@ -111,37 +115,29 @@ intake.
 Kopie dokumentów w vaulcie Obsidiana.
 
 ```sh
-shctl obsidian sync                    # aktualizacja wszystkich kopii teraz
 shctl obsidian link stary-projekt      # kopia docs/ i skrzynka dla projektu założonego wcześniej
 shctl obsidian unlink stary-projekt    # usunięcie kopii przy archiwizacji
 ```
 
-`sync` robi tylko `git pull --ff-only`. Kopię z lokalnymi zmianami pomija i zgłasza, nigdy niczego
-nie nadpisuje. Serwer uruchamia go sam co 5 minut. `unlink` odmawia, gdy kopia ma niezapisane
-zmiany.
+Kopie aktualizuje sam serwer co 5 minut (`obsidian-sync.sh`, zwykłe `git pull --ff-only`); osobnej
+komendy do synchronizacji nie ma. `unlink` odmawia, gdy kopia ma niezapisane zmiany.
 
-**Kiedy samemu:** `sync`, gdy nie chcesz czekać 5 minut. `link` i `unlink` przy archiwizacji albo
-przy projekcie bez kopii lub skrzynki. `unlink` skrzynki nie usuwa.
+**Kiedy samemu:** `link` i `unlink` przy archiwizacji albo przy projekcie bez kopii lub skrzynki.
+`unlink` skrzynki nie usuwa.
 
 ### skrzynka
 
 Przenosi Twoje materiały ze skrzynki `SH/Skrzynka/NAZWA` do repo projektu.
 
 ```sh
-shctl skrzynka przyjmij strona-firmowa                                # do docs/00-intake/zrodla
-shctl skrzynka przyjmij strona-firmowa --etap 04-plan/zrodla  # inne miejsce
-shctl skrzynka przyjmij strona-firmowa --dry-run                # tylko sprawdza pliki
+shctl skrzynka przyjmij strona-firmowa              # do docs/00-intake/zrodla
+shctl skrzynka przyjmij strona-firmowa --dry-run    # tylko wypisuje pliki
 ```
 
-Działa w dwóch krokach:
-
-1. Sprawdza pliki, kopiuje przyjęte do `docs/ETAP/KATALOG` na gałęzi `stage/ETAP` i otwiera PR. Pliki
-   zostają w skrzynce.
-2. Po merge'u PR kolejne wywołanie przenosi je w skrzynce do `_przeniesione/RRRRMMDD/` i od razu
-   bierze nowe pliki, jeśli są.
-
-Programy, skrypty, skróty i pliki powyżej 50 MB są odrzucane i zostają w skrzynce. ZIP jest
-rozpakowywany tylko po kontroli ścieżek; programy z archiwum są pomijane. Nic nie jest uruchamiane.
+Jedno wywołanie robi wszystko: kopiuje pliki do `docs/00-intake/zrodla` na nowej gałęzi, otwiera PR,
+czeka na CI, po zielonym CI merguje PR i opróżnia skrzynkę. Przy czerwonym CI PR zostaje otwarty, a
+skrzynka bez zmian. Pliki ukryte, `__MACOSX` i skróty (dowiązania) są pomijane. Nic nie jest
+uruchamiane ani rozpakowywane.
 
 **Kiedy samemu:** `--dry-run`, gdy chcesz sprawdzić, co zostanie przyjęte. Resztę robi orkiestrator na
 „materiały w skrzynce”.
@@ -207,10 +203,10 @@ Pętla realizacji. Wywołuje ją orkiestrator.
 | Komenda | Co robi |
 |---|---|
 | `shctl task create --plik zadania.yaml` | Zakłada issue i kamienie z pliku YAML |
-| `shctl task ready` | Czyta: zadania gotowe do startu i blokady |
+| `shctl task ready` | Czyta: zadania gotowe do startu i blokady; z `--czekaj` czeka, aż blokada zejdzie |
 | `shctl task dispatch NR` | Kopia robocza, panel `worker:PROJEKT:NR`, start workera z listą skilli (bazowe, kategoria, stack, projekt) |
-| `shctl task wait NR` | Czeka na workera z limitem czasu; zwraca stan: gotowe, idle, blocked, pracuje |
-| `shctl pr check PR` | Konflikt z `main` i wynik CI; z `--czekaj` czeka na CI, liczy nieudane naprawy |
+| `shctl task wait NR` | Czeka na nową turę workera po poleceniu, z limitem czasu; stan: gotowe, idle, blocked, pracuje, bez_tury (worker nie podjął polecenia) |
+| `shctl pr check PR` | Konflikt z `main` i wynik CI; z `--czekaj` czeka na CI, liczy nieudane naprawy (commit z samym raportem się nie liczy) |
 | `shctl review run PR` | Review Codexa w czystej kopii, komentarz z werdyktem w PR; jedno naraz na PR |
 | `shctl task iter NR` | Po FAIL: kolejna iteracja poprawek; po 3. FAIL eskalacja |
 | `shctl task close NR` | Merge (tylko zielone CI i PASS), wpisy w plikach wspólnych, propozycje do issue miesiąca, sprzątanie |
@@ -251,7 +247,8 @@ opisuje [[07-gdy-cos-nie-dziala#Awaryjny STOP]].
 
 ### reset-dryrun
 
-Przywraca projekt wzorcowy `sh-dryrun` do stanu wyjściowego, żeby po zmianach w systemie przejść go
+Przywraca projekt wzorcowy `sh-dryrun` do stanu wyjściowego (tag z `baseline_tag` w
+`konfiguracja.md` albo najnowszy `baseline-DATA`), żeby po zmianach w systemie przejść go
 ponownie i porównać czas, iteracje i eskalacje. Działa wyłącznie na tym projekcie. `metryki.md`
 zostaje: każdy przebieg dostaje w nim nową sekcję „Przebieg dryrun N”. Klon `docs/` w vaulcie
 Obsidiana powstaje od nowa.
@@ -264,20 +261,34 @@ shctl reset-dryrun
 
 ## Utrzymanie projektów
 
-### profile update
+### template update
 
-Przenosi do istniejącego projektu aktualne profile uprawnień agentów (`.claude/roles/*/settings.json`)
-z szablonu: commit na `main` projektu, bez przełączania gałęzi. Z `--baseline` (projekt wzorcowy)
-przesuwa też tag `baseline`, a poprzedni zachowuje jako `baseline-DATA`. `--dry-run` pokazuje, co
-się zmieni.
+Przenosi do istniejącego projektu aktualne pliki szablonu: `scripts/`, workflowy CI, profile
+uprawnień agentów, `AGENTS.md`, `docs/_szablony/`. Commit na `main` projektu, bez przełączania gałęzi.
+Plik zmieniony w projekcie zostaje (`pominiety`), chyba że dodasz `--force`. Brakujące pliki dochodzą.
+Z `--baseline` (projekt wzorcowy) robi to samo na najnowszym baseline i zapisuje wynik jako nowy tag
+`baseline-DATA`; żaden tag nie jest przesuwany. `--dry-run` pokazuje, co się zmieni.
 
 ```sh
-shctl profile update --projekt sh-dryrun --baseline --dry-run
-shctl profile update --projekt sh-dryrun --baseline
+shctl template update --projekt sh-dryrun --baseline --dry-run
+shctl template update --projekt sh-dryrun --baseline
 ```
 
-**Kiedy samemu:** po zmianie uprawnień agentów w szablonie, zwykle robi to agent pracujący nad
-systemem. Zadania w toku dostają nowe profile dopiero po rebase'ie na `main`.
+**Kiedy samemu:** po zmianach w szablonie, zwykle robi to agent pracujący nad systemem. Zadania w
+toku dostają nowe pliki dopiero po rebase'ie na `main`.
+
+### sprzataj
+
+Usuwa kopie robocze (worktree) w `/Users/Shared/sh/wt` i `/Users/Shared/sh/wt-system` oraz lokalne
+gałęzie, ale tylko te, których PR jest scalony albo zamknięty. Kopii z niezapisanymi zmianami, gałęzi
+z commitami spoza PR i `main` nie rusza; pokazuje je jako pominięte z powodem.
+
+```sh
+shctl sprzataj --dry-run   # co by usunął
+shctl sprzataj
+```
+
+**Kiedy samemu:** gdy kopii roboczych i gałęzi przybywa. Usuwa tylko to, co już scalone albo zamknięte.
 
 ## Czego `shctl` nie ma
 
@@ -287,5 +298,4 @@ komentarze do issue miesiąca „Propozycje RRRR-MM” w `sh-system`.
 
 Zapowiedziane komendy:
 
-- `shctl upgrade`: aktualizacja projektów do nowego szablonu poza profilami ról, etap B (jeszcze niedostępne);
 - `shctl cykl new`: nowy cykl etapów w trwającym projekcie, etap B (jeszcze niedostępne).

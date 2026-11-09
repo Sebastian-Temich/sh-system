@@ -16,9 +16,11 @@ ZGL='[{"waga":"istotne","plik":"src/a.ts","linia":4,"opis":"brak walidacji"},{"w
   [ "$status" -eq 0 ]
   [ "$(jq -r '.wynik.werdykt, .wynik.blokujace, (.wynik.zgloszenia | length)' <<<"$output" | tr '\n' ' ')" = "FAIL 1 2 " ]
   [ ! -s "$CODEX_ATRAPA/env-w-katalogu" ]
-  grep -q "/wt/demo/review-12 | exec -p reviewer -s read-only -m gpt-6.1-terra" "$CODEX_ATRAPA/calls" ||
-    grep -q "/wt/demo/review-12 | exec -p reviewer -s read-only" "$CODEX_ATRAPA/calls"
+  grep -q "/wt/demo/review-12 | exec -C .*/wt/demo/review-12 -p reviewer -s read-only -m gpt-6.1-terra" "$CODEX_ATRAPA/calls" ||
+    grep -q "/wt/demo/review-12 | exec -C .*/wt/demo/review-12 -p reviewer -s read-only" "$CODEX_ATRAPA/calls"
   grep -q -- '--output-schema' "$CODEX_ATRAPA/calls"
+  # Panel review startuje poza worktree PR: fnm --use-on-cd nie pyta o wersję Node z .nvmrc.
+  grep -q -- "tab create .*--cwd .*/wt/demo --label review:demo:12" "$HERDR_ATRAPA/calls"
   grep -q 'Zadanie: #12' "$CODEX_ATRAPA/prompt"
   grep -q 'Wygenerowane przez scripts/sync-codex.sh' "$CODEX_ATRAPA/prompt"
   grep -q 'Tryb review: PR' "$CODEX_ATRAPA/prompt"
@@ -76,7 +78,7 @@ ZGL='[{"waga":"istotne","plik":"src/a.ts","linia":4,"opis":"brak walidacji"},{"w
   grep -q 'DoD etapu: `docs/04-plan/DoD.md`' "$CODEX_ATRAPA/prompt"
   grep -q 'Iteracja: 2' "$CODEX_ATRAPA/prompt"
   ! grep -q 'Zadanie: #' "$CODEX_ATRAPA/prompt"
-  grep -q "/wt/demo/review-04-plan | exec -p reviewer" "$CODEX_ATRAPA/calls"
+  grep -q "/wt/demo/review-04-plan | exec -C .*/wt/demo/review-04-plan -p reviewer" "$CODEX_ATRAPA/calls"
   grep -q '^tab create.*--label review:demo:04-plan' "$HERDR_ATRAPA/calls"
   komentarze 30 | grep -q '^## Review Codex: FAIL'
   komentarze 30 | grep -q 'iteracja 2\.'

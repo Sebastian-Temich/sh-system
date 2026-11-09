@@ -15,7 +15,7 @@ Orkiestrator działa na serwerze w panelu herdr i jest połączony przez **Remot
 | Laptop przez SSH | `ssh` na serwer, potem `/Users/Shared/sh/bin/sh-start.sh`; ścieżka jeszcze nietestowana |
 
 Każda sesja otwarta przez Remote Control startuje w trybie **Auto**: rutynowe działania idą bez
-pytania, a o zgodę orkiestrator prosi tylko przy ryzykownych (push „Claude czeka na zgodę”). Tryb
+pytania, a o zgodę orkiestrator prosi tylko przy ryzykownych (w czacie, bez pushu). Tryb
 ustawia `sh-start.sh`; zmiana tego ustawienia działa dopiero po ponownym starcie orkiestratora.
 
 To jedna rozmowa, niezależnie od urządzenia. **Jedna sesja prowadzi jeden projekt:** podaj jego
@@ -106,17 +106,15 @@ Co tam wrzucać: eksport z Claude Design (ZIP, PNG, PDF, HTML), logo, zdjęcia, 
 klienta.
 
 1. Wrzuć pliki (także w podfolderach albo jako ZIP).
-2. Napisz w czacie: „materiały w skrzynce dla NAZWA”. Domyślnie trafią do
-   `docs/00-intake/zrodla/`; inne miejsce podaj wprost, np. „do 04-plan/zrodla”.
-3. Orkiestrator otwiera PR z plikami i podaje, co przyjęto, a co odrzucono. Po zielonym CI merguje
-   go sam: bez review Codexa i bez Twojej akceptacji (Twoja decyzja w [[decyzje-systemu]]).
-4. Po merge'u przyjęte pliki znikają ze skrzynki i trafiają do jej podfolderu
-   `_przeniesione/RRRRMMDD/`. Kopia jest w repo, a w Obsidianie w `docs/` projektu.
+2. Napisz w czacie: „materiały w skrzynce dla NAZWA”. Pliki trafią do `docs/00-intake/zrodla/`.
+3. Orkiestrator jednym wywołaniem (`shctl skrzynka przyjmij`) otwiera PR z plikami, czeka na CI i po
+   zielonym merguje go sam: bez review Codexa i bez Twojej akceptacji (Twoja decyzja w
+   [[decyzje-systemu]]).
+4. Po merge'u skrzynka jest pusta. Kopia jest w repo, a w Obsidianie w `docs/` projektu. Przy
+   czerwonym CI pliki zostają w skrzynce, a orkiestrator mówi, co poszło nie tak.
 
-**Pliki są sprawdzane, nic nie jest uruchamiane.** Zostają w skrzynce i nie trafiają do repo: programy
-i skrypty (np. `.sh`, `.command`, `.exe`, `.dmg`, `.app`), skróty (dowiązania), pliki powyżej 50 MB.
-ZIP jest rozpakowywany tylko wtedy, gdy nie ma w nim podejrzanych ścieżek ani skrótów; programy z
-archiwum są pomijane. Odrzucone pliki usuń sam albo zostaw, jeśli były tam przez pomyłkę.
+**Nic nie jest uruchamiane ani rozpakowywane.** ZIP trafia do repo jako ZIP. Pomijane są pliki
+ukryte (nazwa od kropki), `__MACOSX` i skróty (dowiązania).
 
 ## Powiadomienia ntfy
 
@@ -126,18 +124,15 @@ Wszystkie wysyła `notify.sh` przez ntfy.sh na Twój telefon.
 |---|---|---|---|
 | Czeka na Twoją akceptację: PROJEKT / ETAP | wysoki | Checkpoint po PASS review: specyfikacja, plan, odbiór, odbiór zadania S, podniesienie trybu | Otwórz PR (kliknięcie) i odpowiedz w czacie |
 | Eskalacja E-NNN: PROJEKT | wysoki | Agent potrzebuje Twojej decyzji | Odpowiedz w czacie |
-| Limit claude / Limit codex | wysoki | Wyczerpany limit subskrypcji, praca tego wykonawcy stoi do podanej godziny | Nic, czekasz |
-| Limit X odnowiony | zwykły | Limit wrócił | Napisz „wznów” |
 | STOP | wysoki | Zadziałał awaryjny stop | Gdy chcesz wrócić do pracy: „wznów” |
 | Brak miejsca | wysoki | Za mało miejsca na dysku, nowe zadania nie startują | Zwolnij miejsce ([[07-gdy-cos-nie-dziala#Brak miejsca na dysku]]) |
-| Claude czeka na zgodę | zwykły | Worker albo orkiestrator pyta o zgodę na narzędzie; w treści projekt i rola, np. `sh-dryrun / worker #11` albo `sh-dryrun / orkiestrator` | Odpowiedz w panelu albo zapytaj orkiestratora |
-| Claude czeka na Ciebie | zwykły | Orkiestrator skończył i czeka na wiadomość; w treści projekt i rola, np. `sh-dryrun / orkiestrator`. Workery tego pushu nie wysyłają | Napisz do orkiestratora |
-| Obsidian: klon bez synchronizacji | zwykły | Kopia w vaulcie ma lokalne zmiany albo rozjechała się z GitHubem | [[07-gdy-cos-nie-dziala#Obsidian się nie aktualizuje]] |
+| Orkiestrator uruchomiony ponownie | wysoki | Strażnik podniósł orkiestratora po awarii | Napisz „wznów” |
+| Orkiestrator nie wstał po restarcie | pilny | Strażnik nie zdołał go uruchomić | [[07-gdy-cos-nie-dziala#Orkiestrator nie odpowiada]] |
 | install.sh: agent niezaladowany | wysoki | Usługa serwera nie wystartowała po instalacji | [[05-serwer-i-skrypty#install.sh]] |
 
-Ta sama eskalacja, ten sam limit ani ta sama akceptacja dla tego samego commita nie przyjdzie drugi
-raz. Powiadomienie o odnowieniu limitu
-przychodzi z opóźnieniem do 5 minut.
+Ta sama eskalacja ani ta sama akceptacja dla tego samego commita nie przyjdzie drugi raz. Pushy o
+limitach, „Claude czeka na zgodę” i „Obsidian: klon bez synchronizacji” już nie ma: limit i
+problemy zgłasza orkiestrator w czacie.
 
 ## Obsidian
 
@@ -185,7 +180,7 @@ v1 plik zostaje do migracji.
 
 1. „status?” w czacie.
 2. Odpowiedz na eskalacje z „Czeka na Ciebie”.
-3. Przejrzyj powiadomienia z nocy: limit odnowiony → „wznów”.
+3. Przejrzyj powiadomienia z nocy; jeśli praca stała przez limit, po odnowieniu napisz „wznów”.
 
 **W ciągu dnia:**
 

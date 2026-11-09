@@ -71,10 +71,25 @@ pasuje() {
   done
 }
 
+# Dopasowanie wzorców allow jak w Claude Code (do sprawdzenia zawężonej reguły worktree remove).
+dozwolone() {
+  jq -e --arg k "$1" '[.permissions.allow[] | select(startswith("Bash(")) | ltrimstr("Bash(") | rtrimstr(")")
+    | gsub("(?<z>[.+?^$()\\[\\]{}|\\\\])"; "\\\(.z)") | gsub("\\*"; ".*") | "^" + . + "$"]
+    | any(.[]; . as $w | $k | test($w))' "$S" >/dev/null
+}
+
 @test "worktree etapu: add i remove przez -C, bez --force; switch zabroniony takze bez -C" {
-  for r in 'Bash(git -C * worktree add *)' 'Bash(git -C * worktree remove *)'; do
+  for r in 'Bash(git -C * worktree add *)' 'Bash(git -C * worktree remove /Users/Shared/sh/wt/*)' \
+    'Bash(git -C * worktree remove /Users/Shared/sh/wt-system/*)'; do
     allow "$r" || { echo "brak allow: $r"; false; }
   done
+  ! allow 'Bash(git -C * worktree remove *)' || false
+  dozwolone 'git -C /Users/Shared/sh/projekty/x worktree remove /Users/Shared/sh/wt/x/stage-04-plan'
+  dozwolone 'git -C /Users/Shared/sh/sh-system worktree remove /Users/Shared/sh/wt-system/f3b'
+  ! dozwolone 'git -C /Users/Shared/sh/projekty/x worktree remove /Users/Shared/sh/projekty/x' || false
+  ! dozwolone 'git -C /Users/Shared/sh/projekty/x worktree remove /tmp/inny' || false
+  pasuje 'git -C /Users/Shared/sh/projekty/x worktree remove /Users/Shared/sh/wt/../projekty/x'
+  allow 'Bash(shctl sprzataj)' && allow 'Bash(shctl sprzataj *)'
   pasuje 'git -C /Users/Shared/sh/projekty/x worktree remove --force /Users/Shared/sh/wt/x/stage-04-plan'
   pasuje 'git -C /Users/Shared/sh/projekty/x worktree remove /Users/Shared/sh/wt/x/stage-04-plan -f'
   pasuje 'git switch stage/04-plan'

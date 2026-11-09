@@ -15,7 +15,7 @@ Wróć do: [[00-start-tutaj]]
 | GitHub | Źródło prawdy: kod, zadania (issue), zmiany (PR), dokumenty | Konto Sebastian-Temich, jedno repo na projekt |
 | Obsidian | Podgląd dokumentów do czytania | Vault `~/Documents/Obsidian Vault`, folder `SH/` |
 | ntfy | Powiadomienia push na telefon | Aplikacja ntfy |
-| Strażnik limitów | Skrypt bez AI, pilnuje limitów subskrypcji i podnosi orkiestratora, gdy padnie | Co 5 minut, w tle |
+| Strażnik orkiestratora | Skrypt bez AI, podnosi orkiestratora, gdy padnie | Co 5 minut, w tle |
 
 Zasada podziału pracy: **agent decyduje i pisze treść, `shctl` wykonuje mechanikę**. Dzięki temu
 zakładanie zadań, etykiety czy zamykanie zawsze przebiegają tak samo.

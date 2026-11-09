@@ -100,7 +100,7 @@ wynik_codex() {
 
 # Praca workera: commit w worktree, push gałęzi, PR w atrapie (z refs/pull/N/head). pr_workera NR PR [CI]
 pr_workera() {
-  local nr="$1" prn="$2" ci="${3:-SUCCESS}" wt="$SH_DIR/wt/demo/$1" br sha
+  local nr="$1" prn="$2" ci="${3:-SUCCESS}" wt="$SH_DIR/wt/demo/$1" br sha cd_
   br="$(git -C "$wt" symbolic-ref --short HEAD)"
   mkdir -p "$wt/docs/07-realizacja"
   cat >"$wt/docs/07-realizacja/T-$nr.md" <<MD
@@ -129,17 +129,18 @@ MD
   git -C "$wt" commit -qm "#$nr: praca"
   git -C "$wt" push -q origin "$br" "$br:refs/pull/$prn/head"
   sha="$(git -C "$wt" rev-parse HEAD)"
-  jq --arg r "$R" --argjson n "$prn" --argjson i "$nr" --arg b "$br" --arg s "$sha" --arg c "$ci" \
+  cd_="${PR_COMMIT_DATA:-$(date -u +%Y-%m-%dT%H:%M:%SZ)}"
+  jq --arg r "$R" --argjson n "$prn" --argjson i "$nr" --arg b "$br" --arg s "$sha" --arg c "$ci" --arg cd "$cd_" \
     '. + [{repo:$r, number:$n, title:"Zadanie \($i)", state:"OPEN", headRefName:$b, headRefOid:$s,
       closingIssuesReferences:[{number:$i}], url:"https://github.com/\($r)/pull/\($n)",
       createdAt:"2026-11-01T10:00:00Z", comments:[], mergeable:"MERGEABLE",
-      files:[{path:"docs/07-realizacja/T-\($i).md"}, {path:"src/praca-\($i).txt"}],
+      files:[{path:"docs/07-realizacja/T-\($i).md"}, {path:"src/praca-\($i).txt"}], commits:[{oid:$s, committedDate:$cd}],
       statusCheckRollup:[{status:"COMPLETED", conclusion:$c}]}]' "$GH_ATRAPA/prs.json" 2>/dev/null >"$T/pr.json" ||
-    jq -n --arg r "$R" --argjson n "$prn" --argjson i "$nr" --arg b "$br" --arg s "$sha" --arg c "$ci" \
+    jq -n --arg r "$R" --argjson n "$prn" --argjson i "$nr" --arg b "$br" --arg s "$sha" --arg c "$ci" --arg cd "$cd_" \
       '[{repo:$r, number:$n, title:"Zadanie \($i)", state:"OPEN", headRefName:$b, headRefOid:$s,
         closingIssuesReferences:[{number:$i}], url:"https://github.com/\($r)/pull/\($n)",
         createdAt:"2026-11-01T10:00:00Z", comments:[], mergeable:"MERGEABLE",
-      files:[{path:"docs/07-realizacja/T-\($i).md"}, {path:"src/praca-\($i).txt"}],
+      files:[{path:"docs/07-realizacja/T-\($i).md"}, {path:"src/praca-\($i).txt"}], commits:[{oid:$s, committedDate:$cd}],
         statusCheckRollup:[{status:"COMPLETED", conclusion:$c}]}]' >"$T/pr.json"
   mv "$T/pr.json" "$GH_ATRAPA/prs.json"
   [ "$(cat "$GH_ATRAPA/licznik" 2>/dev/null || echo 0)" -ge "$prn" ] || echo "$prn" >"$GH_ATRAPA/licznik"

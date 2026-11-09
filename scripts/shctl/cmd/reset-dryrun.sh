@@ -1,5 +1,6 @@
-# shctl reset-dryrun: projekt wzorcowy sh-dryrun wraca do tagu „baseline” (proces-v1.md, „Projekt
-# wzorcowy”). Zamyka panele, worktree i otwarte PR, archiwizuje znaczniki shctl:id we wszystkich issue
+# shctl reset-dryrun: projekt wzorcowy sh-dryrun wraca do baseline (proces-v1.md, „Projekt wzorcowy”):
+# tagu z pola baseline_tag w docs/konfiguracja.md albo najnowszego baseline-RRRRMMDD. Tagów nie przesuwa
+# (force push tagów jest zablokowany); nowy baseline to nowy tag (shctl template update --baseline). Zamyka panele, worktree i otwarte PR, archiwizuje znaczniki shctl:id we wszystkich issue
 # (także zamkniętych), usuwa lokalne gałęzie stage/* i task/*, resetuje main do tagu (force push),
 # odtwarza issue z zadania.yaml zapisanego w repo, dopisuje nowy przebieg do docs/metryki.md (plik
 # przechodzi przez reset) i odtwarza klon docs/ w vaulcie Obsidiana. Działa wyłącznie na sh-dryrun.
@@ -80,7 +81,7 @@ odtworz_obsidian() {
 }
 
 komenda_main() {
-  local baseline plik_rel ids prs issues main_sha zgodne ile_wt panele etyk n wyn mapa='{}' t art galezie
+  local baseline baseline_tag plik_rel ids prs issues main_sha zgodne ile_wt panele etyk n wyn mapa='{}' t art galezie
   local zam_pr='[]' zam_is='[]' arch='[]' oznaczone metryki nr_przebiegu=null obs="" drzewo
   while [ $# -gt 0 ]; do opcja_wspolna "$@"; shift "$ZJEDZONE"; done
   [ -n "$PROJEKT" ] || PROJEKT="$DRYRUN_NAZWA"
@@ -90,10 +91,10 @@ komenda_main() {
 
   z_limitem 120 git -C "$ROOT_G" fetch -q --force origin main 'refs/tags/*:refs/tags/*' ||
     die "$E_WYKONANIE" "git fetch origin nie powiódł się"
-  baseline="$(git -C "$ROOT_G" rev-parse -q --verify 'refs/tags/baseline^{commit}')" ||
-    die "$E_BRAK" "brak tagu baseline w $SLUG"
+  baseline_tag="$(najnowszy_baseline)" || die "$E_BRAK" "brak tagu baseline w $SLUG"
+  baseline="$(git -C "$ROOT_G" rev-parse "refs/tags/$baseline_tag^{commit}")"
   art="$(artefakty_baseline "$baseline")"
-  [ -z "$art" ] || die "$E_ODMOWA" "baseline ${baseline:0:7} zawiera artefakty przebiegu: $(printf '%s' "$art" | paste -sd ';' - | sed 's/;/; /g'); przesuń tag baseline na czysty commit"
+  [ -z "$art" ] || die "$E_ODMOWA" "baseline ${baseline:0:7} zawiera artefakty przebiegu: $(printf '%s' "$art" | paste -sd ';' - | sed 's/;/; /g'); wskaż czysty tag w baseline_tag (docs/konfiguracja.md) albo utwórz nowy baseline"
   plik_rel=""
   for t in zadania.yaml docs/06-zadania/zadania.yaml; do
     if git -C "$ROOT_G" cat-file -e "$baseline:$t" 2>/dev/null; then plik_rel="$t"; break; fi
@@ -126,12 +127,12 @@ komenda_main() {
       and ($o | all(.state == "OPEN" and ([.labels[].name] | (index("status:todo") != null)
         and (map(select(startswith("iter:"))) | length == 0))))')"
   if [ "$zgodne" = true ]; then
-    info "$PROJEKT jest już w stanie baseline (${baseline:0:7})"
-    wynik_json "$(jq -nc --arg b "$baseline" '{baseline:$b, zmiana:false}')"
+    info "$PROJEKT jest już w stanie $baseline_tag (${baseline:0:7})"
+    wynik_json "$(jq -nc --arg b "$baseline" --arg t "$baseline_tag" '{baseline:$b, tag:$t, zmiana:false}')"
     return 0
   fi
 
-  info "reset $PROJEKT do baseline ${baseline:0:7}:"
+  info "reset $PROJEKT do $baseline_tag (${baseline:0:7}):"
   info "- zamknij panele: $(jq -r 'map(.label) | join(", ") | if . == "" then "brak" else . end' <<<"$etyk")"
   info "- usuń worktree, gałęzie task/* i stage/*, zamknij PR: $(jq -r 'map("#\(.number)") | join(", ") | if . == "" then "brak" else . end' <<<"$prs")"
   info "- zarchiwizuj znaczniki shctl:id: $(jq -r 'map("#\(.number)") | join(", ") | if . == "" then "brak" else . end' <<<"$oznaczone")"
@@ -197,8 +198,8 @@ komenda_main() {
     obs="$(odtworz_obsidian)"
     case "$obs" in pominiety*) uwaga "Obsidian: $obs" ;; esac
   fi
-  wynik_json "$(jq -nc --arg b "$baseline" --argjson p "$zam_pr" --argjson i "$zam_is" --argjson a "$arch" --argjson m "$mapa" \
+  wynik_json "$(jq -nc --arg b "$baseline" --arg t "$baseline_tag" --argjson p "$zam_pr" --argjson i "$zam_is" --argjson a "$arch" --argjson m "$mapa" \
     --arg f "$plik_rel" --argjson n "$nr_przebiegu" --arg o "$obs" \
-    '{baseline:$b, zamkniete_pr:$p, zamkniete_issue:$i, zarchiwizowane:$a, plik_zadan:$f, mapa:$m,
+    '{baseline:$b, tag:$t, zamkniete_pr:$p, zamkniete_issue:$i, zarchiwizowane:$a, plik_zadan:$f, mapa:$m,
       przebieg:$n, obsidian:(if $o == "" then null else $o end), zmiana:true}')"
 }

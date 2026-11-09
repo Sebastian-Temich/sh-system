@@ -4,7 +4,7 @@
 <dict>
   <key>Label</key>
   <string>pl.iskt.softwarehouse.sh-watchdog</string>
-  <!-- Strażnik limitów: jeden przebieg co 5 minut, bez AI (docs/serwer.md). -->
+  <!-- Strażnik orkiestratora: jeden przebieg co 5 minut, bez AI (docs/serwer.md). -->
   <key>ProgramArguments</key>
   <array>
     <string>/bin/bash</string>

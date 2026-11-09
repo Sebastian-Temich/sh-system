@@ -10,7 +10,7 @@ Centralne repozytorium software house'u prowadzonego przez agentów AI.
 | `.claude-plugin/` | Lokalny marketplace `sh-system` z pluginem `software-house` |
 | `codex/` | Konfiguracja i prompty Codex; `sh-review.md` generuje `scripts/sync-codex.sh` ze skilla `sh-review` |
 | `templates/` | Wspólne szablony, m.in. format wyniku review (`review.md`) |
-| `scripts/server/` | Skrypty serwera (m.in. strażnik limitów `sh-watchdog.sh`), plisty LaunchAgentów i Brewfile |
+| `scripts/server/` | Skrypty serwera (m.in. strażnik orkiestratora `sh-watchdog.sh` i `obsidian-sync.sh`), plisty LaunchAgentów i Brewfile |
 | `scripts/shctl/` | Narzędzie `shctl` |
 | `scripts/plugin/` | `sprawdz-skille.sh`: zgodność skilli z kontraktem |
 | `scripts/docs/` | `sprawdz-podrecznik.sh`: komendy `shctl` i skille z podręcznika istnieją (CI) |

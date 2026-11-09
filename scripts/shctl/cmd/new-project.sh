@@ -188,7 +188,7 @@ komenda_main() {
       --argjson sz "$skr" '{katalog:$k, utworzono:($z == 1), skrzynka:{katalog:$s, utworzono:($sz == 1)}}')"
     info "Klon docs/: $(obsidian_kat "$nazwa")"
     info "Skrzynka na materiały: $(skrzynka_kat "$nazwa")"
-    info "Synchronizację robi serwer co 5 minut (shctl obsidian sync); w Obsidianie nic nie włączasz."
+    info "Synchronizację robi serwer co 5 minut (obsidian-sync.sh); w Obsidianie nic nie włączasz."
   fi
   wynik_json "$(jq -nc --arg r "$slug" --arg k "$katalog" --argjson s "$KROKI" --argjson p "$porty" --argjson o "$obs" \
     --arg t "$tryb_proj" '{repo:$r, katalog:$k, tryb:$t, kroki:$s, porty:$p, obsidian:$o}')"

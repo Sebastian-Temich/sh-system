@@ -107,7 +107,9 @@ polecenie_codex() {
   local kat="$1" prompt="$2" wynik="$3" rc="$4" m r c
   m="$(model_reviewera)"
   r="$(konf modele.reviewer.rozumowanie "")"
-  c="cd $(cytuj "$kat") && codex exec -p reviewer -s read-only"
+  # Bez cd: powłoka panelu z fnm --use-on-cd pytałaby o brakującą wersję Node z .nvmrc i blokowała
+  # review (iskt-www #44). Codex nie potrzebuje Node, a katalog dostaje przez -C.
+  c="codex exec -C $(cytuj "$kat") -p reviewer -s read-only"
   [ -z "$m" ] || c="$c -m $(cytuj "$m")"
   [ -z "$r" ] || c="$c -c $(cytuj "model_reasoning_effort=\"$r\"")"
   c="$c --output-schema $(cytuj "$KODEKS_DIR/sh-review.schema.json") -o $(cytuj "$wynik") - < $(cytuj "$prompt")"
@@ -226,7 +228,7 @@ review_run() {
     zbuduj_prompt "$(prompt_review)" "$pr" "$j" "$baza" "$etap" "$iter" "$(poprzednie_review "$prn" "$head")" >"$prompt"
     cmd="$(polecenie_codex "$kat" "$prompt" "$dir/wynik.json" "$dir/rc")"
     REVIEW_PANEL="$(panel_po_etykiecie "$(panele_herdr)" "$REVIEW_LABEL")"
-    [ -n "$REVIEW_PANEL" ] || REVIEW_PANEL="$(otworz_panel "$REVIEW_LABEL" "$kat")"
+    [ -n "$REVIEW_PANEL" ] || REVIEW_PANEL="$(otworz_panel "$REVIEW_LABEL" "$WT")"
     info "PR #$prn: review Codex ($([ -n "$etap" ] && echo "etap $etap" || echo "zadanie #$nr"), iteracja $iter) w panelu $REVIEW_PANEL ($REVIEW_LABEL)"
     herdr pane run "$REVIEW_PANEL" "$cmd" >/dev/null || die "$E_WYKONANIE" "nie można uruchomić codex w panelu $REVIEW_PANEL"
 

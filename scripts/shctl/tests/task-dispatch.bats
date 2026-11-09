@@ -18,7 +18,7 @@ WT() { echo "$SH_DIR/wt/demo/$1"; }
   cmp config/dev.json "$(WT 12)/config/dev.json"
   [ "$(jq -r '.wynik.env | join(",")' <<<"$output")" = ".env.local,config/dev.json" ]
   [ "$(etykiety_paneli)" = "worker:demo:12" ]
-  grep -q "/wt/demo/12 | SH_NOTIFY=1 | --settings .claude/roles/worker/settings.json --model opus Zrealizuj issue #12 skillem sh-worker." "$CLAUDE_ATRAPA/calls"
+  grep -q "/wt/demo/12 | SH_NOTIFY= | --settings .claude/roles/worker/settings.json --model opus Zrealizuj issue #12 skillem sh-worker." "$CLAUDE_ATRAPA/calls"
   [ "$(etykiety 12)" = "iter:1,runner:local,status:in-progress,wykonawca:claude" ]
   [ "$(jq -r '.zadania["12"] | .label, .galaz, .uruchomiono' "$SH_DIR/stan/demo.json" | tr '\n' ' ')" = "worker:demo:12 task/12-zazolc-gesla-jazn-lodz true " ]
   jq -e '.zadania["12"].panel | startswith("w1:p")' "$SH_DIR/stan/demo.json"

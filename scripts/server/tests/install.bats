@@ -186,16 +186,16 @@ globalny_hooks_path() {
   [ "$(readlink "$T/sh/bin/sh-watchdog.sh")" = "$REPO/scripts/server/sh-watchdog.sh" ]
 }
 
-@test "wzorce straznika: kopia gdy brak, poprawki wlasciciela zostaja" {
+@test "dowiazanie do pliku usunietego z repo znika, obce pliki zostaja" {
+  mkdir -p "$T/sh/bin"
+  ln -s "$REPO/scripts/server/notify-hook.sh" "$T/sh/bin/notify-hook.sh"
+  ln -s /nie/ma/takiego "$T/sh/bin/obce-dowiazanie"
+  echo x >"$T/sh/bin/wlasny.sh"
   install
-  [ "$status" -eq 0 ]
-  cmp "$REPO/scripts/server/watchdog-wzorce.txt" "$T/sh/watchdog-wzorce.txt"
-  [ ! -L "$T/sh/watchdog-wzorce.txt" ]
-  echo 'claude  nowy wzorzec' >>"$T/sh/watchdog-wzorce.txt"
-  install
-  [ "$status" -eq 0 ]
-  grep -q 'nowy wzorzec' "$T/sh/watchdog-wzorce.txt"
-  [[ "$stderr" == *"watchdog-wzorce.txt rozni sie"* ]]
+  [ ! -L "$T/sh/bin/notify-hook.sh" ]
+  [ -L "$T/sh/bin/obce-dowiazanie" ]
+  [ -f "$T/sh/bin/wlasny.sh" ]
+  [ "$(readlink "$T/sh/bin/obsidian-sync.sh")" = "$REPO/scripts/server/obsidian-sync.sh" ]
 }
 
 @test "ustawienia orkiestratora: symlink /Users/Shared/sh/.claude/settings.json do repo" {
