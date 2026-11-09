@@ -1,6 +1,6 @@
 ---
 name: sh-qa
-description: QA zbiorcze po kamieniu milowym trybu M. Zbiera zamknięte issue kamienia, uruchamia testy E2E Playwright (chromium i webkit), sprawdza przepływy między funkcjami, scenariusze odbioru kamienia i zgodność ze specyfikacją. Pisze raport docs/08-qa/raport-MN.md na gałęzi stage/08-qa. Błędy krytyczne i istotne zakłada jako nowe issue typ:qa z wagą przez shctl task create, a drobne wpisuje do sekcji Drobne uwagi raportu. Użyj, gdy wszystkie zadania kamienia są zamknięte, a orkiestrator poleca „QA kamienia MN”, „QA zbiorcze”, „przetestuj kamień” albo „sprawdź kamień przed kolejnym”, oraz gdy trzeba poprawić raport QA (na przykład po czerwonym CI albo uwagach orkiestratora).
+description: QA zbiorcze po kamieniu milowym trybu M. Zbiera zamknięte issue kamienia, zleca testy E2E Playwright (chromium i webkit) i Lighthouse w CI (job e2e i qa-staging na stagingu), sprawdza przepływy między funkcjami, scenariusze odbioru kamienia i zgodność ze specyfikacją. Pisze raport docs/08-qa/raport-MN.md na gałęzi stage/08-qa. Błędy krytyczne i istotne zakłada jako nowe issue typ:qa z wagą przez shctl task create, a drobne wpisuje do sekcji Drobne uwagi raportu. Użyj, gdy wszystkie zadania kamienia są zamknięte, a orkiestrator poleca „QA kamienia MN”, „QA zbiorcze”, „przetestuj kamień” albo „sprawdź kamień przed kolejnym”, oraz gdy trzeba poprawić raport QA (na przykład po czerwonym CI albo uwagach orkiestratora).
 ---
 
 # sh-qa
@@ -15,8 +15,8 @@ tej sesji i zasadami `AGENTS.md`. W etapie A szablon nie ma profilu `.claude/rol
 Robisz:
 
 - zbierasz zamknięte issue kamienia i ich kryteria akceptacji;
-- uruchamiasz pełny zestaw E2E Playwright w chromium i webkit oraz testy integracyjne z „Stack
-  (kontrakt)”;
+- zlecasz w CI pełny zestaw E2E Playwright w chromium i webkit (job `e2e` na PR) oraz E2E i Lighthouse
+  na stagingu (job `qa-staging`, gdy `staging_url` jest ustawione) i czytasz ich wyniki;
 - piszesz testy E2E przepływów między funkcjami i scenariuszy odbioru kamienia w `e2e/qa/`;
 - sprawdzasz zgodność z wymaganiami `W-n` kamienia;
 - piszesz raport `docs/08-qa/raport-MN.md` i plik błędów `docs/08-qa/zadania-MN.yaml`;
@@ -30,7 +30,9 @@ Nie robisz:
 - zmian zakresu, planu i kamieni (to `sh-plan` przez orkiestratora);
 - startu kolejnego kamienia, dispatchu, merge'a, statusu etapu i commitów na `main` (orkiestrator);
 - ręcznych issue i etykiet przez `gh`: zakłada je wyłącznie `shctl task create`;
-- testów na stagingu i produkcji: QA działa lokalnie, a staging sprawdza właściciel przy odbiorze.
+- lokalnego uruchamiania E2E, Lighthouse, `pnpm install` i `supabase start`: sesja działa w sandboxie
+  (sieć tylko do GitHuba, przeglądarki nie startują), więc testy uruchamia wyłącznie CI;
+- testów na produkcji.
 
 ## Wejście
 
@@ -90,24 +92,26 @@ shctl escalate --dotyczy 08-qa --powod "..." --potrzebne "..." --opcje "A;B"
    kończysz i mówisz orkiestratorowi, które. Zadania zamknięte jako „not planned” wpisujesz do
    raportu jako poza zakresem.
 3. Załóż worktree `/Users/Shared/sh/wt/NAZWA/stage-08-qa` na gałęzi `stage/08-qa` od `origin/main`
-   (`git -C /Users/Shared/sh/projekty/NAZWA worktree add -b stage/08-qa …`, bez przełączania gałęzi
-   głównego klonu) i utwórz `docs/08-qa/raport-MN.md` z szablonu, z tytułem
+   osobnymi wywołaniami `cd /Users/Shared/sh/projekty/NAZWA`, `git fetch origin`,
+   `git worktree add --no-track -b stage/08-qa /Users/Shared/sh/wt/NAZWA/stage-08-qa origin/main` i `cd`
+   do worktree (nie `git -C`; bez przełączania gałęzi głównego klonu), potem utwórz `docs/08-qa/raport-MN.md` z szablonu, z tytułem
    „MN NAZWA” (istniejącego raportu kamienia nie nadpisujesz).
 4. Zrób listę do sprawdzenia: kryteria zamkniętych issue, wymagania `W-n` kamienia, scenariusze odbioru
    kamienia z planu i przepływy między funkcjami (miejsca, gdzie wynik jednej funkcji jest wejściem
    drugiej, np. rejestracja → logowanie → koszyk → zamówienie).
-5. Przygotuj środowisko według „Stack (kontrakt)”: instalacja zależności z lockfile, Supabase lokalnie
-   na porcie z `blok_portow` (`supabase start`, gdy projekt go używa), build i uruchomienie. Sprawdź,
-   że wersja Playwright równa się `playwright_version`; inna wersja to zgłoszenie 🟡, a testów nie
-   przepinasz.
-6. Uruchom pełne E2E w chromium i webkit, headless, z `playwright_workers` (komenda E2E z `AGENTS.md`,
-   np. `pnpm exec playwright test --project=chromium --project=webkit --workers=1`). Test czerwony
-   powtórz raz pojedynczo: zielony za drugim razem to test niestabilny. Uruchom też testy
-   integracyjne z kontraktu (np. `pnpm test`). Wynik każdej komendy zapisz do raportu.
-7. Dla przepływów i scenariuszy bez pokrycia w istniejących testach napisz testy w
-   `e2e/qa/MN-slug.spec.ts` i uruchom je w obu przeglądarkach. Test, który pokazuje błąd, oznacz
-   `test.fixme(true, 'QA-MN-k')`, żeby CI na `main` zostało zielone; zdjęcie `fixme` jest kryterium
-   issue błędu.
+5. Sprawdź w `package.json` i lockfile, że wersja Playwright równa się `playwright_version`; inna
+   wersja to zgłoszenie 🟡, a testów nie przepinasz. Lokalnie niczego nie instalujesz ani nie uruchamiasz.
+6. Dla przepływów i scenariuszy bez pokrycia w istniejących testach napisz testy w
+   `e2e/qa/MN-slug.spec.ts`. Commit `08-qa: testy MN`, `git push -u origin stage/08-qa` i
+   `gh pr create --draft --base main --head stage/08-qa` (z worktree, osobnymi wywołaniami). CI uruchamia
+   job `e2e` (pełne E2E, chromium i webkit) i `qa-staging` (E2E i Lighthouse na `staging_url`; bez
+   adresu job tylko to odnotowuje).
+7. Czekaj na CI: `shctl pr check PR --czekaj --json`. Wyniki: `gh pr checks PR --repo …`, przy czerwonym
+   jobie `gh run view RUN --repo … --log-failed`, raporty `gh run download RUN --repo … -n qa-staging`
+   (Playwright i Lighthouse) i `-n playwright-report`. Czerwony test ponów raz (`gh run rerun RUN
+   --failed --repo …`): zielony za drugim razem to test niestabilny. Test, który pokazuje błąd, oznacz
+   `test.fixme(true, 'QA-MN-k')` i wypchnij, żeby CI na `main` zostało zielone; zdjęcie `fixme` jest
+   kryterium issue błędu. Wyniki jobów (liczby testów, wyniki Lighthouse) zapisz do raportu.
 8. Sprawdź zgodność ze specyfikacją: każde `W-n` kamienia ma wynik `spełnione`, `częściowo` albo
    `niespełnione` z dowodem (test, komenda, krok scenariusza). Sprawdź też sekrety
    (`gitleaks git --redact --no-banner .`, gdy jest zainstalowany) i dane osobowe w logach aplikacji
@@ -119,12 +123,11 @@ shctl escalate --dotyczy 08-qa --powod "..." --potrzebne "..." --opcje "A;B"
 10. Uruchom `shctl task create --plik docs/08-qa/zadania-MN.yaml --dry-run --json` i popraw plik do
     kodu 0.
 11. Wypełnij raport według „Raportu”. Werdykt `FAIL`, gdy jest choć jeden błąd 🔴 albo 🟡, inaczej `PASS`.
-    Zatrzymaj Supabase (`supabase stop`) i aplikację.
 12. Zaznacz w `docs/08-qa/DoD.md` pola, które QA tego kamienia spełnia. Pola „Raport QA powstał dla
     każdego kamienia milowego” i „Błędy z QA są issue i zostały zamknięte” zaznaczasz dopiero w QA
     ostatniego kamienia planu, gdy są prawdziwe; w pozostałych dopisujesz notatkę pod polem. Pól
     Checkpointu nie ruszasz.
-13. Commit `08-qa: raport MN`, push i `gh pr create --base main --head stage/08-qa`. Opis PR: kamień,
+13. Commit `08-qa: raport MN`, push i `gh pr ready PR` (PR z kroku 6 przestaje być szkicem). Opis PR: kamień,
     commit testowany, tabela wyników, lista błędów z wagami i „Decyzje do rejestru” w postaci
     `co / dlaczego / cofnięcie`.
 14. Przekaż orkiestratorowi numer PR. Raport QA nie ma review etapu: orkiestrator sprawdza zielone
@@ -201,7 +204,7 @@ Tryb L jest odłożony. Etap B doda testy na stagingu i raport dla klienta. W et
 ## DoD
 
 - [ ] Wszystkie zadania kamienia poza `typ:qa` są zamknięte, a raport wymienia je w „Zakresie”
-- [ ] Pełne E2E uruchomione w chromium i webkit z `playwright_version` i `playwright_workers`, wynik w raporcie
+- [ ] Pełne E2E w chromium i webkit uruchomione w CI (job `e2e`, oraz `qa-staging`, gdy jest `staging_url`), wynik w raporcie
 - [ ] Przepływy między funkcjami i scenariusze odbioru kamienia sprawdzone testami w `e2e/qa/` albo istniejącymi
 - [ ] Każde `W-n` kamienia ma wynik i dowód w „Zgodności z wymaganiami”
 - [ ] Każdy błąd 🔴 i 🟡 ma ID `QA-MN-k`, wagę i kroki odtworzenia, w raporcie i w `zadania-MN.yaml`
@@ -277,13 +280,13 @@ Orkiestrator: „QA kamienia M2 skillem sh-qa.”
 
 1. `main` na `9c1e2f0`; issue M2: #14, #15, #16 zamknięte, otwartych brak.
 2. Worktree `stage-08-qa` na `stage/08-qa`, `docs/08-qa/raport-M2.md` z szablonu, tytuł „M2 Katalog i koszyk”.
-3. `supabase start`, `pnpm build`, `pnpm exec playwright test --project=chromium --project=webkit
-   --workers=1`: chromium 18/18, webkit 17/18 (`koszyk.spec.ts` czerwony także w powtórce).
+3. PR #40 (szkic) z testami QA; job `e2e`: chromium 18/18, webkit 17/18 (`koszyk.spec.ts` czerwony także
+   w powtórce), `qa-staging`: Lighthouse z artefaktu `qa-staging`.
 4. Nowy test `e2e/qa/M2-koszyk-logowanie.spec.ts` (przepływ koszyk → logowanie) pokazuje błąd w webkit:
    `test.fixme(true, 'QA-M2-1')`.
 5. `W-2` częściowo, reszta spełniona. `zadania-M2.yaml`: `QA-M2-1`, `waga: istotne`. `--dry-run`: kod 0.
    Literówka na przycisku „Do kasy” idzie do „Drobnych uwag”.
-6. Raport: werdykt FAIL. Commit `08-qa: raport M2`, PR #40 z `stage/08-qa`.
+6. Raport: werdykt FAIL. Commit `08-qa: raport M2`, `gh pr ready 40`.
 7. CI zielone, werdykt zgodny z wagami, merge. Na `main`: `shctl task create --plik docs/08-qa/zadania-M2.yaml`: #41
    z `typ:qa` i `sev:istotne` w milestone „M2 Katalog i koszyk”.
 

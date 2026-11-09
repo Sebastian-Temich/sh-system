@@ -101,8 +101,9 @@ shctl escalate --dotyczy 00-intake --powod "..." --potrzebne "..." --opcje "A;B"
    pytania, każde z proponowaną odpowiedzią. Nie czekasz: piszesz dalej, przyjmując propozycję jako
    założenie, a właściciel rozstrzyga w checkpoincie.
 6. Załóż worktree etapu bez przełączania gałęzi głównego klonu:
-   `git -C /Users/Shared/sh/projekty/NAZWA worktree add -b stage/00-intake /Users/Shared/sh/wt/NAZWA/stage-00-intake origin/main`,
-   i w nim utwórz `specyfikacja.md` z szablonu (istniejącej nie nadpisujesz).
+   osobnymi wywołaniami `cd /Users/Shared/sh/projekty/NAZWA`, `git fetch origin` i
+   `git worktree add --no-track -b stage/00-intake /Users/Shared/sh/wt/NAZWA/stage-00-intake origin/main`
+   (nie `git -C`: w sandboxie sesji nie zapisze `.git/config`), potem `cd` do worktree i w nim utwórz `specyfikacja.md` z szablonu (istniejącej nie nadpisujesz).
 7. Wypełnij specyfikację według „Treści specyfikacji” (niżej). Zlecenie i wcześniejsze ustalenia
    przywołujesz odnośnikiem (`zrodlo.md`, wiersz `decyzje.md`), a nie kopią.
 8. Ustaw w `docs/konfiguracja.md` `tryb_procesu` i `hosting` z `zaakceptowany: false`.

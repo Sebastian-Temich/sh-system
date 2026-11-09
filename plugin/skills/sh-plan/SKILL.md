@@ -103,8 +103,9 @@ Etap `04-plan`:
 
 1. Przeczytaj pliki z sekcji „Wejście” i zapisz rewizję specyfikacji (krótki SHA).
 2. Załóż worktree etapu z głównego klonu, bez przełączania jego gałęzi:
-   `git -C /Users/Shared/sh/projekty/NAZWA worktree add -b stage/04-plan /Users/Shared/sh/wt/NAZWA/stage-04-plan origin/main`
-   (po `git -C … fetch`). Dalej pracujesz w tym katalogu; dokumenty tworzysz z szablonów.
+   osobnymi wywołaniami `cd /Users/Shared/sh/projekty/NAZWA`, `git fetch origin` i
+   `git worktree add --no-track -b stage/04-plan /Users/Shared/sh/wt/NAZWA/stage-04-plan origin/main`
+   (nie `git -C`: w sandboxie sesji nie zapisze `.git/config`), potem `cd` do worktree. Dalej pracujesz w tym katalogu; dokumenty tworzysz z szablonów.
 3. Napisz sekcję „Architektura” `plan.md` krótko, tyle ile trzeba do rozpisania zadań. Tabela „Moduły
    i punkty wejścia”: każda funkcja z punktem wejścia (strona i trasa, element nawigacji, komenda,
    endpoint), plikami designu i wymaganiami `W-n`. Do tego model danych z zasadą migracji zgodnych
@@ -322,7 +323,7 @@ Po eskalacji kończysz części, które od niej nie zależą.
 
 Polecenie: „Plan dla `sklep`”, po akceptacji specyfikacji (rewizja `4f2a9c1`).
 
-1. `git -C /Users/Shared/sh/projekty/sklep worktree add -b stage/04-plan /Users/Shared/sh/wt/sklep/stage-04-plan origin/main`.
+1. `cd /Users/Shared/sh/projekty/sklep`, `git fetch origin`, `git worktree add --no-track -b stage/04-plan /Users/Shared/sh/wt/sklep/stage-04-plan origin/main`, `cd /Users/Shared/sh/wt/sklep/stage-04-plan`.
 2. `plan.md`: moduły Katalog (`/`, `zrodla/katalog.png`), Koszyk (`/koszyk`, link w nagłówku,
    `zrodla/koszyk.png`), Płatność (`/zamowienie`, Stripe Checkout). ADR-001 płatności Stripe, ADR-002
    RLS zamówień. Kamienie: 1 Szkielet, 2 Katalog i koszyk, 3 Płatność ze spike'iem Stripe, 4 Konto i

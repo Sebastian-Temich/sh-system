@@ -93,16 +93,17 @@ shctl escalate --dotyczy "#NR" --powod "..." --potrzebne "..." --opcje "A;B"
    ani nie resetujesz bazy: eskalujesz albo zapisujesz decyzję, jeśli kryterium tego wymaga.
 7. Uruchom komendy z „Stack (kontrakt)”: lint, typy, testy, a potem „Komendę testów” z issue. Wszystkie
    zielone. Czerwony test, którego nie umiesz naprawić w zakresie zadania, opisujesz w „Ryzykach”.
-   Lokalny Lighthouse (i inne długie pomiary) tylko z limitem czasu: limit wywołania narzędzia (np. 3
-   minuty) i `--max-wait-for-load 60000`; macOS nie ma `timeout`. Po limicie nie czekasz: zapisujesz to
-   w „Ryzykach” i idziesz dalej, a pełny pomiar robi CI albo QA.
+   Lokalnie tylko lint, typy, testy jednostkowe i build. E2E i Lighthouse nie działają w sandboxie
+   (przeglądarki nie startują): testy E2E piszesz, a uruchamia je CI, także część E2E „Komendy testów” z issue (job `e2e` na PR, Lighthouse w
+   `qa-staging` u QA). Czerwony `e2e` czytasz przez `gh run view RUN --log-failed` w kroku 12.
 8. Sprawdź sekrety: `gitleaks git --redact --no-banner .`, gdy jest zainstalowany, i przegląd diffu.
    Sekret znaleziony w repo to eskalacja, nie samodzielne czyszczenie historii.
 9. Napisz raport `docs/07-realizacja/T-NR.md` według „Raportu” (niżej).
 10. `git add PLIKI`, potem commit `#NR: opis` (stopka przez drugie `-m`, przykład niżej) i
     `git push -u origin task/NR-slug`; każda komenda w osobnym wywołaniu.
 11. Gdy PR nie istnieje: `gh pr create --base main --head task/NR-slug --title "#NR: TYTUŁ"
-    --body-file PLIK`. Treść według `.github/PULL_REQUEST_TEMPLATE.md`: `Closes #NR`, krótki opis i
+    --body-file PLIK`, gdzie PLIK leży w worktree (np. `pr-opis.md`; nie dodajesz go do commita i usuwasz
+    po utworzeniu PR). Plik spoza `/Users/Shared/sh` blokuje hook `gh-plik-hook.sh`. Treść według `.github/PULL_REQUEST_TEMPLATE.md`: `Closes #NR`, krótki opis i
     checklista DoD zaznaczona zgodnie z prawdą. Gdy PR istnieje, push go aktualizuje.
 12. Sprawdź CI: `gh pr checks NR_PR --watch`. Czerwone CI z twojego kodu naprawiasz i wracasz do kroku 7,
     najwyżej 2 razy (commit zmieniający tylko raport nie jest próbą naprawy). Po drugiej nieudanej naprawie kończysz: przyczynę i wyjście CI opisujesz w

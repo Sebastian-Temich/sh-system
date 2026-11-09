@@ -113,17 +113,25 @@ shctl stop-all
 
 - Każde wywołanie z `--projekt NAZWA`, bo działasz w `/Users/Shared/sh`. Wynik czytasz z `--json`.
 - Komendy piszesz tak, żeby pasowały do listy dozwolonych (`/Users/Shared/sh/.claude/settings.json`) i
-  nie wymagały zgody: `git -C /Users/Shared/sh/projekty/NAZWA status` zamiast `cd KATALOG && git ...`;
-  w `gh` repo podajesz wprost (`gh pr view 16 --repo Sebastian-Temich/NAZWA`), bez podstawień
-  zmiennych (`R=$(...); gh api repos/$R`), bez łańcuchów `;`/`&&` z `cd`, pętli `until`/`while`,
+  nie wymagały zgody; w `gh` repo podajesz wprost (`gh pr view 16 --repo Sebastian-Temich/NAZWA`), bez
+  podstawień zmiennych (`R=$(...); gh api repos/$R`), bez łańcuchów `;`/`&&`, pętli `until`/`while`,
   `pkill` i własnych skryptów w scratchpadzie. Czekanie robią `shctl task wait` i
-  `shctl pr check --czekaj`. Jedna komenda w jednym wywołaniu; potok do `jq`, `head` albo `tail` jest
-  dozwolony.
+  `shctl pr check --czekaj`. Jedna komenda w jednym wywołaniu, **bez potoków**: komenda w potoku traci
+  wyjątek sandboxa (`shctl … | jq` kończy się `Operation not permitted`). Wynik `shctl … --json` czytasz
+  wprost, a w `gh` filtrujesz flagą `-q` (`gh pr view 16 --repo … --json state -q .state`).
+- **Git przez `cd`, nie przez `git -C`.** Sesja działa w sandboxie, a Claude Code nie wyłącza z niego
+  formy `git -C KATALOG …`: taki git nie ma tokenu GitHuba ani zapisu `.git/config` (push, fetch
+  prywatnego repo, `worktree add` padają). Zapis i sieć robisz dwoma osobnymi wywołaniami narzędzia:
+  najpierw `cd /Users/Shared/sh/projekty/NAZWA` (albo worktree), potem zwykłe `git …`; Claude Code
+  pamięta katalog. Nigdy `cd … && git …` w jednym wywołaniu (zawsze wymaga zgody). Po pracy
+  `cd /Users/Shared/sh`. `git -C` zostaje tylko do lokalnego odczytu (`status`, `log`, `diff`, `show`,
+  `rev-parse`, `ls-files`, `worktree list`) i tylko dla ścieżek w `/Users/Shared/sh/`. Worktree zakładasz
+  wyłącznie w `/Users/Shared/sh/wt/` (`git worktree add --no-track -b GAŁĄŹ /Users/Shared/sh/wt/…`).
 - `stage`, `decision add`, `escalate`, `task create` (w skillach) i `task close` zostawiają zmiany
   niezacommitowane. Od razu potem na `main`: `git -C /Users/Shared/sh/projekty/NAZWA status --porcelain`
-  pokazuje tylko pliki z „Wyjścia”, potem `git -C /Users/Shared/sh/projekty/NAZWA add PLIKI`,
-  `git -C … commit -m "orkiestrator: OPERACJA"` i `git -C … push`. Inny plik w drzewie zatrzymuje
-  commit: ustal, skąd jest.
+  pokazuje tylko pliki z „Wyjścia”, potem `cd /Users/Shared/sh/projekty/NAZWA`, `git add PLIKI`,
+  `git commit -m "orkiestrator: OPERACJA"`, `git push` i `cd /Users/Shared/sh`, każde osobnym
+  wywołaniem. Inny plik w drzewie zatrzymuje commit: ustal, skąd jest.
 - `review run`: kod 4 przy limicie Codexa oznacza, że PR czeka w `status:review`; bierzesz inne zadania.
   Kod 4 „review PR #N już trwa”: inne wywołanie robi to review; nie uruchamiasz drugiego, czekasz na
   komentarz z wynikiem.
@@ -192,11 +200,11 @@ git -C /Users/Shared/sh/projekty/NAZWA show origin/stage/04-plan:docs/04-plan/pl
 
 Worktree zadania zakłada `shctl task dispatch`, a review `shctl review run` (`wt/NAZWA/review-NR`).
 Skille etapów (`sh-intake`, `sh-plan`, `sh-qa`) piszą w worktree etapu
-`/Users/Shared/sh/wt/NAZWA/stage-ETAP` (`git -C /Users/Shared/sh/projekty/NAZWA worktree add -b stage/ETAP
-/Users/Shared/sh/wt/NAZWA/stage-ETAP origin/main`). Po merge'u PR etapu usuwasz go:
-`git -C /Users/Shared/sh/projekty/NAZWA worktree remove /Users/Shared/sh/wt/NAZWA/stage-ETAP` (bez
-`--force`, tylko ścieżki w `/Users/Shared/sh/wt/` i `/Users/Shared/sh/wt-system/`) albo
-`shctl sprzataj`, które usuwa też lokalną gałąź po merge'u. Gdy
+`/Users/Shared/sh/wt/NAZWA/stage-ETAP`: `cd /Users/Shared/sh/projekty/NAZWA`, `git fetch origin`,
+`git worktree add --no-track -b stage/ETAP /Users/Shared/sh/wt/NAZWA/stage-ETAP origin/main` (osobne
+wywołania). Po merge'u PR etapu usuwasz go z głównego klonu: `git worktree remove
+/Users/Shared/sh/wt/NAZWA/stage-ETAP` (bez `--force`, tylko ścieżki w `/Users/Shared/sh/wt/` i
+`/Users/Shared/sh/wt-system/`) albo `shctl sprzataj`, które usuwa też lokalną gałąź po merge'u. Gdy
 potrzebujesz pliku z innej gałęzi, czytasz go przez `git -C … show GAŁĄŹ:ŚCIEŻKA`, a nie przełączasz.
 
 ### Start i wznowienie
