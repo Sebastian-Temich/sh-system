@@ -844,8 +844,27 @@ orkiestratora odmowę uprawnień. Działają: `git status`, `npm view`, `shctl s
 (widzi plik w skrzynce), `shctl obsidian link --dry-run`, `herdr workspace list`, `gh pr list`,
 `git ls-remote`. Orkiestrator przejmuje sandbox po restarcie sesji Remote Control.
 
-Nie testowano w sandboxie: Playwright (przeglądarki, XPC), `supabase start` (Docker), `brew install`.
-Pierwszy przebieg `sh-dryrun` po zmianie to sprawdza.
+Ustalenia z testu w sh-dryrun (2026-11-09, nowe sesje w panelach herdr):
+
+- **`git -C` zawsze w sandboxie.** Claude Code nie wyłącza z sandboxa formy `git -C KATALOG …`, także
+  przy wzorcu `git -C *` w `excludedCommands`. Taki git nie ma tokenu (`could not read Username`) ani
+  zapisu `.git/config` (chroniona ścieżka). Zwykłe `git …` jest wyłączone i działa. Orkiestrator i
+  skille etapów robią więc `cd KATALOG` i `git …` dwoma osobnymi wywołaniami (Claude Code pamięta
+  katalog; `cd … && git …` w jednym wywołaniu zawsze wymaga zgody), a `git -C` tylko do lokalnego
+  odczytu. Lista dozwolonych nie ma już `git -C … add|commit|push|fetch|pull|worktree add|remove`.
+  Test: commit, `git push -u`, `gh pr create`, `gh pr close --delete-branch` i `worktree remove` w
+  świeżej sesji orkiestratora (tryb Auto) przechodzą.
+- **Potoki tracą wyjątek.** `shctl … | jq` i `herdr … | head` działają w sandboxie (`mktemp: Operation
+  not permitted`, brak gniazda herdr). Skill orkiestratora: bez potoków, `--json` czytany wprost, w `gh`
+  `-q`. `ps` w sandboxie też nie działa.
+- **pnpm 12 trzyma blokady w `/tmp/pnpm-*-UID`.** Profil workera ma zapis w czterech takich katalogach
+  (`store-operation-locks`, `dir-locks`, `modules-swaps`, `verify-deps-install-locks`); bez tego
+  `pnpm install` kończy się `ERR_PNPM_STORE_DIR_OPEN_OPERATION_LOCK`. Po zmianie działają `pnpm install`,
+  `build`, `test`, `pnpm add` i pobranie przeglądarek Playwrighta.
+- **Przeglądarki nie startują w sandboxie** (Chromium: `bootstrap_check_in … Permission denied`, WebKit
+  wisi). Decyzja właściciela: E2E i Lighthouse tylko w CI (job `e2e` na PR, `qa-staging` na stagingu dla
+  PR z `stage/08-qa`); worker lokalnie robi testy jednostkowe i build, QA czyta wyniki jobów.
+- Nie testowano: `supabase start` (sh-dryrun nie używa Supabase) i `brew install`.
 
 ### Uprawnienia sesji SH
 
@@ -883,9 +902,9 @@ Profile i inne pliki szablonu w istniejącym projekcie aktualizuje `shctl templa
 komendy: `shctl`, `notify.sh`, `herdr` do odczytu i sterowania agentami (`agent list|get|read|wait|
 explain|prompt`, `pane list|get|read|process-info|wait-output|close`, `workspace|tab list`,
 `status`), `gh pr|issue|run|repo view|label list` i `gh api repos/...`, `git` do odczytu,
-`fetch|pull|add|commit|push|tag|merge` (także `git -C ŚCIEŻKA` dla odczytu, `fetch|pull` i
-`add|commit|push`), `git -C ŚCIEŻKA worktree remove` tylko dla ścieżek w `/Users/Shared/sh/wt/` i
-`/Users/Shared/sh/wt-system/` (bez `..`, `--force` i `-f`), `shctl sprzataj`, `jq` oraz `ps`. Każda reguła `deny` dla `git` ma odpowiednik z `-C` (test
+`fetch|pull|add|commit|push|tag|merge` po `cd /Users/Shared/sh/…` (`git -C ŚCIEŻKA` tylko do odczytu,
+patrz „Sandbox sesji SH”), `git worktree add` oraz `git worktree remove` tylko dla ścieżek w
+`/Users/Shared/sh/wt/` i `/Users/Shared/sh/wt-system/` (bez `..`, `--force` i `-f`), `shctl sprzataj`, `jq` oraz `ps`. Każda reguła `deny` dla `git` ma odpowiednik z `-C` (test
 `scripts/server/tests/orkiestrator-settings.bats`), bo `git -C KATALOG push --force` nie pasuje do
 `git push --force*`. Bez `git switch` i `checkout`: w `/Users/Shared/sh/sh-system` i klonach projektów
 nie przełączamy gałęzi. Bez reguły zostają `herdr pane run|send-text|send-keys` i `herdr agent

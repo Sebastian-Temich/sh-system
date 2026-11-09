@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-11-09 (sandbox: git przez cd, e2e w CI)
+
+- Orkiestrator w sandboxie nie robił `git -C … push|commit|worktree add` (Claude Code nie wyłącza formy `git -C` z sandboxa: brak tokenu i zapisu `.git/config`). `sh-orkiestrator`, `sh-intake`, `sh-plan`, `sh-qa`: zapis i sieć przez `cd KATALOG` i zwykłe `git` w osobnych wywołaniach, `git -C` tylko do odczytu; bez potoków (`shctl --json` wprost, `gh … -q`). `orkiestrator-settings.json`: allow `cd /Users/Shared/sh/*`, `git worktree add|remove|prune` bez `-C`, bez allow `git -C … add|commit|push|fetch|pull|worktree`.
+- E2E i Lighthouse tylko w CI: `sh-worker` lokalnie lint, typy, testy jednostkowe i build, czerwony `e2e` z `gh run view --log-failed`; `sh-qa` pisze testy, otwiera szkic PR i czyta joby `e2e` i `qa-staging` (szablon: nowy job na stagingu, pole `staging_url`). Szablon: zapis do katalogów blokad pnpm `/tmp/pnpm-*-502` w sandboxie workera.
+
 ## 2026-11-09 (izolacja agentów: sandbox sesji SH)
 
 - Test: Read, `cat`, `ls` i `grep` na `~/Pictures` były blokowane, ale `node -e` czytał `~/Pictures` u workera i orkiestratora (reguły deny nie obejmują interpreterów). `orkiestrator-settings.json` i profil workera w szablonie mają teraz sandbox Claude Code (`allowUnsandboxedCommands: false`); poza sandboxem tylko `shctl`, `herdr`, `gh`, `git`, `notify.sh` (orkiestrator) oraz `git`, `gh`, `shctl escalate`, `brew install` (worker). Sieć z listy domen.

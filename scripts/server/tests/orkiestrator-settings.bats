@@ -11,10 +11,14 @@ deny() { jq -e --arg r "$1" '.permissions.deny | index($r) != null' "$S" >/dev/n
   jq -e . "$S" >/dev/null
 }
 
-@test "git -C: commit i push na main bez pytania" {
-  for r in 'Bash(git -C * status)' 'Bash(git -C * add *)' 'Bash(git -C * commit *)' 'Bash(git -C * push)' \
-    'Bash(git -C * push *)' 'Bash(git -C * pull --ff-only*)'; do
+@test "git: zapis i siec przez cd i zwykly git (sandbox nie wylacza git -C), -C tylko do odczytu" {
+  for r in 'Bash(cd /Users/Shared/sh/*)' 'Bash(git add *)' 'Bash(git commit *)' 'Bash(git push)' 'Bash(git push *)' \
+    'Bash(git fetch *)' 'Bash(git worktree add *)' 'Bash(git -C * status)' 'Bash(git -C * log *)' 'Bash(git -C * show *)'; do
     allow "$r" || { echo "brak allow: $r"; false; }
+  done
+  for r in 'Bash(git -C * add *)' 'Bash(git -C * commit *)' 'Bash(git -C * push *)' 'Bash(git -C * fetch *)' \
+    'Bash(git -C * pull --ff-only*)' 'Bash(git -C * worktree add *)'; do
+    ! allow "$r" || { echo "zbedne allow (nie dziala w sandboxie): $r"; false; }
   done
 }
 
@@ -78,17 +82,17 @@ dozwolone() {
     | any(.[]; . as $w | $k | test($w))' "$S" >/dev/null
 }
 
-@test "worktree etapu: add i remove przez -C, bez --force; switch zabroniony takze bez -C" {
-  for r in 'Bash(git -C * worktree add *)' 'Bash(git -C * worktree remove /Users/Shared/sh/wt/*)' \
-    'Bash(git -C * worktree remove /Users/Shared/sh/wt-system/*)'; do
+@test "worktree etapu: add i remove zwyklym git z katalogu projektu, bez --force; switch zabroniony" {
+  for r in 'Bash(git worktree add *)' 'Bash(git worktree remove /Users/Shared/sh/wt/*)' \
+    'Bash(git worktree remove /Users/Shared/sh/wt-system/*)'; do
     allow "$r" || { echo "brak allow: $r"; false; }
   done
-  ! allow 'Bash(git -C * worktree remove *)' || false
-  dozwolone 'git -C /Users/Shared/sh/projekty/x worktree remove /Users/Shared/sh/wt/x/stage-04-plan'
-  dozwolone 'git -C /Users/Shared/sh/sh-system worktree remove /Users/Shared/sh/wt-system/f3b'
-  ! dozwolone 'git -C /Users/Shared/sh/projekty/x worktree remove /Users/Shared/sh/projekty/x' || false
-  ! dozwolone 'git -C /Users/Shared/sh/projekty/x worktree remove /tmp/inny' || false
-  pasuje 'git -C /Users/Shared/sh/projekty/x worktree remove /Users/Shared/sh/wt/../projekty/x'
+  ! allow 'Bash(git worktree remove *)' || false
+  dozwolone 'git worktree remove /Users/Shared/sh/wt/x/stage-04-plan'
+  dozwolone 'git worktree remove /Users/Shared/sh/wt-system/f3b'
+  ! dozwolone 'git worktree remove /Users/Shared/sh/projekty/x' || false
+  ! dozwolone 'git worktree remove /tmp/inny' || false
+  pasuje 'git worktree remove /Users/Shared/sh/wt/../projekty/x'
   allow 'Bash(shctl sprzataj)' && allow 'Bash(shctl sprzataj *)'
   pasuje 'git -C /Users/Shared/sh/projekty/x worktree remove --force /Users/Shared/sh/wt/x/stage-04-plan'
   pasuje 'git -C /Users/Shared/sh/projekty/x worktree remove /Users/Shared/sh/wt/x/stage-04-plan -f'

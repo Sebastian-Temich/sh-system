@@ -93,9 +93,9 @@ shctl escalate --dotyczy "#NR" --powod "..." --potrzebne "..." --opcje "A;B"
    ani nie resetujesz bazy: eskalujesz albo zapisujesz decyzję, jeśli kryterium tego wymaga.
 7. Uruchom komendy z „Stack (kontrakt)”: lint, typy, testy, a potem „Komendę testów” z issue. Wszystkie
    zielone. Czerwony test, którego nie umiesz naprawić w zakresie zadania, opisujesz w „Ryzykach”.
-   Lokalny Lighthouse (i inne długie pomiary) tylko z limitem czasu: limit wywołania narzędzia (np. 3
-   minuty) i `--max-wait-for-load 60000`; macOS nie ma `timeout`. Po limicie nie czekasz: zapisujesz to
-   w „Ryzykach” i idziesz dalej, a pełny pomiar robi CI albo QA.
+   Lokalnie tylko lint, typy, testy jednostkowe i build. E2E i Lighthouse nie działają w sandboxie
+   (przeglądarki nie startują): testy E2E piszesz, a uruchamia je CI, także część E2E „Komendy testów” z issue (job `e2e` na PR, Lighthouse w
+   `qa-staging` u QA). Czerwony `e2e` czytasz przez `gh run view RUN --log-failed` w kroku 12.
 8. Sprawdź sekrety: `gitleaks git --redact --no-banner .`, gdy jest zainstalowany, i przegląd diffu.
    Sekret znaleziony w repo to eskalacja, nie samodzielne czyszczenie historii.
 9. Napisz raport `docs/07-realizacja/T-NR.md` według „Raportu” (niżej).
