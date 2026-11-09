@@ -3,14 +3,16 @@
 # (-o) kopiuje $CODEX_ATRAPA/wynik.json. Kod wyjścia z $CODEX_ATRAPA/rc (domyślnie 0).
 set -euo pipefail
 D="${CODEX_ATRAPA:?}"
-echo "$PWD | $*" >>"$D/calls"
+args="$*"
 out=""
 while [ $# -gt 0 ]; do
   case "$1" in
     -o) out="$2"; shift 2 ;;
+    -C | --cd) cd "$2"; shift 2 ;;
     *) shift ;;
   esac
 done
+echo "$PWD | $args" >>"$D/calls"
 cat >"$D/prompt"
 find . -name '.env*' ! -name .env.example ! -path './.git/*' >"$D/env-w-katalogu"
 rc="$(cat "$D/rc" 2>/dev/null || echo 0)"

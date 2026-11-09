@@ -7,7 +7,8 @@ Zasada ogólna: najpierw zapytaj orkiestratora „status?”. Gdy nie odpowiada,
 
 ## Limit subskrypcji
 
-**Objaw:** push „Limit claude” albo „Limit codex” z godziną odnowienia.
+**Objaw:** orkiestrator pisze w czacie o limicie Claude albo Codexa z godziną odnowienia. Pushu o
+limicie nie ma: strażnik już ich nie śledzi.
 
 | Limit | Skutek |
 |---|---|
@@ -17,27 +18,28 @@ Zasada ogólna: najpierw zapytaj orkiestratora „status?”. Gdy nie odpowiada,
 **Co robisz:**
 
 1. Nic, do godziny odnowienia. Pracy nie przenosimy na inny model.
-2. Push „Limit X odnowiony, możesz wznowić” przychodzi do 5 minut po tej godzinie.
-3. Piszesz „wznów”. Orkiestrator sprawdza każde przerwane zadanie i decyduje, jak kontynuować.
+2. Po tej godzinie piszesz „wznów”. Orkiestrator usuwa wpis z `limity.md`, sprawdza każde przerwane
+   zadanie i decyduje, jak kontynuować.
 
-Godzina z dopiskiem „(szacunek)” znaczy, że komunikat nie podał godziny: strażnik przyjął 5 godzin.
-Aktywne limity: `/Users/Shared/sh/limity.md` albo „Wstrzymania” w statusie.
+Aktywne limity: `/Users/Shared/sh/limity.md` albo „Wstrzymania” w statusie. Limit zauważony przez
+Ciebie możesz wpisać tam sam albo zgłosić orkiestratorowi.
 
 Automatyczne wznowienie po limicie to etap B (jeszcze niedostępne).
 
 ## Zawieszony worker
 
-**Objaw:** zadanie długo „w toku”, brak postępu w statusie, albo push „Claude czeka na zgodę” z
-treścią `PROJEKT / worker #NR`.
+**Objaw:** zadanie długo „w toku”, brak postępu w statusie.
 
 **Co robisz:**
 
 1. Napisz „status?” albo „co z zadaniem #12?”. Orkiestrator sprawdza panel i PR:
    - panel bez agenta, brak PR: sprawdza stan (`shctl task resume-check`) i uruchamia workera
      ponownie (`shctl task dispatch`);
-   - agent bezczynny bez PR: wysyła mu polecenie dokończenia.
-2. Push „Claude czeka na zgodę” oznacza pytanie o zgodę w panelu workera. Bezczynnego workera
-   (bez pushu) wykrywa orkiestrator. Możesz zajrzeć do
+   - agent bezczynny bez PR: wysyła mu polecenie dokończenia;
+   - worker nie podjął polecenia (`shctl task wait` zwraca `bez_tury`): czyta panel i ponawia
+     polecenie.
+2. Pushu „Claude czeka na zgodę” już nie ma. Pytanie o zgodę i bezczynnego workera wykrywa
+   orkiestrator. Możesz zajrzeć do
    panelu `worker:PROJEKT:NR` w herdr (na serwerze albo przez SSH: `/Users/Shared/sh/bin/sh-start.sh`) i
    odpowiedzieć.
 3. Sam możesz sprawdzić blokady: `shctl task ready --projekt NAZWA`.
@@ -82,7 +84,8 @@ eskalacji. Merge nadal wymaga zielonego CI.
 
 **Objaw:** w statusie „CI czerwone na PR #N”.
 
-Review nie startuje bez zielonego CI. Czerwone CI naprawia worker. Po dwóch nieudanych próbach
+Review nie startuje bez zielonego CI. Czerwone CI naprawia worker. Commit z samym raportem zadania
+nie liczy się jako próba. Po dwóch nieudanych próbach
 orkiestrator sprawdza stan zadania i decyduje o dalszym kroku. Ty zwykle nic nie robisz.
 
 Gdy CI pada na brakującym sekrecie (np. `STAGING_DB_URL`), to Twoje zadanie ręczne z planu:
@@ -90,35 +93,33 @@ orkiestrator zgłosi je w „Czeka na Ciebie” albo eskalacją.
 
 ## Obsidian się nie aktualizuje
 
-**Objaw:** push „Obsidian: klon bez synchronizacji” albo stare dokumenty w vaulcie.
+**Objaw:** stare dokumenty w vaulcie. Pushu o tym nie ma.
 
 **Przyczyna zwykle:** zmiana zapisana w pliku w `SH/Projekty` albo `SH/sh-system`. Synchronizacja
 nie nadpisuje lokalnych zmian, więc pomija tę kopię. Skrzynki (`SH/Skrzynka`) to nie dotyczy.
 
-**Gdy log mówi „fetch z origin nieudany”:** serwer nie może się zalogować do GitHuba. W nawiasie
-jest przyczyna z git. Sprawdź `gh auth status` i wiersz `logowanie git` w `shctl doctor`; przy
+**Gdy log mówi „could not read Username” albo „Authentication failed”:** serwer nie może się
+zalogować do GitHuba. Sprawdź `gh auth status` i wiersz `logowanie git` w `shctl doctor`; przy
 błędzie uruchom `/Users/Shared/sh/sh-system/scripts/server/install.sh` (ustawia logowanie git przez gh).
 
 **Co robisz:**
 
 1. Cofnij zmianę w Obsidianie (albo poproś orkiestratora: „uporządkuj klon Obsidiana projektu
    NAZWA”).
-2. Sprawdź: `shctl doctor` pokazuje datę ostatniej udanej synchronizacji (uwaga, gdy starsza niż 30
-   minut). Szczegóły: `/Users/Shared/sh/logs/obsidian-sync.log`.
-3. Synchronizacja teraz, bez czekania: `shctl obsidian sync`.
+2. Sprawdź: `shctl doctor` (wiersz „Obsidian”: czy kopie są czyste i zgodne z GitHubem) i
+   `/Users/Shared/sh/logs/obsidian-sync.log` (wpisy `POMINIĘTY` z powodem).
+3. Synchronizacja teraz, bez czekania:
+   `launchctl kickstart gui/$(id -u)/pl.iskt.softwarehouse.obsidian-sync`.
 4. Czy nie jest wyłączona: plik `/Users/Shared/sh/stan/obsidian-sync.off`.
 
 ## Skrzynka: plik nie trafił do repo
 
-**Objaw:** orkiestrator podaje „odrzucone” albo plik dalej leży w skrzynce.
+**Objaw:** plik dalej leży w skrzynce.
 
-| Powód | Co robisz |
+| Przyczyna | Co robisz |
 |---|---|
-| `plik wykonywalny`, `skrypt`, `pakiet aplikacji` | To program albo skrypt; nie trafia do repo. Usuń go ze skrzynki. Jeśli to dokument z nietypowym rozszerzeniem, zmień format (np. PDF) |
-| `za duży` | Pliki powyżej 50 MB nie wchodzą do repo. Zmniejsz albo podziel |
-| `niebezpieczna ścieżka w archiwum`, `dowiązanie symboliczne w archiwum` | ZIP jest podejrzany. Rozpakuj go u siebie i wrzuć same pliki |
-| `zmieniony po przyjęciu` | Plik zmieniłeś po założeniu PR; wejdzie do następnego PR |
-| PR czeka na merge | Nowe pliki poczekają, aż poprzedni PR zostanie scalony |
+| Czerwone CI w PR ze skrzynki | PR zostaje otwarty, skrzynka bez zmian. Orkiestrator sprawdza CI (np. za duży plik) i decyduje; po poprawce przyjmuje skrzynkę jeszcze raz |
+| Plik ukryty (nazwa od kropki), `__MACOSX`, skrót (dowiązanie) | Te są zawsze pomijane. Zmień nazwę albo wrzuć sam plik |
 
 Stan skrzynki sprawdzisz sam: `shctl skrzynka przyjmij NAZWA --dry-run` (niczego nie zmienia).
 
@@ -140,7 +141,7 @@ nie obchodzi blokady.
 ## Restart Maca
 
 Po restarcie i zalogowaniu usługa `sh-start` czeka na Docker Desktop i sieć, potem uruchamia herdr i
-orkiestratora. Strażnik limitów i synchronizacja Obsidiana startują same.
+orkiestratora. Strażnik orkiestratora i synchronizacja Obsidiana startują same.
 
 **Co robisz:**
 
@@ -219,8 +220,9 @@ launchctl print gui/$(id -u)/pl.iskt.softwarehouse.sh-watchdog | grep -E 'state|
 |---|---|
 | Co robił shctl | `/Users/Shared/sh/logs/shctl.log` |
 | Start orkiestratora | `/Users/Shared/sh/logs/sh-start.log`, `/Users/Shared/sh/logs/herdr-server.log` |
-| Limity | `/Users/Shared/sh/logs/watchdog.log`, `/Users/Shared/sh/limity.md` |
-| Obsidian | `/Users/Shared/sh/logs/obsidian-sync.log`, `/Users/Shared/sh/stan/obsidian-sync.json` |
+| Limity | `/Users/Shared/sh/limity.md` |
+| Restart orkiestratora | `/Users/Shared/sh/logs/watchdog.log` |
+| Obsidian | `/Users/Shared/sh/logs/obsidian-sync.log` |
 | Review Codexa | `/Users/Shared/sh/stan/review/PROJEKT-NR/codex.log` |
 | Stan po STOP | `/Users/Shared/sh/stan/NAZWA.json` |
 | Ogólne zdrowie | `shctl doctor` |

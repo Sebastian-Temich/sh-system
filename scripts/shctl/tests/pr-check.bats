@@ -58,3 +58,26 @@ ustaw_pr() { jq --argjson n "$1" "map(if .number == \$n then $2 else . end)" "$G
   [ "$status" -eq 4 ]
   [[ "$stderr" == *"konflikt z main"* ]] || false
 }
+
+@test "pr check: commit zmieniajacy tylko raport nie jest proba naprawy CI" {
+  wt="$SH_DIR/wt/demo/12"
+  ustaw_pr 20 '.statusCheckRollup = [{status:"COMPLETED", conclusion:"FAILURE"}]'
+  run --separate-stderr "$SHCTL" pr check 20 --json
+  # Druga czerwona wersja: tylko raport.
+  echo "dopisek" >>"$wt/docs/07-realizacja/T-12.md"
+  git -C "$wt" commit -qam "raport"
+  git -C "$wt" push -q origin HEAD
+  h="$(git -C "$wt" rev-parse HEAD)"
+  ustaw_pr 20 ".headRefOid = \"$h\""
+  run --separate-stderr "$SHCTL" pr check 20 --json
+  echo "$output $stderr"
+  [ "$(jq -r '.wynik.czerwone_commity, .wynik.nieudane_naprawy_ci' <<<"$output" | tr '\n' ' ')" = "2 0 " ]
+  # Trzecia: zmiana kodu, to pierwsza nieudana naprawa.
+  echo "kod" >>"$wt/src/praca-12.txt"
+  git -C "$wt" commit -qam "naprawa"
+  git -C "$wt" push -q origin HEAD
+  h="$(git -C "$wt" rev-parse HEAD)"
+  ustaw_pr 20 ".headRefOid = \"$h\""
+  run --separate-stderr "$SHCTL" pr check 20 --json
+  [ "$(jq -r '.wynik.czerwone_commity, .wynik.nieudane_naprawy_ci, .wynik.limit_napraw_ci' <<<"$output" | tr '\n' ' ')" = "3 1 false " ]
+}

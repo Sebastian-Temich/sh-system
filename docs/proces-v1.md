@@ -50,7 +50,8 @@ Plik `docs/konfiguracja.md` projektu ma pole `etap_wdrozenia`: A albo B. W etapi
 - dostępne są tylko tryby S i M;
 - wszystkie zadania mają `runner:local` i `wykonawca:claude`, Codex robi wyłącznie review;
 - nie ma workerów w chmurze, Lovable ani GitHub Projects;
-- strażnik limitów tylko wykrywa limit i powiadamia, a wznowienie wywołuje właściciel („wznów”);
+- strażnik orkiestratora tylko podnosi orkiestratora, gdy padnie; limity wpisuje do `limity.md`
+  właściciel albo orkiestrator, a wznowienie wywołuje właściciel („wznów”);
 - `auto_merge_S` działa, ale domyślnie ma wartość `false`; włączamy go po kilku udanych zleceniach S;
 - dostępne skille: `sh-intake`, `sh-plan`, `sh-worker`, `sh-review`, `sh-qa`, `sh-orkiestrator`;
 - wersja procesu projektu jest w `docs/konfiguracja.md` (`wersja_procesu`): `2` ma jeden etap `04-plan`,
@@ -64,7 +65,7 @@ Wszystko inne w tym dokumencie to model docelowy, wdrażany w etapie B.
 - **Źródło prawdy:** GitHub Sebastian-Temich, jedno repo na projekt (kod, Issues, PR, `docs/`). Na
   tym koncie są też `sh-system` i szablon. Projekty klientów domyślnie prywatne.
 - **Obsidian:** widok tylko do odczytu na `docs/` projektów i `sh-system`. Serwer co 5 minut robi
-  `git pull --ff-only` w klonach (`shctl obsidian sync`), bez wtyczki Obsidian Git. Dokumentacja zawsze
+  `git pull --ff-only` w klonach (`scripts/server/obsidian-sync.sh`), bez wtyczki Obsidian Git. Dokumentacja zawsze
   żyje w repo.
 - **Serwer:** Mac (macOS Sonoma) z herdr, Claude Code, Codex CLI, Docker Desktop i Supabase CLI.
   Orkiestrator działa w panelu herdr, a właściciel rozmawia z nim przez Remote Control.
@@ -234,6 +235,8 @@ zamiast czekać na CI. Konflikt rozwiązuje autor gałęzi: `git merge origin/ma
 
 Worker pisze tylko własne pliki: kod, testy, docs obszaru swojego zadania i raport
 `docs/07-realizacja/T-NR.md` z sekcjami „Decyzje”, „Drobne uwagi” i „Propozycje dla systemu”.
+Lighthouse lokalnie uruchamia tylko z limitem czasu; po przekroczeniu zapisuje to w raporcie i
+pracuje dalej, a pełny pomiar robi CI albo QA.
 Orkiestrator przenosi dwie pierwsze do plików wspólnych, a propozycje trafiają do jednego otwartego
 issue miesiąca w `sh-system` (etykieta `propozycja`, tytuł „Propozycje RRRR-MM”): `shctl task close`
 dopisuje każdą jako komentarz. Decyzję o nich podejmuje retro: w etapie A
@@ -300,7 +303,8 @@ migracje zgodne wstecz.
   poprawia się tylko zgłoszenia z review. Po 3. FAIL: eskalacja. Eskalacja nie zatrzymuje zadań
   niezależnych i zwalnia slot workera.
 - **Czerwone CI:** naprawia je worker zadania, najwyżej 2 próby (2 kolejne czerwone commity po
-  pierwszym czerwonym). `shctl pr check` liczy czerwone commity i po 2 nieudanych naprawach zwraca
+  pierwszym czerwonym). Commit zmieniający względem poprzedniego czerwonego tylko raport `T-NR.md`
+  nie jest próbą naprawy. `shctl pr check` liczy czerwone commity i po 2 nieudanych naprawach zwraca
   `limit_napraw_ci: true`. Wtedy orkiestrator: przyczyna w zakresie zadania (kod, testy) → `shctl
   review run` mimo czerwonego CI, a FAIL idzie zwykłą pętlą iteracji; przyczyna poza zadaniem
   (środowisko, sekret, sprzeczne kryteria, CI szablonu) → `shctl escalate`. Merge nadal wymaga
@@ -336,11 +340,11 @@ wybór jest w docs/konfiguracja.md. Ustawienia per rola w `docs/konfiguracja.md`
 ## Limity subskrypcji
 
 Po wyczerpaniu limitu praca danego wykonawcy jest WSTRZYMANA do odnowienia, bez przenoszenia na inny
-model. Strażnik `/Users/Shared/sh/bin/sh-watchdog.sh` (launchd, bez AI) wykrywa komunikat o limicie, zapisuje
-`/Users/Shared/sh/limity.md` i wysyła powiadomienie.
+model. Wpis w `/Users/Shared/sh/limity.md` dodaje właściciel albo orkiestrator, a shctl traktuje go jako
+blokadę dispatchu albo review. Strażnik `sh-watchdog.sh` od SH-lite F3b limitów nie śledzi.
 
 - **Etap A:** wznowienie wywołuje właściciel poleceniem „wznów”.
-- **Etap B:** strażnik wznawia sam.
+- **Etap B:** wznowienie automatyczne.
 
 Wznowienie zawsze z weryfikacją: dla każdego przerwanego zadania orkiestrator sprawdza stan gałęzi i
 worktree, wynik testów i aktualność zadania, po czym decyduje: kontynuuj, rebase i kontynuuj albo
@@ -494,17 +498,20 @@ Właściciel potwierdza tę listę przed pierwszym uruchomieniem projektu wzorco
 Repo `sh-dryrun` to test regresji systemu. Po każdej istotnej zmianie skilli lub shctl uruchamiamy
 go ponownie (`shctl reset-dryrun`) i porównujemy czas, iteracje i eskalacje w `metryki.md`.
 
-`reset-dryrun` przywraca tag `baseline`, ale `metryki.md` przechodzi przez reset: każdy przebieg
-dostaje sekcję „Przebieg dryrun N” z własną tabelą, do której `task close` dopisuje zadania. Tag
-`baseline` nie może zawierać artefaktów przebiegu (raporty `T-NR.md`, eskalacje, raporty QA, mapa
+`reset-dryrun` przywraca baseline: tag z pola `baseline_tag` w `docs/konfiguracja.md`, a bez niego
+najnowszy `baseline-RRRRMMDD` (albo dawny `baseline`). Nowy baseline to zawsze nowy tag
+(`shctl template update --baseline`); tagów nie przesuwamy, force push tagów jest zablokowany.
+`metryki.md` przechodzi przez reset: każdy przebieg dostaje sekcję „Przebieg dryrun N” z własną
+tabelą, do której `task close` dopisuje zadania. Baseline nie może zawierać artefaktów przebiegu (raporty `T-NR.md`, eskalacje, raporty QA, mapa
 zadań, wpisy `CHANGELOG.md`, DoD poza `todo`/`pominiety` albo z iteracją): reset odmawia. Znaczniki
 `shctl:id` archiwizuje we wszystkich issue, także zamkniętych, a klon `docs/` w vaulcie Obsidiana
 zakłada od nowa.
 
 ## Znane ograniczenia
 
-- Pliki skopiowane z szablonu (`AGENTS.md`, CI, DoD) w istniejących projektach nie aktualizują się
-  same po zmianach w sh-system. W etapie B pojawi się `shctl upgrade`.
+- Pliki szablonu (`scripts/`, CI, profile ról, `AGENTS.md`, `docs/_szablony/`) w istniejących
+  projektach nie aktualizują się same. Aktualizuje je `shctl template update`; plik zmieniony w
+  projekcie zostaje bez `--force`.
 - Codex nie ma blokady odczytu chronionych katalogów, a sandbox ogranicza tylko zapis. Akceptujemy
   to w etapie A, bo Codex robi tam wyłącznie review. Czysty worktree `../wt/review-NR` usuwa pliki
   env z jego katalogu pracy, ale nie blokuje odczytu `.env.local` z innych worktree na dysku. Dlatego

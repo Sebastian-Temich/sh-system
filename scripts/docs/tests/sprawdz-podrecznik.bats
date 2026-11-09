@@ -38,7 +38,7 @@ sprawdz() { run --separate-stderr bash "$REPO/scripts/docs/sprawdz-podrecznik.sh
 
 @test "znane podkomendy i komenda bez podkomendy z tekstem po nazwie" {
   {
-    echo '`shctl obsidian sync`, `shctl stage done 04-architektura`, `shctl escalate close E-001`'
+    echo '`shctl obsidian link x`, `shctl stage done 04-architektura`, `shctl escalate close E-001`'
     echo '`shctl escalate --dotyczy "#1"`, `shctl stop-all --projekt x`, `shctl doctor`'
   } >>"$P/02-codzienna-praca.md"
   sprawdz

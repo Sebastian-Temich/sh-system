@@ -10,14 +10,14 @@ Legacy Patcher. Narzędzia, przeglądarki i testy działają natywnie. Docker s�
 - Homebrew: `/Users/Shared/sh/Brewfile` (symlink do `scripts/server/Brewfile`)
 - Porty: `/Users/Shared/sh/porty.md`
 - Chrome for Testing: `/Users/Shared/sh/browsers`
-- Strażnik limitów: `/Users/Shared/sh/bin/sh-watchdog.sh` co 5 minut (sekcja „Strażnik limitów”)
-- Obsidian: `shctl obsidian sync` co 5 minut (sekcja „Synchronizacja Obsidiana”)
+- Strażnik orkiestratora: `/Users/Shared/sh/bin/sh-watchdog.sh` co 5 minut (sekcja „Strażnik orkiestratora”)
+- Obsidian: `/Users/Shared/sh/bin/obsidian-sync.sh` co 5 minut (sekcja „Synchronizacja Obsidiana”)
 - Plugin Claude Code `software-house`: lokalny marketplace `sh-system` (sekcja „Plugin software-house”)
 
 ## Katalog SH
 
 Cały katalog roboczy (`sh-system`, `sh-template-projekt`, `projekty`, `wt`, `wt-system`, `stan`,
-`logs`, `bin`, `porty.md`, `limity.md`, `Brewfile`, `watchdog-wzorce.txt`, `archiwum`) leży w
+`logs`, `bin`, `porty.md`, `limity.md`, `Brewfile`, `archiwum`) leży w
 `/Users/Shared/sh`: właściciel `sebastiant.`, uprawnienia 700, więc inni użytkownicy Maca nie mają
 dostępu.
 
@@ -48,7 +48,8 @@ plików wykonywalnych z `scripts/shctl/`. Zmiany wprowadzamy w repo, a na serwer
 
 Skrypt jest idempotentny i uruchamiamy go po dodaniu nowego skryptu. Zwykły plik w `/Users/Shared/sh/bin`
 zastępuje tylko, gdy jest identyczny z repo; przy różnicy kończy się błędem i niczego nie nadpisuje,
-więc zmiany trzeba najpierw przenieść do repo. Plik spoza repo zgłasza ostrzeżeniem.
+więc zmiany trzeba najpierw przenieść do repo. Plik spoza repo zgłasza ostrzeżeniem. Dowiązanie do
+pliku usuniętego z repo (np. dawny `notify-hook.sh`) usuwa. Wzorców strażnika już nie kopiuje.
 
 `/Users/Shared/sh/Brewfile` to także symlink, do `scripts/server/Brewfile`, na tych samych zasadach. Dopisane
 narzędzie trzeba więc zacommitować w `sh-system`.
@@ -144,7 +145,8 @@ Zasada stała: pracę nad `sh-system` prowadzimy w osobnym worktree
 plisty LaunchAgentów i `/Users/Shared/sh/.claude/settings.json` to dowiązania do tego katalogu, więc zmiana
 gałęzi zmienia działający system w trakcie pracy orkiestratora. `/Users/Shared/sh/sh-system` stoi zawsze na
 aktualnym `main`: po merge'u `git -C /Users/Shared/sh/sh-system pull --ff-only`, potem
-`/Users/Shared/sh/sh-system/scripts/server/install.sh`, a worktree usuwamy (`git worktree remove`).
+`/Users/Shared/sh/sh-system/scripts/server/install.sh`. Worktree i gałęzie scalonych PR usuwa
+`shctl sprzataj` (`docs/shctl.md`, „sprzataj”); agent nie usuwa gałęzi sam.
 
 Wyjątek: zmiana dotycząca bezpieczeństwa, dostępów albo produkcji czeka na zgodę właściciela także
 po zielonym CI.
@@ -231,7 +233,7 @@ directory: …/_brew_services` dawało martwe dowiązanie `/usr/local/share/zsh/
 ## Herdr
 
 Herdr 0.9.5 (repo przeniesione na `herdrdev/herdr`) to dom orkiestratora. Workspace `sh`:
-panel `orkiestrator` (w1:p1) z `SH_NOTIFY=1 claude remote-control --name sh-orkiestrator --permission-mode auto`
+panel `orkiestrator` (w1:p1) z `claude remote-control --name sh-orkiestrator --permission-mode auto`
 w `/Users/Shared/sh`,
 panel `powloka` (w1:p2). ID mogą się zmienić, dlatego skrypty szukają paneli po etykiecie.
 
@@ -258,7 +260,7 @@ stąd `-i`. Docker Desktop ma wyłączony AutoStart, więc skrypt tylko go otwie
 `claude remote-control` jest serwerem sesji („New sessions will be created in the current
 directory”), więc nowe sesje dziedziczą jego PATH. `sh-start.sh` dokłada do PATH brakujące
 katalogi narzędzi, eksportuje go dla serwera herdr i przekazuje jawnie w `ORCH_CMD`
-(`PATH='…' SH_NOTIFY=1 claude remote-control …`). Druga instancja nie startuje: skrypt pomija
+(`PATH='…' claude remote-control …`). Druga instancja nie startuje: skrypt pomija
 start, gdy `ps -ax` i `lsof` znajdą `claude remote-control` z cwd `/Users/Shared/sh` poza panelem, a po starcie
 przez 8 s szuka w panelu nowego komunikatu „This folder is already served by a terminal claude
 remote-control”; w obu przypadkach zostawia wpis `UWAGA` w logu i kończy z kodem 0.
@@ -651,55 +653,11 @@ notify.sh min "Build" "Gotowy" "" white_check_mark   # tagi bez URL-a
 
 ### Hook Claude Code
 
-Hook `Notification` w `~/.claude/settings.json` ma dwa wpisy z `matcher`, po jednym na typ
-powiadomienia. Oba wołają `/Users/Shared/sh/bin/notify-hook.sh` (`scripts/server/notify-hook.sh`),
-który z katalogu sesji (pole `cwd`) ustala projekt i rolę i podaje je w treści pushu:
-
-| `matcher` | Kiedy | Tytuł pushu | Kto wysyła |
-|---|---|---|---|
-| `permission_prompt` | Claude pyta o zgodę na narzędzie | „Claude czeka na zgodę” | orkiestrator i worker |
-| `idle_prompt` | Claude skończył i czeka na wiadomość | „Claude czeka na Ciebie” | tylko orkiestrator |
-
-Worker kończy każdą turę i czeka; śledzi go orkiestrator przez herdr, więc „Claude czeka na
-Ciebie” od workera byłoby szumem. Inne typy (`auth_success`, `elicitation_dialog` i pozostałe) nie
-wysyłają pushu.
-
-| Katalog sesji | Treść pushu |
-|---|---|
-| `/Users/Shared/sh/wt/NAZWA/NR` | `NAZWA / worker #NR` |
-| `/Users/Shared/sh/projekty/NAZWA` | `NAZWA / orkiestrator` |
-| `/Users/Shared/sh` | `NAZWA / orkiestrator`, NAZWA z ostatniego `--projekt NAZWA` albo `projekty/NAZWA` w transkrypcie sesji; bez trafienia `SH / orkiestrator` |
-| inny | nazwa katalogu |
-
-Wpisy w `~/.claude/settings.json`:
-
-```json
-"Notification": [
-  {"matcher": "permission_prompt",
-   "hooks": [{"type": "command", "command": "/Users/Shared/sh/bin/notify-hook.sh zgoda", "async": true}]},
-  {"matcher": "idle_prompt",
-   "hooks": [{"type": "command", "command": "/Users/Shared/sh/bin/notify-hook.sh czeka", "async": true}]}
-]
-```
-
-Hook działa tylko, gdy proces Claude Code ma `SH_NOTIFY=1`:
-
-```sh
-SH_NOTIFY=1 claude
-```
-
-Hook dziedziczy środowisko procesu Claude Code, więc zmienną trzeba ustawić przed jego
-startem; zmiana w działającej sesji nic nie da. Ustawiają ją `shctl task dispatch` (workerzy) i
-`sh-start.sh` (orkiestrator, `ORCH_CMD`). Orkiestrator uruchomiony przed tą zmianą dostaje ją
-dopiero po ponownym starcie.
-
-`~/.claude/settings.json` nie jest w repo; po odtworzeniu serwera wpisy trzeba dodać ręcznie. Skrypt hooka jest w repo i trafia do `bin` przez
-`install.sh`.
-
-Format hooków: <https://code.claude.com/docs/en/hooks>. Hook jest asynchroniczny (`async`),
-więc nie blokuje Claude'a, a błąd wysyłki nie pojawia się w sesji. Diagnoza:
-`claude --debug`, ręczne uruchomienie `notify.sh` albo
-`echo '{"cwd":"/Users/Shared/sh/projekty/NAZWA"}' | SH_NOTIFY=1 notify-hook.sh czeka`.
+Hooków `Notification` w `~/.claude/settings.json` już nie ma (SH-lite F3b). `notify-hook.sh` usunięty
+razem z wpisami, więc pushe „Claude czeka na zgodę” i „Claude czeka na Ciebie” nie przychodzą.
+Workerów śledzi orkiestrator przez herdr i `shctl task wait`. `install.sh` usuwa martwe dowiązanie
+`/Users/Shared/sh/bin/notify-hook.sh`. Polecenia startowe nie ustawiają już `SH_NOTIFY=1`. `notify.sh`
+działa bez zmian.
 
 ## Synchronizacja Obsidiana
 
@@ -710,121 +668,70 @@ projektów, zakłada je `shctl new-project` albo `shctl obsidian link`), a obok 
 jedno repo na vault, więc aktualizuje je serwer.
 
 LaunchAgent `pl.iskt.softwarehouse.obsidian-sync` (źródło `scripts/server/`, instaluje `install.sh`)
-uruchamia `/Users/Shared/sh/bin/shctl obsidian sync --agent` co 5 minut i przy logowaniu. W każdym klonie robi
-`git pull --ff-only`. Klon z lokalnymi zmianami albo rozjechany z origin pomija, zapisuje w
-`/Users/Shared/sh/logs/obsidian-sync.log`, a przy powtórce w kolejnym przebiegu wysyła powiadomienie. Nigdy nie robi
-merge'a ani resetu. Szczegóły: `docs/shctl.md`, „obsidian sync”.
+uruchamia `/Users/Shared/sh/bin/obsidian-sync.sh` (`scripts/server/obsidian-sync.sh`) co 5 minut i
+przy logowaniu. Skrypt robi zwykłe `git pull --ff-only` w każdym klonie w `SH_OBSIDIAN_DIR` i w
+klonie `sh-system`. Nieudany pull (lokalne zmiany, rozjazd z origin, sieć) to wpis
+`POMINIĘTY KATALOG: powód` w logu. Bez merge'a, resetu, pliku stanu i powiadomień. Komendy
+`shctl obsidian sync` i pliku `stan/obsidian-sync.json` już nie ma (SH-lite F3b).
 
 | Rzecz | Miejsce |
 |---|---|
-| Stan (ostatnia udana, problemy) | `/Users/Shared/sh/stan/obsidian-sync.json`, data także w `shctl doctor` |
 | Log | `/Users/Shared/sh/logs/obsidian-sync.log` |
 | Wyłączenie | `touch /Users/Shared/sh/stan/obsidian-sync.off`: przebiegi się pomijają, `install.sh` nie ładuje agenta. Zatrzymanie od razu: `launchctl bootout gui/$(id -u)/pl.iskt.softwarehouse.obsidian-sync` |
 | Włączenie | `rm /Users/Shared/sh/stan/obsidian-sync.off` i `/Users/Shared/sh/sh-system/scripts/server/install.sh` |
-| Ręcznie | `shctl obsidian sync` (działa także z flagą) |
-
-Test z 2026-11-02: pierwszy przebieg zaktualizował `SH/sh-system` o jeden commit, a `shctl doctor`
-pokazał „ostatnia udana 2026-11-02T23:50:06+0100”.
+| Ręcznie | `launchctl kickstart gui/$(id -u)/pl.iskt.softwarehouse.obsidian-sync` albo `/Users/Shared/sh/bin/obsidian-sync.sh` |
 
 **Logowanie git pod launchd.** Agent dostaje minimalne środowisko: PATH z plisty, brak terminala.
-Od 2026-11-03 13:50 każdy przebieg kończył się „fetch z origin nieudany”: git brał token tylko z
-helpera `osxkeychain`, którego wpis dla github.com zniknął (git kasuje go sam po odrzuconym tokenie),
-a bez terminala nie mógł zapytać o hasło („could not read Username”). Teraz:
+Skrypt ustawia `GIT_TERMINAL_PROMPT=0`, więc brak tokenu kończy pull błędem w logu zamiast czekania.
+Token daje globalny helper `credential.https://github.com.helper` (`gh auth git-credential`), który
+ustawia `install.sh`, a `shctl doctor` sprawdza kontrolą `logowanie git`. `shctl` (inne komendy)
+robi fetch, pull, clone i ls-remote przez `git_gh` (`scripts/shctl/lib/common.sh`) z tym samym
+helperem i dopisuje do PATH brakujące katalogi narzędzi.
 
-- `shctl` robi fetch, pull, clone i ls-remote przez `git_gh` (`scripts/shctl/lib/common.sh`): helper
-  `gh auth git-credential` z bezwzględną ścieżką `gh`, `GIT_TERMINAL_PROMPT=0`. Token gh leży w pęku
-  kluczy logowania, dostępnym dla agentów w domenie `gui/UID`. Nie zależy od `~/.gitconfig`.
-- `shctl` dopisuje do PATH brakujące katalogi narzędzi (`/Users/Shared/sh/bin`, `~/.local/bin`, Homebrew,
-  `/usr/local/bin`, `/usr/sbin`), także przy PATH=/usr/bin:/bin.
-- `install.sh` ustawia globalny `credential.https://github.com.helper` na `gh auth git-credential`
-  (dla workerów i orkiestratora przy push), a `shctl doctor` sprawdza go kontrolą `logowanie git`.
-- Log podaje przyczynę z git, np. „fetch z origin nieudany (could not read Username …)”.
-
-Sprawdzenie w kontekście launchd: `launchctl kickstart -k gui/$(id -u)/pl.iskt.softwarehouse.obsidian-sync`,
-potem `tail /Users/Shared/sh/logs/obsidian-sync.log` i `shctl doctor` (wiersz „Obsidian sync”). Test
-`scripts/shctl/tests/launchd.bats` uruchamia `shctl obsidian sync --agent` przez `env -i` z
-PATH=/usr/bin:/bin.
+Sprawdzenie: `launchctl kickstart -k gui/$(id -u)/pl.iskt.softwarehouse.obsidian-sync`, potem
+`tail /Users/Shared/sh/logs/obsidian-sync.log` i `shctl doctor` (wiersz „Obsidian”: klony czyste i
+zgodne z origin).
 
 ### Obsidian: instrukcja dla właściciela
 
 - W vaulcie włączona jest tylko wtyczka społeczności **Dataview**. Obsidian Git nie jest potrzebny i
   nie instalujemy go: w vaulcie z wieloma klonami commitowałby albo pomijał niewłaściwe repo.
 - Pliki w `SH/Projekty` i `SH/sh-system` tylko czytasz. Zmiana zapisana w Obsidianie zatrzymuje synchronizację klonu
-  (powiadomienie „Obsidian: klon bez synchronizacji”) i nie trafia do repo. Zmiany w dokumentach
+  (wpis w `obsidian-sync.log`, wiersz „Obsidian” w `shctl doctor`) i nie trafia do repo. Zmiany w dokumentach
   zlecasz orkiestratorowi, a odpowiedzi na eskalacje dajesz w czacie.
-- Po powiadomieniu wystarczy cofnąć zmianę w Obsidianie albo poprosić orkiestratora o porządek z
-  klonem. Nowe dokumenty pojawiają się w ciągu 5 minut od pusha na GitHub.
+- Wystarczy cofnąć zmianę w Obsidianie albo poprosić orkiestratora o porządek z klonem. Nowe dokumenty pojawiają się w ciągu 5 minut od pusha na GitHub.
 - Notatki własne trzymaj poza `SH/`, np. w `Witaj.md` albo nowym folderze w katalogu głównym vaulta.
 - Wyjątek to `SH/Skrzynka/NAZWA`: zwykły folder (nie klon), do którego wrzucasz materiały projektu.
   Po poleceniu „materiały w skrzynce” orkiestrator wywołuje `shctl skrzynka przyjmij NAZWA`, które
-  przenosi je przez PR do `docs/00-intake/zrodla/`, a po merge'u odkłada w `_przeniesione/RRRRMMDD/`.
-  `obsidian sync` skrzynki nie dotyka.
+  kopiuje je przez PR do `docs/00-intake/zrodla/`, po zielonym CI merguje PR i opróżnia skrzynkę.
+  Synchronizacja skrzynki nie dotyka.
 
-## Strażnik limitów
+## Strażnik orkiestratora
 
-`/Users/Shared/sh/bin/sh-watchdog.sh` wykrywa wyczerpanie limitu subskrypcji Claude Code i Codexa
-(`proces-v1.md`, „Limity subskrypcji”). Działa bez AI (bash, herdr CLI, jq). LaunchAgent
-`pl.iskt.softwarehouse.sh-watchdog` uruchamia go co 5 minut i przy logowaniu.
+`/Users/Shared/sh/bin/sh-watchdog.sh` pilnuje tylko orkiestratora. Działa bez AI (bash, herdr CLI,
+jq). LaunchAgent `pl.iskt.softwarehouse.sh-watchdog` uruchamia go co 5 minut i przy logowaniu.
+
+Od SH-lite F3b (2026-11-09) strażnik nie śledzi limitów subskrypcji: nie czyta paneli, nie prowadzi
+`limity.md` i nie wysyła powiadomień o limitach ani odnowieniach. Usunięte: wzorce
+`scripts/server/watchdog-wzorce.txt` i `/Users/Shared/sh/watchdog-wzorce.txt` oraz
+`/Users/Shared/sh/stan/watchdog-widziane.txt`. `limity.md` zostaje: wpisy dodaje i usuwa właściciel
+albo orkiestrator, a shctl czyta je jako blokadę (`docs/shctl.md`, „Format /Users/Shared/sh/limity.md”).
 
 | Plik | Rola |
 |---|---|
 | `scripts/server/sh-watchdog.sh` | Skrypt, symlink w `/Users/Shared/sh/bin` |
 | `scripts/server/pl.iskt.softwarehouse.sh-watchdog.plist` | LaunchAgent, `StartInterval` 300 s, `/bin/bash` 3.2, `AbandonProcessGroup` (orkiestrator przeżywa koniec przebiegu) |
-| `/Users/Shared/sh/watchdog-wzorce.txt` | Wzorce komunikatów, kopia robocza `scripts/server/watchdog-wzorce.txt` |
-| `/Users/Shared/sh/limity.md` | Aktywne wstrzymania, format w `docs/shctl.md` („Format /Users/Shared/sh/limity.md”) |
-| `/Users/Shared/sh/stan/watchdog-widziane.txt` | Komunikaty już obsłużone |
 | `/Users/Shared/sh/logs/watchdog.log` | Log; po przekroczeniu 1 MB poprzedni trafia do `watchdog.log.1` |
 
-Jeden przebieg:
-
-1. Wiersze `limity.md`, których godzina „Do” minęła, usuwa i wysyła `notify.sh default`
-   „Limit X odnowiony, możesz wznowić”.
-2. W panelach workspace `sh` (orkiestrator, powłoka, karty workerów i review) czyta 40 ostatnich
-   linii (`herdr pane read --source recent-unwrapped`) i szuka wzorców.
-3. Przy nowym komunikacie dopisuje wiersz do `limity.md` i wysyła `notify.sh high`
-   „Limit X do HH:MM. Po odnowieniu napisz orkiestratorowi: wznów”.
-4. Sprawdza, czy działa orkiestrator: proces `claude remote-control` z katalogiem roboczym `/Users/Shared/sh`
-   w panelu `orkiestrator` (ta sama kontrola co `sh-start.sh` i doctor, sekcja „Uruchomienie”).
-   Taki proces poza panelem to wpis `UWAGA` bez restartu (blokuje drugą instancję). Gdy nie działa, uruchamia
-   `/Users/Shared/sh/bin/sh-start.sh --no-attach` (wyjście w `/Users/Shared/sh/logs/sh-start.log`), czeka do 15 s i wysyła
-   `notify.sh high` „Orkiestrator uruchomiony ponownie”. Gdy orkiestrator nie wstanie, wysyła raz
-   `urgent` „Orkiestrator nie wstał po restarcie” (flaga `/Users/Shared/sh/stan/orkiestrator-restart-blad`
-   do pierwszego udanego przebiegu). Flaga `/Users/Shared/sh/stan/autostart.off` wyłącza też ten restart.
-
-W etapie A strażnik pracy nie wznawia: robi to właściciel, pisząc orkiestratorowi „wznów”.
-Powiadomienie o odnowieniu przychodzi z opóźnieniem do 5 minut (najbliższy przebieg).
-
-**Wzorce.** Linia `WYKONAWCA REGEX` (ERE, bez rozróżniania wielkości liter). Wygrywa pierwszy
-pasujący wzorzec, dlatego Codex stoi przed Claude. Plik poprawiamy na serwerze, a zmiana działa od
-następnego przebiegu. `install.sh` kopiuje go tylko wtedy, gdy go brak, a przy różnicy z repo
-ostrzega; poprawki warto przenieść do repo. Domyślne wzorce pochodzą z tekstów w Claude Code
-2.1.316 i Codex 0.163.0:
-
-```text
-You've hit your 5-hour limit · resets 7pm (Europe/Warsaw)
-You've hit your usage limit. Upgrade to Pro (...) or try again at 7:05 PM.
-```
-
-**Godzina odnowienia** pochodzi z tekstu od miejsca dopasowania: `resets 7pm`,
-`resets Nov 3, 7:30pm`, `try again at Nov 3rd, 2026 7:05 PM`, `try again in 2 hours 5 minutes`
-albo epoch po `|` (starszy Claude). Strefę z nawiasu, np. `(Europe/Warsaw)`, strażnik uwzględnia.
-Sama godzina bez daty oznacza dziś, a jeśli minęła ponad godzinę temu, jutro. Godzina sprzed mniej
-niż godziny to limit już odnowiony i zostaje tylko wpis w logu. Komunikat bez godziny dostaje
-szacunek teraz + 5 h z dopiskiem „(szacunek)”.
-
-**Jedno powiadomienie na zdarzenie.** Aktywny wiersz wykonawcy wycisza ten sam limit w innych
-panelach. Kolejne powiadomienie wychodzi tylko wtedy, gdy godzina odnowienia przesunie się o ponad
-10 minut. Obsłużone komunikaty (tekst od dopasowania do końca linii) strażnik pamięta, dopóki są
-widoczne w panelach, i jeszcze 12 h po zniknięciu. Dzięki temu komunikat widoczny po odnowieniu nie
-wraca jako nowy. Gdy herdr nie odpowiada, odnowienia działają dalej, a pamięć się nie zmienia.
-Powiadomienie ma 3 próby; nieudane zostaje w logu jako `BLAD`.
-
-Ograniczenia:
-
-- wzorzec pasuje też do komunikatu wyświetlonego przez człowieka, np. w wyniku `grep`; do logu
-  strażnik nie wpisuje treści komunikatu, więc `tail watchdog.log` alarmu nie wywoła;
-- przy pierwszym uruchomieniu stary komunikat z godziną bez daty może dać jeden fałszywy alarm na
-  jutro.
+Jeden przebieg sprawdza, czy działa orkiestrator: proces `claude remote-control` z katalogiem
+roboczym `/Users/Shared/sh` w panelu `orkiestrator` (ta sama kontrola co `sh-start.sh` i doctor,
+sekcja „Uruchomienie”). Taki proces poza panelem to wpis `UWAGA` bez restartu (blokuje drugą
+instancję). Gdy nie działa, uruchamia `/Users/Shared/sh/bin/sh-start.sh --no-attach` (wyjście w
+`/Users/Shared/sh/logs/sh-start.log`), czeka do 15 s i wysyła `notify.sh high` „Orkiestrator
+uruchomiony ponownie”. Gdy orkiestrator nie wstanie, wysyła raz `urgent` „Orkiestrator nie wstał po
+restarcie” (flaga `/Users/Shared/sh/stan/orkiestrator-restart-blad` do pierwszego udanego przebiegu).
+Flaga `/Users/Shared/sh/stan/autostart.off` wyłącza restart. Powiadomienie ma 3 próby; nieudane
+zostaje w logu jako `BLAD`.
 
 ```sh
 launchctl kickstart gui/$(id -u)/pl.iskt.softwarehouse.sh-watchdog   # przebieg teraz
@@ -833,16 +740,7 @@ tail -f /Users/Shared/sh/logs/watchdog.log
 launchctl bootout gui/$(id -u)/pl.iskt.softwarehouse.sh-watchdog     # wyłączenie do install.sh
 ```
 
-Testy: `scripts/server/tests/sh-watchdog.bats` (atrapy herdr i notify, stały czas).
-
-Test na serwerze 2026-11-02: panel `test-watchdog` w workspace `sh` z komunikatem
-`You've hit your 5-hour limit · resets 9:20pm (Europe/Warsaw)`, wypisanym o 21:17.
-
-| Godzina | Przebieg | Wynik |
-|---|---|---|
-| 21:17:36 | `launchctl kickstart` | Wiersz `claude … 21:20` w `limity.md`, push „Limit claude do 21:20…” |
-| 21:22:37 | planowy z launchd | Wiersz usunięty, push „Limit claude odnowiony, możesz wznowić” |
-| 21:27:38 | planowy z launchd | Komunikat nadal widoczny w panelu, brak nowego powiadomienia |
+Testy: `scripts/server/tests/sh-watchdog.bats` (atrapy herdr i notify).
 
 ## Izolacja agentów
 
@@ -944,14 +842,16 @@ tylko dla `/Users/Shared/sh` (orkiestrator) i `/Users/Shared/sh/wt/NAZWA/KATALOG
 `review-ID`); inny katalog projektu sesji to odmowa. Przekroczenie limitu czasu hooka (10 s)
 Claude Code traktuje jako błąd bez blokady.
 
-Profile w istniejącym projekcie aktualizuje `shctl profile update [--baseline]` (`docs/shctl.md`).
+Profile i inne pliki szablonu w istniejącym projekcie aktualizuje `shctl template update [--baseline]`
+(`docs/shctl.md`, „template update”).
 
 **Lista dozwolonych orkiestratora.** `orkiestrator-settings.json` zezwala bez pytania na rutynowe
 komendy: `shctl`, `notify.sh`, `herdr` do odczytu i sterowania agentami (`agent list|get|read|wait|
 explain|prompt`, `pane list|get|read|process-info|wait-output|close`, `workspace|tab list`,
 `status`), `gh pr|issue|run|repo view|label list` i `gh api repos/...`, `git` do odczytu,
 `fetch|pull|add|commit|push|tag|merge` (także `git -C ŚCIEŻKA` dla odczytu, `fetch|pull` i
-`add|commit|push`), `jq` oraz `ps`. Każda reguła `deny` dla `git` ma odpowiednik z `-C` (test
+`add|commit|push`), `git -C ŚCIEŻKA worktree remove` tylko dla ścieżek w `/Users/Shared/sh/wt/` i
+`/Users/Shared/sh/wt-system/` (bez `..`, `--force` i `-f`), `shctl sprzataj`, `jq` oraz `ps`. Każda reguła `deny` dla `git` ma odpowiednik z `-C` (test
 `scripts/server/tests/orkiestrator-settings.bats`), bo `git -C KATALOG push --force` nie pasuje do
 `git push --force*`. Bez `git switch` i `checkout`: w `/Users/Shared/sh/sh-system` i klonach projektów
 nie przełączamy gałęzi. Bez reguły zostają `herdr pane run|send-text|send-keys` i `herdr agent

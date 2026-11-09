@@ -29,12 +29,11 @@ Użycie: shctl KOMENDA [argumenty] [--dry-run] [--json] [--projekt NAZWA]
   escalate close E-NNN --odpowiedz "..."
   status show
   stop-all
-  skrzynka przyjmij NAZWA [--etap ETAP/KATALOG]
+  skrzynka przyjmij NAZWA
   obsidian link|unlink NAZWA
-  obsidian sync [--agent]
   doctor [--test-notify]
   task create --plik zadania.yaml
-  task ready
+  task ready [--czekaj] [--timeout SEKUNDY]
   task dispatch NR
   task iter NR
   task close NR [--anuluj [--powod "..."]]   (task cancel NR: alias do następnej wersji)
@@ -43,7 +42,8 @@ Użycie: shctl KOMENDA [argumenty] [--dry-run] [--json] [--projekt NAZWA]
   pr check PR [--czekaj] [--timeout SEKUNDY]
   review run PR [--timeout SEKUNDY]
   reset-dryrun
-  profile update [--baseline]
+  template update [--baseline] [--force]
+  sprzataj
 
 Dokumentacja: sh-system/docs/shctl.md
 TXT
@@ -56,7 +56,7 @@ shift
 case "$KOMENDA" in
   -h | --help | help) pomoc; exit 0 ;;
   new-project | stage | decision | escalate | status | stop-all | obsidian | doctor) ;;
-  task | review | reset-dryrun | skrzynka | pr | profile) ;;
+  task | review | reset-dryrun | skrzynka | pr | template | sprzataj) ;;
   *) echo "BŁĄD: nieznana komenda: $KOMENDA (shctl --help)" >&2; exit "$E_UZYCIE" ;;
 esac
 

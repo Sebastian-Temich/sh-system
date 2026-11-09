@@ -2,7 +2,7 @@
 # Atrapa gh ze stanem w plikach JSON ($GH_ATRAPA): issue, PR z komentarzami i CI, milestone'y.
 # Obsługuje tylko wywołania używane przez shctl. Merge robi prawdziwy squash na zdalnym repo
 # (adres GitHuba przekierowany przez url.insteadOf w testach). Plik $GH_ATRAPA/fail-KOMENDA-PODKOMENDA
-# wymusza błąd danej komendy.
+# wymusza błąd danej komendy. $GH_ATRAPA/ci-nowy-pr: wynik CI (np. SUCCESS) dla PR z pr create.
 set -euo pipefail
 D="${GH_ATRAPA:?}"
 mkdir -p "$D"
@@ -143,8 +143,9 @@ case "$k1 $k2" in
     n="$(nastepny)"
     zapisz prs '. + [{repo: $r, number: $n, title: $t, state: "OPEN", headRefName: $h, headRefOid: "",
       closingIssuesReferences: [], url: ("https://github.com/" + $r + "/pull/" + ($n | tostring)),
-      createdAt: "2026-11-01T10:00:00Z", comments: [], statusCheckRollup: []}]' \
-      --arg r "$repo" --argjson n "$n" --arg t "$title" --arg h "$head"
+      createdAt: "2026-11-01T10:00:00Z", comments: [], mergeable: "MERGEABLE",
+      statusCheckRollup: (if $c == "" then [] else [{status: "COMPLETED", conclusion: $c}] end)}]' \
+      --arg r "$repo" --argjson n "$n" --arg t "$title" --arg h "$head" --arg c "$(cat "$D/ci-nowy-pr" 2>/dev/null || true)"
     echo "https://github.com/$repo/pull/$n"
     ;;
   "api ")

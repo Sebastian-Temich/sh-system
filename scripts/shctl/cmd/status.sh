@@ -50,7 +50,7 @@ komenda_main() {
       '. + [{id:$i, dotyczy:$d, powod:$p}]' <<<"$esk")"
   done
 
-  # Format limity.md ustala strażnik; bierzemy pozycje listy i wiersze tabeli bez nagłówka.
+  # Format limity.md: docs/shctl.md (wpisy właściciela albo orkiestratora); bierzemy pozycje listy i wiersze tabeli bez nagłówka.
   wstrzym='[]'
   if [ -f "$LIMITY" ]; then
     wstrzym="$(grep -E '^(- |\| )' "$LIMITY" | grep -vE '^\|[- |]*$' | awk '!/^\| / || n++' | jq -Rsc 'split("\n") | map(select(length > 0))' || true)"

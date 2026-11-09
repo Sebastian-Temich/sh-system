@@ -2,7 +2,7 @@
 
 CLI z mechaniką procesu (`proces-v1.md`, „Automatyzacja: CLI shctl”). Agent decyduje i pisze treść,
 a shctl wykonuje operacje na plikach, GitHubie i panelach herdr. Część 1: komendy projektu i etapów,
-część 2: `task`, `review run` i `reset-dryrun` (sekcja „Zadania”).
+część 2: `task`, `review run`, `reset-dryrun`, `template update` i `sprzataj` (sekcja „Zadania”).
 
 Źródło: `scripts/shctl/` (`shctl`, `cmd/` z podkomendami, `lib/`, `tests/`). `install.sh` zakłada
 symlink `/Users/Shared/sh/bin/shctl`. Zależności: bash 3.2+, gh, jq, yq (mikefarah), git, herdr.
@@ -38,7 +38,8 @@ Format `--json`:
 Komunikaty błędów i ostrzeżenia idą na stderr. Każde wywołanie dopisuje linię do
 `/Users/Shared/sh/logs/shctl.log` (czas, kod, `dry`, projekt, komenda i argumenty ucięte do 400 znaków).
 
-shctl commituje w projekcie tylko w `new-project`. Pozostałe komendy zostawiają zmiany w drzewie
+shctl commituje na main projektu tylko w `new-project` i `template update`; `skrzynka przyjmij`
+merguje własny PR. Pozostałe komendy zostawiają zmiany w drzewie
 roboczym, a commit na main robi orkiestrator. Wyjątki poza plikami projektu: `task close` dopisuje
 propozycje jako komentarz do issue miesiąca „Propozycje RRRR-MM” (etykieta `propozycja`) w
 `sh-system`, a `reset-dryrun` przestawia main `sh-dryrun` na
@@ -60,6 +61,8 @@ Zmienne środowiska (dla testów i innego układu):
 | `SH_SKILLE_PLUGINU` | `sh-system/plugin/skills`; gdzie `task dispatch` sprawdza skille pluginu |
 | `SHCTL_REVIEW_TIMEOUT` | `3600`; limit czekania `review run` na Codexa, w sekundach |
 | `SHCTL_TEST_TIMEOUT` | `1800`; limit testów w `task resume-check`, w sekundach |
+| `SHCTL_READY_PAUZA` | `30`; odstęp sprawdzania blokad w `task ready --czekaj`, w sekundach |
+| `SHCTL_FNM_LIMIT` | `300`; limit `fnm install` w `task dispatch`, w sekundach |
 | `SHCTL_DRYRUN_NAZWA` | `sh-dryrun`; jedyny projekt, na którym działa `reset-dryrun` |
 | `CODEX_HOME` | `~/.codex`; tu `review run` szuka profilu `reviewer.config.toml` |
 | `SH_CLAUDE_JSON` | `~/.claude.json`; tu `task dispatch` zapisuje zaufanie folderu projektu |
@@ -79,8 +82,8 @@ frontmatter `konfiguracja.md` (`tryb_procesu`, `etap_wdrozenia: A`, `data`,
 `blok_portow`), blok portów w `porty.md` (zwalnia się ręcznie), `supabase/config.toml`, jeśli
 istnieje, `pominiety` dla wszystkich etapów w trybie S, `status.md`, opis w `docs/00-intake/zrodlo.md`, `check-dod.sh`, commit i push na main. Na
 końcu zakłada lekki klon `docs/` w `SH_OBSIDIAN_DIR/NAZWA` (sekcja „obsidian”) i skrzynkę na
-materiały `SH_SKRZYNKA_DIR/NAZWA` (sekcja „skrzynka”). Klon aktualizuje `obsidian sync`; w Obsidianie
-nic nie trzeba włączać.
+materiały `SH_SKRZYNKA_DIR/NAZWA` (sekcja „skrzynka”). Klon aktualizuje serwer
+(`obsidian-sync.sh`, `docs/serwer.md`, „Synchronizacja Obsidiana”); w Obsidianie nic nie trzeba włączać.
 
 | Argument | Znaczenie |
 |---|---|
@@ -234,8 +237,8 @@ shctl status show
 
 Krótkie podsumowanie dla właściciela: etap, zadania według statusu, otwarte eskalacje, wstrzymania z
 `/Users/Shared/sh/limity.md`. Zadania pochodzą z GitHuba, a gdy jest niedostępny, z liczników `status.md`
-(`zrodlo_zadan`). Z `limity.md` bierze pozycje list i wiersze tabeli bez nagłówka; format ustali
-strażnik limitów. Komenda tylko czyta.
+(`zrodlo_zadan`). Z `limity.md` bierze pozycje list i wiersze tabeli bez nagłówka (sekcja „Format
+/Users/Shared/sh/limity.md”). Komenda tylko czyta.
 
 ```json
 {"ok":true,"komenda":"status","dry_run":false,"wynik":{
@@ -280,7 +283,6 @@ zawiera panele, etap, gałąź, HEAD, liczbę niezacommitowanych plików i list�
 ```sh
 shctl obsidian link NAZWA
 shctl obsidian unlink NAZWA
-shctl obsidian sync [--agent]
 ```
 
 Obsidian działa na tym samym Macu i służy **głównie do czytania** dokumentacji. Odpowiedzi na
@@ -290,7 +292,7 @@ vaulcie. Źródłem prawdy pozostaje repo w `/Users/Shared/sh/projekty`.
 `link` zakłada dla projektu założonego wcześniej to samo, co `new-project`: klon
 `git clone --filter=blob:none --sparse` i `git sparse-checkout set --no-cone /docs/`. Klon ma tylko
 `docs/`, bez kodu, `node_modules` i plików z katalogu głównego; tryb cone zostawiłby te ostatnie.
-Aktualizuje go `sync`, a w Obsidianie nie trzeba niczego włączać. Powtórka nic nie zmienia, a
+Aktualizuje go serwer (sekcja „Synchronizacja”), a w Obsidianie nie trzeba niczego włączać. Powtórka nic nie zmienia, a
 katalog będący czymś innym niż klon tego repo daje kod 4.
 
 `unlink` usuwa klon przy archiwizacji. Odmawia (kod 4) przy niezacommitowanych zmianach, plikach
@@ -309,122 +311,48 @@ shctl obsidian link sklep --json
 `link` zakłada też skrzynkę na materiały, jeśli jej brak (sekcja „skrzynka”); wynik ma pole
 `skrzynka` jak w `new-project`. `unlink` skrzynki nie usuwa i zwraca `{"katalog":"...","usunieto":true}`.
 
-### obsidian sync
+### Synchronizacja
 
-Wtyczka Obsidian Git obsługuje jedno repo na vault, a `SH` ma wiele niezależnych klonów. Dlatego
-synchronizację robi serwer: LaunchAgent `pl.iskt.softwarehouse.obsidian-sync` uruchamia
-`shctl obsidian sync --agent` co 5 minut i przy logowaniu (`docs/serwer.md`, „Synchronizacja
-Obsidiana”).
-
-Klony: każdy katalog z `.git` w `SH_OBSIDIAN_DIR` oraz klon `docs/` repo `sh-system` w
-`SH_OBSIDIAN_SYSTEM` (domyślnie `sh-system` obok `SH_OBSIDIAN_DIR`, czyli
-`Obsidian Vault/SH/sh-system`). Synchronizacja jest jednokierunkowa, z GitHuba do vaulta. W każdym
-klonie: `git fetch`, potem `git pull --ff-only`. Nigdy nie robi merge'a, resetu ani pusha.
-
-| Stan klonu | Wynik |
-|---|---|
-| Czysty, za origin | `git pull --ff-only`, wpis `ok` w logu |
-| Czysty, zgodny z origin | nic |
-| Lokalne zmiany (także pliki nieśledzone) | pominięty |
-| Niewypchnięte commity | pominięty |
-| Rozjechany z origin (commity po obu stronach) | pominięty |
-| Odłączony HEAD, nieudany fetch albo pull | pominięty |
-
-Pominięcie trafia do `/Users/Shared/sh/logs/obsidian-sync.log` (`POMINIĘTY KATALOG: powód`), a przy ręcznym
-uruchomieniu także na stderr. Ten sam klon pominięty w dwóch kolejnych przebiegach daje jedno
-powiadomienie `notify.sh default` „Obsidian: klon bez synchronizacji”. Kolejne powiadomienie dla tego
-klonu przychodzi dopiero wtedy, gdy problem ustąpi i wróci. Klon z problemem naprawia właściciel
-albo orkiestrator (np. `git -C KLON stash` albo usunięcie i `shctl obsidian link`), nie `sync`.
-
-Stan zapisuje w `/Users/Shared/sh/stan/obsidian-sync.json`:
-
-```json
-{"ostatni_przebieg":"2026-11-02T23:50:06+0100","ostatnia_udana":"2026-11-02T23:50:06+0100",
- "ostatnia_udana_epoch":1793659809,
- "problemy":{"/.../Projekty/sklep":{"powod":"lokalne zmiany (1 plików)","od":"...","przebiegi":2,"zgloszone":true}}}
-```
-
-Udana synchronizacja to przebieg, w którym wszystkie klony są `ok`. Jej datę pokazuje `doctor`.
-Z `--agent` flaga `/Users/Shared/sh/stan/obsidian-sync.off` wyłącza przebieg (wynik `{"wylaczona":true}`).
-Ręczne `shctl obsidian sync` działa także z flagą. Dwa przebiegi naraz wyklucza blokada
-`/Users/Shared/sh/stan/obsidian-sync.lock`. Kod wyjścia to 0 także przy pominięciach. `--dry-run` tylko wypisuje
-klony.
-
-```json
-{"ok":true,"komenda":"obsidian","dry_run":false,"wynik":{"wylaczona":false,"pominiete":0,"klony":[
-  {"katalog":"/Users/.../Obsidian Vault/SH/sh-system","stan":"ok","opis":"9c9dca4..30b26ec (commitów: 1)"}]}}
-```
+Komendy `obsidian sync` już nie ma (SH-lite F3b). Klony aktualizuje skrypt serwera
+`scripts/server/obsidian-sync.sh`, uruchamiany przez LaunchAgent `pl.iskt.softwarehouse.obsidian-sync`
+co 5 minut (`docs/serwer.md`, „Synchronizacja Obsidiana”). W każdym klonie w `SH_OBSIDIAN_DIR` i w
+klonie `sh-system` robi zwykłe `git pull --ff-only`. Bez merge'a, resetu, pliku stanu i powiadomień.
+Nieudany pull to wpis w `/Users/Shared/sh/logs/obsidian-sync.log`. Klon z problemem naprawia
+właściciel albo orkiestrator (np. usunięcie i `shctl obsidian link`).
 
 ## skrzynka
 
 ```sh
-shctl skrzynka przyjmij NAZWA [--etap ETAP/KATALOG]
+shctl skrzynka przyjmij NAZWA
 ```
 
 Skrzynka to zwykły folder w vaulcie, `SH_SKRZYNKA_DIR/NAZWA` (domyślnie
 `Obsidian Vault/SH/Skrzynka/NAZWA`), do którego właściciel wrzuca materiały: makiety i eksport z Claude
-Design, logo, teksty. Nie jest repo git i `obsidian sync` go nie dotyka. Zakłada go `new-project` albo
-`obsidian link`.
+Design, logo, teksty. Nie jest repo git i synchronizacja Obsidiana go nie dotyka. Zakłada go
+`new-project` albo `obsidian link`.
 
-`przyjmij` przenosi materiały do repo w dwóch wywołaniach:
+`przyjmij` robi wszystko w jednym wywołaniu:
 
-1. **Partia.** Pliki ze skrzynki (bez `_przeniesione/`, plików i katalogów ukrytych oraz `__MACOSX`)
-   przechodzą kontrolę i trafiają do `docs/ETAP/KATALOG` (domyślnie `docs/00-intake/zrodla`) z
-   zachowaniem podkatalogów i prawami 644. Commit `ETAP: materiały ze skrzynki (N)` powstaje w
-   odłączonym worktree `/Users/Shared/sh/wt/NAZWA/skrzynka-ETAP` na bazie `origin/stage/ETAP`, a bez takiej gałęzi
-   na `origin/main`, i idzie pushem na `stage/ETAP`. Lokalne gałęzie repo głównego zostają nietknięte.
-   Potem PR do `main` (istniejący otwarty PR z tej gałęzi jest używany ponownie) z listą przyjętych i
-   odrzuconych plików. Stan partii (PR i skrót `git hash-object` każdego pliku) trafia do
-   `/Users/Shared/sh/stan/skrzynka/NAZWA.json`. Pliki zostają w skrzynce.
-2. **Po merge'u.** Kolejne wywołanie widzi scalony PR i przenosi przyjęte pliki do
-   `_przeniesione/RRRRMMDD/` w skrzynce, z zachowaniem ścieżek; puste katalogi usuwa. Plik zmieniony
-   po przyjęciu zostaje (`pozostawione`) i wchodzi do następnej partii w tym samym wywołaniu.
+1. kopiuje pliki ze skrzynki do `docs/00-intake/zrodla` z zachowaniem podkatalogów i prawami 644;
+   pomija pliki i katalogi ukryte, `_przeniesione`, `__MACOSX` i dowiązania symboliczne;
+2. na nowej gałęzi `skrzynka/RRRRMMDD-HHMMSS` (worktree w `/Users/Shared/sh/wt/NAZWA`, baza `origin/main`)
+   robi commit „00-intake: materiały ze skrzynki”, push i PR do `main`;
+3. czeka na CI (`pr check --czekaj`);
+4. przy zielonym CI merguje PR (squash, usunięcie gałęzi) i opróżnia skrzynkę: usuwa skopiowane pliki
+   i puste katalogi.
 
-| Stan partii | Wynik |
-|---|---|
-| PR otwarty | `stan: czeka_na_merge`, nowe pliki czekają na kolejną partię |
-| PR scalony | przeniesienie, potem nowa partia, jeśli są nowe pliki |
-| PR zamknięty bez merge'a | kod 4, stan partii usunięty, pliki zostają; kolejne wywołanie zakłada nowy PR |
-
-Pliki to dane nieufne: komenda niczego nie uruchamia i nie otwiera ich inaczej niż do odczytu
-nagłówka. Odrzuca, zostawiając w skrzynce:
-
-| Co | Powód w wyniku |
-|---|---|
-| Dowiązanie symboliczne | `dowiązanie symboliczne` |
-| Pakiet aplikacji (katalog `.app`, `.bundle`, `.framework`, `.pkg` i podobne) | `pakiet aplikacji` |
-| Rozszerzenie wykonywalne (m.in. `.sh`, `.command`, `.exe`, `.dmg`, `.pkg`, `.py`, `.jar`, `.dylib`) | `plik wykonywalny (.ROZSZ)` |
-| Nagłówek ELF, Mach-O albo PE | `plik wykonywalny (nagłówek …)` |
-| Plik zaczynający się od `#!` | `skrypt (nagłówek #!)` |
-| Plik powyżej 50 MB | `za duży` |
-| Znaki sterujące w nazwie | `znaki sterujące w nazwie` |
-
-ZIP jest rozpakowywany do folderu o nazwie archiwum (`makiety.zip` → `KATALOG/makiety/`), tylko gdy
-lista wpisów (`zipinfo`) przejdzie kontrolę: brak ścieżek bezwzględnych, `..` i `\`, brak dowiązań,
-najwyżej 2000 plików i 500 MB po rozpakowaniu. Inaczej całe archiwum jest odrzucane. Po rozpakowaniu
-do katalogu tymczasowego `unzip` bez `-:` jeszcze raz sprawdzane są dowiązania, a pliki wykonywalne z
-archiwum i śmieci systemowe (`__MACOSX`, pliki ukryte) są pomijane (`ARCHIWUM:ŚCIEŻKA` w
-`odrzucone`). Archiwum bez plików do przyjęcia jest odrzucane. Inne archiwa (`.tar`, `.7z`) trafiają
-do repo bez rozpakowania.
-
-`--etap` to ścieżka względem `docs/`, której pierwszy element jest etapem (`04-plan/zrodla` daje
-gałąź `stage/04-plan`). Przy trwającym intake domyślny cel `00-intake/zrodla` trafia do
-otwartego PR etapu. `..`, `/` na początku i znaki spoza `A-Za-z0-9._/-` to kod 2. Gdy skrzynka
-nie zawiera niczego nowego: `stan: pusto`. Gdy wszystko zostało odrzucone: kod 4. Ta sama treść już na
-`main`: pliki od razu do `_przeniesione/`, bez PR. Brak skrzynki: kod 3. `--dry-run` sprawdza pliki,
-nie wypycha i nie zapisuje stanu (`stan: do_przyjecia`). Wymaga `unzip` i `zipinfo` tylko przy ZIP.
+Czerwone CI: kod 4, PR zostaje otwarty, skrzynka bez zmian. Pusta skrzynka: `stan: pusto`. Brak
+skrzynki: kod 3. `--dry-run` tylko wypisuje pliki (`stan: do_przyjecia`). Pliki to dane nieufne:
+komenda ich nie uruchamia ani nie rozpakowuje. Nie ma już `--etap`, folderu `_przeniesione/`,
+filtrowania plików wykonywalnych i ZIP ani pliku stanu `stan/skrzynka/`.
 
 ```sh
 shctl skrzynka przyjmij sklep --json
 ```
 
 ```json
-{"ok":true,"komenda":"skrzynka","dry_run":false,"wynik":{
-  "projekt":"sklep","skrzynka":"/Users/.../Obsidian Vault/SH/Skrzynka/sklep","stan":"pr_otwarty",
-  "cel":"docs/00-intake/zrodla","galaz":"stage/00-intake","pr":7,
-  "url":"https://github.com/Sebastian-Temich/sklep/pull/7","przyjete":["logo.png","makiety.zip"],
-  "odrzucone":[{"plik":"makiety.zip:makiety/run.sh","powod":"plik wykonywalny (.sh)"}],
-  "przeniesione":[],"pozostawione":[]}}
+{"ok":true,"komenda":"skrzynka","dry_run":false,"wynik":{"stan":"przyjeto","pr":7,
+  "url":"https://github.com/Sebastian-Temich/sklep/pull/7","pliki":["logo.png","makiety/strona.png"]}}
 ```
 
 ## doctor
@@ -442,10 +370,8 @@ PATH procesu orkiestratora, brak to `blad`, a gdy orkiestrator nie działa, `uwa
 `notify.sh` i temat ntfy,
 globalny `core.hooksPath`, lokalny `core.hooksPath` w repo z `/Users/Shared/sh/projekty`, wolne miejsce,
 `porty.md`, klony w `SH_OBSIDIAN_DIR` (czy są czyste i zgodne z origin, przez `git ls-remote`, bez
-pobierania; różnica to `uwaga`), datę ostatniej udanej synchronizacji Obsidiana z
-`/Users/Shared/sh/stan/obsidian-sync.json` (`uwaga`, gdy przebiegu nie było, jest starsza niż 30 minut, klon ma
-problem albo flaga `obsidian-sync.off` wyłącza agenta) oraz repo z `/Users/Shared/sh/stan/do-usuniecia.md`
-(`uwaga`, gdy są).
+pobierania; różnica to `uwaga`) oraz repo z `/Users/Shared/sh/stan/do-usuniecia.md` (`uwaga`, gdy są).
+Kontroli „Obsidian sync” już nie ma: synchronizacja nie zapisuje stanu.
 
 Repo z listy `doctor` sprawdza przez `gh repo view` i zdejmuje wiersze tych, których już nie ma. To
 jego jedyny zapis; przy `--dry-run` tylko je wskazuje. Błąd sieci lub logowania niczego nie zdejmuje
@@ -462,7 +388,7 @@ jego jedyny zapis; przy `--dry-run` tylko je wskazuje. Błąd sieci lub logowani
 
 Cykl zadania w etapie A: `task create` → `task ready` → `task dispatch` → praca workera (`task wait`
 do PR z raportem) → `pr check --czekaj` → `review run` → przy FAIL `task iter` i znów `review run` →
-`task close`. Każde zadanie ma `runner:local` i `wykonawca:claude`, a review robi Codex. Po przerwie:
+`task close`. Po kilku zadaniach `sprzataj` usuwa worktree i gałęzie scalonych PR. Każde zadanie ma `runner:local` i `wykonawca:claude`, a review robi Codex. Po przerwie:
 `task resume-check`. Rezygnacja z zadania: `task close --anuluj`.
 
 ### Pliki, panele, stan
@@ -550,7 +476,7 @@ przez issue o innym tytule daje kod 4.
 ### task ready
 
 ```sh
-shctl task ready
+shctl task ready [--czekaj] [--timeout SEKUNDY]
 ```
 
 Tylko czyta. `kandydaci` to otwarte issue `status:todo`, których wszystkie zależności z sekcji
@@ -568,13 +494,19 @@ wstrzymaniem. Wpis ze słowem „codex” wstrzymuje tylko review, każdy inny w
 Brak miejsca wysyła `notify.sh high` raz dziennie (znacznik `/Users/Shared/sh/stan/dysk-alarm`, kasowany, gdy
 miejsce wróci).
 
+`--czekaj` zastępuje pętlę odpytywania po stronie orkiestratora: gdy są kandydaci, a dispatch
+wstrzymuje blokada (slot, kolejka review, dysk, limit), komenda sprawdza ją co `SHCTL_READY_PAUZA`
+(30 s) do zejścia blokady albo do `--timeout` (domyślnie 1800 s). Bez kandydatów wraca od razu, bo
+zależności zamyka orkiestrator. Wynik ma `czekano_s` i `limit_czasu` (`true`, gdy blokada nie zeszła
+przed limitem).
+
 ```json
 {"ok":true,"komenda":"task","dry_run":false,"wynik":{
   "gotowe":[{"nr":12,"tytul":"Schemat bazy","db_migracja":true}],"kandydaci":[...],
   "zablokowane":[{"nr":13,"tytul":"Logowanie","db_migracja":false,"powody":["zależność #12 otwarta"]}],
   "blokady":[],"sloty":{"max_local":2,"max_local_globalny":2,"max_local_projektu":null,"aktywne":1,
     "aktywne_projektu":0,"wolne":1},"kolejka_review":{"max":3,"czeka":0},
-  "wolne_gb":25,"min_wolne_gb":15,"mozna_dispatch":true}}
+  "wolne_gb":25,"min_wolne_gb":15,"mozna_dispatch":true,"czekano_s":0,"limit_czasu":false}}
 ```
 
 ### task dispatch
@@ -592,11 +524,15 @@ niespełnionym odmawia kodem 4 z powodem. Potem:
    ostrzeżenie;
 3. zaufanie folderu Claude Code dla repo projektu (sekcja „Zaufanie folderu”);
 4. lista skilli workera według warstw (sekcja „Warstwy skilli”);
+   przy `.nvmrc` albo `.node-version` w worktree także `fnm install` bez pytań (limit
+   `SHCTL_FNM_LIMIT`, 300 s), żeby `fnm --use-on-cd` w panelu nie pytał o brakującą wersję Node;
+   błąd to ostrzeżenie;
 5. karta herdr z panelem `worker:NAZWA:NR` i w nim
-   `SH_NOTIFY=1 claude --settings .claude/roles/worker/settings.json --model MODEL 'Zrealizuj issue #NR skillem sh-worker. Przed pracą wczytaj skille: A, B.'`
+   `claude --settings .claude/roles/worker/settings.json --model MODEL 'Zrealizuj issue #NR skillem sh-worker. Przed pracą wczytaj skille: A, B.'`
    (bez skilli zdanie o skillach odpada);
 6. etykiety `status:in-progress` i `iter:1`;
-7. wpis w `/Users/Shared/sh/stan/NAZWA.json`: panel, etykieta, worktree, gałąź, start, iteracja.
+7. wpis w `/Users/Shared/sh/stan/NAZWA.json`: panel, etykieta, worktree, gałąź, start, iteracja, a po
+   starcie claude `polecenie` (czas UTC) i `tura: false` dla `task wait`.
 
 Przy `status:in-progress` dokańcza brakujące kroki bez bramek; agenta, który już działa w panelu, nie
 uruchamia drugi raz. Inny status to kod 4. Brak `.claude/roles/worker/settings.json` to kod 3.
@@ -604,7 +540,7 @@ uruchamia drugi raz. Inny status to kod 4. Brak `.claude/roles/worker/settings.j
 ```json
 {"ok":true,"komenda":"task","dry_run":false,"wynik":{
   "nr":12,"galaz":"task/12-schemat-bazy","worktree":"/Users/.../sh/wt/sklep/12","panel":"w1:p7",
-  "label":"worker:sklep:12","env":[".env.local"],"uruchomiono":true,"polecenie":"cd ... && SH_NOTIFY=1 claude ...",
+  "label":"worker:sklep:12","env":[".env.local"],"uruchomiono":true,"polecenie":"cd ... && claude ...",
   "skille":["sh-kat-baza"],"skille_brak":["sh-stack-supabase"],
   "zaufanie_dopisane":false,"zmiana":true,"kroki":["worktree ...","env: .env.local","skille: sh-kat-baza (brak: sh-stack-supabase)","panel worker:sklep:12 i start claude (model opus)"]}}
 ```
@@ -648,7 +584,8 @@ repo (hooki, `env`, pomocnicze komendy), a repo projektów powstają z naszego s
 
 ### Format /Users/Shared/sh/limity.md
 
-Plik prowadzi strażnik limitów `/Users/Shared/sh/bin/sh-watchdog.sh` (A3.7, `docs/serwer.md`, „Strażnik limitów”), a `task ready`, `task dispatch` i `review run` go czytają. Jedna
+Plik prowadzi ręcznie właściciel albo orkiestrator (od SH-lite F3b strażnik nie śledzi limitów,
+`docs/serwer.md`, „Strażnik orkiestratora”), a `task ready`, `task dispatch` i `review run` go czytają. Jedna
 aktywna blokada to jedna pozycja listy albo jeden wiersz tabeli; nagłówek tabeli i jej separator się
 nie liczą. Inne linie (tytuł, akapity, komentarze) są ignorowane.
 
@@ -657,8 +594,8 @@ nie liczą. Inne linie (tytuł, akapity, komentarze) są ignorowane.
 
 | Wykonawca | Od | Do | Źródło |
 |---|---|---|---|
-| claude | 2026-11-02 14:05 | 2026-11-02 19:00 | panel worker:sklep:12 |
-| codex | 2026-11-02 15:30 | 2026-11-02 20:30 | review:sklep:14 |
+| claude | 2026-11-02 14:05 | 2026-11-02 19:00 | orkiestrator |
+| codex | 2026-11-02 15:30 | 2026-11-02 20:30 | właściciel |
 ```
 
 - Wpis zawierający słowo `codex` (wielkość liter bez znaczenia) wstrzymuje tylko `review run`: PR
@@ -667,11 +604,8 @@ nie liczą. Inne linie (tytuł, akapity, komentarze) są ignorowane.
   odmawia (kod 4). Nazwę `claude` warto więc wpisywać jawnie.
 - Brak wstrzymań to plik bez pozycji i wierszy albo jedna pozycja `brak` (także `- (brak)`, `*brak*`,
   `| brak |`). Brak pliku też oznacza brak wstrzymań.
-- Po odnowieniu limitu strażnik usuwa wpis. Godzina „Do” jest dla ludzi; shctl jej nie interpretuje.
-- Strażnik zapisuje „Od” i „Do” jako `RRRR-MM-DD GG:MM` w czasie lokalnym, a „Źródło” jako
-  `panel ETYKIETA (ID)`. Godzinę szacowaną (komunikat bez godziny) oznacza dopiskiem „(szacunek)”.
-  Ręcznie dopisane pozycje listy i wiersze tabeli zostawia bez zmian; wiersz w formacie strażnika
-  usuwa, gdy jego „Do” minie.
+- Po odnowieniu limitu wpis usuwa ten, kto go dopisał. Godzina „Do” jest dla ludzi; shctl jej nie
+  interpretuje.
 
 `status show` pokazuje te same wpisy jako „Wstrzymania”.
 
@@ -682,15 +616,31 @@ shctl task wait NR [--timeout SEKUNDY]
 ```
 
 Czekanie na workera z limitem czasu (domyślnie 600 s) zamiast gołego `herdr agent wait`, który na
-panelu `idle` wraca od razu, a na panelu bez agenta kończy się błędem. Najpierw stan: PR z `Closes
-#NR` z raportem `docs/07-realizacja/T-NR.md` w plikach to `gotowe`; panel `idle`/`done` bez tego to
-`idle`; `blocked`, `brak_agenta`, `brak_panelu` wracają od razu. Na pracującego agenta czeka porcjami
-(`herdr agent wait` z limitem, `SHCTL_WAIT_KROK`, domyślnie 60 s) i po każdej sprawdza stan znowu.
-Po limicie: `pracuje`, `"limit_czasu":true`. Pole `nastepny_krok` podpowiada dalszy krok.
+panelu `idle` wraca od razu, a na panelu bez agenta kończy się błędem.
+
+Liczy się nowa tura. `task dispatch` (przy starcie claude) i `task iter` (przy wysłaniu polecenia
+poprawek) zapisują w `/Users/Shared/sh/stan/NAZWA.json` czas `polecenie` (UTC) i `tura: false`. Tura
+zaczyna się, gdy agent przejdzie w `working` (zapis `tura: true`), i kończy, gdy wróci do `idle`. Za
+nową pracę liczy się też commit w PR nowszy niż polecenie (`nowy_commit`). Raport z poprzedniej
+iteracji ani panel `idle`, zanim agent podejmie polecenie, nie kończą czekania. Zadanie bez pola
+`polecenie` (stan sprzed F3b) działa jak dawniej.
+
+| Stan | Kiedy |
+|---|---|
+| `gotowe` | PR z `Closes #NR` ma raport `docs/07-realizacja/T-NR.md` i commit po poleceniu |
+| `idle` | Agent skończył turę (albo jest nowy commit), a PR z raportem nie ma |
+| `blocked`, `brak_agenta`, `brak_panelu` | Od razu |
+| `pracuje` | Limit czasu, agent w trakcie tury |
+| `bez_tury` | Limit czasu, agent nie podjął polecenia |
+
+Przed turą sprawdza stan co `SHCTL_WAIT_PAUZA` (5 s). W turze czeka porcjami (`herdr agent wait` z
+limitem, `SHCTL_WAIT_KROK`, domyślnie 60 s) i po każdej sprawdza stan znowu. `limit_czasu` jest `true`
+przy `pracuje` i `bez_tury`. Pole `nastepny_krok` podpowiada dalszy krok.
 
 ```json
-{"ok":true,"komenda":"task","dry_run":false,"wynik":{"nr":12,"stan":"idle","pr":null,"raport":false,
-  "czekano_s":0,"limit_czasu":false,"nastepny_krok":"agent czeka bez PR z raportem: polecenie dokończenia (herdr agent prompt)"}}
+{"ok":true,"komenda":"task","dry_run":false,"wynik":{"nr":12,"stan":"bez_tury","pr":20,"raport":true,
+  "czekano_s":600,"polecenie":"2026-11-09T10:15:00Z","nowy_commit":false,"limit_czasu":true,
+  "nastepny_krok":"agent nie podjął polecenia: herdr agent read; gdy czeka na wejście, herdr agent prompt"}}
 ```
 
 ### pr check
@@ -707,7 +657,9 @@ obiegu znów sprawdza konflikt.
 
 Dla PR zadania liczy czerwone commity (`.zadania[NR].ci_czerwone` w stanie). Pierwszy czerwony to
 wynik pracy, kolejne to nieudane naprawy: przy 2 (`MAKS_NAPRAW_CI`) zwraca `"limit_napraw_ci":true` i
-krok „review albo eskalacja” (`proces-v1.md`, „Review, QA, pętla poprawek”).
+krok „review albo eskalacja” (`proces-v1.md`, „Review, QA, pętla poprawek”). Commit, który względem
+poprzedniego czerwonego zmienia tylko raport `docs/07-realizacja/T-NR.md`, nie jest próbą naprawy
+(`.zadania[NR].ci_tylko_raport` w stanie); limit 2 napraw bez zmian.
 
 ```json
 {"ok":true,"komenda":"pr","dry_run":false,"wynik":{"pr":20,"nr":12,"head":"...","mergeable":"MERGEABLE",
@@ -736,8 +688,10 @@ pliki robocze mają w nazwie `ETAP` zamiast `NR`. Kolejno:
 2. przy wstrzymaniu Codexa w `limity.md` koniec z kodem 4: PR czeka w kolejce;
 3. czysty worktree `/Users/Shared/sh/wt/NAZWA/review-NR` na commicie PR (`git fetch origin pull/PR/head`), bez plików
    env; plik `.env*` (poza `.env.example`) w samym PR daje kod 4;
-4. karta z panelem `review:NAZWA:NR` i w nim
-   `codex exec -p reviewer -s read-only -m MODEL --output-schema codex/sh-review.schema.json -o ... - < prompt`;
+4. karta z panelem `review:NAZWA:NR` otwarta w `/Users/Shared/sh/wt/NAZWA` (nie w worktree PR) i w nim
+   `codex exec -C WORKTREE -p reviewer -s read-only -m MODEL --output-schema codex/sh-review.schema.json -o ... - < prompt`;
+   bez `cd` do worktree, więc `fnm --use-on-cd` nie pyta o wersję Node z `.nvmrc` (retro iskt-www:
+   panel stał około 50 minut na #44);
 5. czekanie na wynik (limit `--timeout`, domyślnie `SHCTL_REVIEW_TIMEOUT`);
 6. komentarz w PR z werdyktem i zgłoszeniami;
 7. usunięcie worktree review i zamknięcie panelu, także po błędzie.
@@ -781,7 +735,8 @@ shctl task iter NR
 Tylko po FAIL review dla bieżącego commita otwartego PR; bez takiego wyniku albo przy PASS kod 4.
 Podbija `iter:N` na `iter:N+1`, ustawia `status:in-progress` i wysyła do panelu `worker:NAZWA:NR`
 polecenie: popraw wyłącznie zgłoszenia 🔴 i 🟡 z ostatniego review. Bez panelu otwiera go w
-`/Users/Shared/sh/wt/NAZWA/NR` i uruchamia claude z tym poleceniem.
+`/Users/Shared/sh/wt/NAZWA/NR` i uruchamia claude z tym poleceniem. Zapisuje `polecenie` i `tura: false`
+w stanie zadania, więc następne `task wait` czeka na nową turę.
 
 Powtórka dla tego samego review nie podbija licznika i nie wysyła polecenia drugi raz (stan w
 `/Users/Shared/sh/stan/NAZWA.json`). FAIL w iteracji 3 wywołuje `shctl escalate --dotyczy "#NR" --powod "3 iteracje
@@ -859,7 +814,9 @@ i uruchamia `sync-status.sh`. Zwalnia slot. Scalony PR to kod 4. Powtórka nic n
 shctl reset-dryrun
 ```
 
-Przywraca projekt wzorcowy `sh-dryrun` do tagu `baseline` (`proces-v1.md`, „Projekt wzorcowy”). Inny
+Przywraca projekt wzorcowy `sh-dryrun` do tagu baseline (`proces-v1.md`, „Projekt wzorcowy”): z pola
+`baseline_tag` we frontmatterze `docs/konfiguracja.md` `sh-dryrun`, a bez niego najnowszego z
+`baseline-*` i dawnego `baseline` według daty commita. Tagów nie przesuwa. Inny
 projekt to kod 4, brak tagu albo pliku zadań w tagu to kod 3, a tag z artefaktami przebiegu (raporty
 `T-NR.md`, `escalations/E-NNN.md`, `08-qa/raport-*.md`, mapa zadań w `06-zadania/index.md`, wpisy
 `CHANGELOG.md`, `DoD.md` poza `todo`/`pominiety` albo z iteracją) to kod 4 z listą.
@@ -880,37 +837,73 @@ otwartych PR, paneli, worktree ani gałęzi `task/*`/`stage/*`, a issue ze znacz
 otwarte zadania z pliku w `status:todo` bez iteracji, komenda nic nie robi (`"zmiana":false`).
 
 ```json
-{"ok":true,"komenda":"reset-dryrun","dry_run":false,"wynik":{"baseline":"0ea967b...","zamkniete_pr":[35],
+{"ok":true,"komenda":"reset-dryrun","dry_run":false,"wynik":{"baseline":"0ea967b...","tag":"baseline-20261109","zamkniete_pr":[35],
   "zamkniete_issue":[36],"zarchiwizowane":[23,24,25,26,27,28,36],"plik_zadan":"docs/06-zadania/zadania.yaml",
   "mapa":{"T1":38,"T2":39},"przebieg":3,"obsidian":"odtworzony","zmiana":true}}
 ```
 
-### profile update
+### template update
 
 ```sh
-shctl profile update [--baseline] [--dry-run] [--json] [--projekt NAZWA]
+shctl template update [--projekt NAZWA] [--baseline] [--force] [--dry-run]
 ```
 
-Kopiuje profile ról (`.claude/roles/*/settings.json`) z `main` szablonu `SH_TEMPLATE` (płytki klon z
-GitHuba) do istniejącego projektu. Klon projektu musi stać na `main`: komenda nie przełącza gałęzi,
-inna gałąź to odmowa (kod 4). Przed zmianą `fetch` i przewinięcie `main` do `origin/main`; lokalne
-commity spoza `origin/main` albo niezacommitowane zmiany w profilach to odmowa. Różniące się pliki
-trafiają do commita „profile ról z SH_TEMPLATE SHA” na `main` i push.
+Zastępuje `profile update` (usunięte). Aktualizuje pliki zarządzane przez szablon `SH_TEMPLATE`
+(`scripts/`, `.github/workflows/`, `.claude/roles/`, `AGENTS.md`, `docs/_szablony/`) z `main` szablonu.
 
-`--baseline` (projekt wzorcowy): buduje commit „baseline + profile” na starym `baseline` przez
-osobny indeks, bez dotykania katalogu roboczego, zapisuje stary tag jako
-`baseline-RRRRMMDD-HHMMSS`, wypycha go i przesuwa `baseline` (force push tagu). Pozostała treść
-baseline bez zmian, więc `reset-dryrun` działa dalej. Cofnięcie: `git tag -f baseline
-baseline-RRRRMMDD-HHMMSS && git push --force origin refs/tags/baseline`.
+| Plik w projekcie | Akcja |
+|---|---|
+| Równy bieżącej wersji szablonu | nic |
+| Równy którejś wersji z historii szablonu (treść szablonu) | `aktualizacja` |
+| Zmieniony w projekcie | `pominiety`, z `--force` `nadpisany` |
+| Brak w projekcie | `nowy` |
+| Usunięty z szablonu | zostaje |
 
-`--dry-run` tylko porównuje z `origin/main` i tagiem, niczego nie zmienia. Zadania w toku mają
-stare profile do czasu rebase'u ich gałęzi na `main`.
+Klon projektu musi stać na `main`: komenda nie przełącza gałęzi, inna gałąź to kod 4. Lokalne commity
+spoza `origin/main` albo niezacommitowane zmiany w plikach zarządzanych to kod 4. Zmiany trafiają do
+commita „szablon: pliki z SH_TEMPLATE SHA” na `main` i push.
+
+`--baseline` (projekt wzorcowy): to samo na najnowszym baseline (`baseline_tag` albo najnowszy tag,
+jak w `reset-dryrun`), przez osobny indeks, bez dotykania katalogu roboczego. Wynik to **nowy** tag
+`baseline-RRRRMMDD` (drugi tego dnia: `-2`, `-3`), wypchnięty bez force. Żaden tag nie jest
+przesuwany; force push tagów jest zablokowany i tak zostaje.
+
+`--dry-run` tylko porównuje i wypisuje akcje. Zadania w toku mają stare pliki do czasu rebase'u ich
+gałęzi na `main`.
 
 ```json
-{"ok":true,"komenda":"profile","dry_run":false,"wynik":{"szablon":"7aa9c64...",
- "main":{"przed":"48c3441...","po":"9b1e0d2...","pliki":[".claude/roles/worker/settings.json"]},
- "baseline":{"przed":"0ea967b...","po":"5c3a8f1...","archiwum":"baseline-20261104-221500","pliki":[...]},
+{"ok":true,"komenda":"template","dry_run":false,"wynik":{"szablon":"7aa9c64...",
+ "main":{"po":"9b1e0d2...","pliki":[{"akcja":"aktualizacja","plik":"scripts/check-dod.sh"},
+   {"akcja":"pominiety","plik":"AGENTS.md"}]},
+ "baseline":{"z":"baseline-20261104","przed":"0ea967b...","tag":"baseline-20261109","po":"5c3a8f1...","pliki":[...]},
  "zmiana":true}}
+```
+
+### sprzataj
+
+```sh
+shctl sprzataj [--dry-run]
+```
+
+Sprzątanie po builderze i orkiestratorze. Usuwa worktree w `/Users/Shared/sh/wt-system/` i
+`/Users/Shared/sh/wt/` oraz lokalne gałęzie repo w `/Users/Shared/sh` i `/Users/Shared/sh/projekty`
+wyłącznie wtedy, gdy PR gałęzi ma stan `MERGED` albo `CLOSED` (`gh pr list`). Nigdy z `--force`:
+
+| Co zostaje | Powód w `pominiete` |
+|---|---|
+| Gałąź bez PR albo z otwartym PR | `brak PR`, `PR OPEN` |
+| Worktree z niezacommitowanymi zmianami | `niezacommitowane zmiany` |
+| Gałąź z commitami spoza head PR | `lokalne commity spoza PR` |
+| Gałąź wybrana w worktree | `gałąź w worktree` |
+| `main` i gałąź bieżąca | pomijane bez wpisu |
+
+Gałęzie usuwa skrypt przez `git branch -D`, bo po squash merge `-d` odmawia. Agent tego nie robi
+sam. `--dry-run` wypisuje, co by usunął.
+
+```json
+{"ok":true,"komenda":"sprzataj","dry_run":false,"wynik":{
+  "worktree":["/Users/Shared/sh/wt-system/f3a"],"galezie":["/Users/Shared/sh/sh-system:sh-lite-f3a"],
+  "pominiete":[{"co":"/Users/Shared/sh/wt/sklep/12","powod":"PR gałęzi task/12-schemat-bazy: OPEN"}]}}
 ```
 
 ## Testy

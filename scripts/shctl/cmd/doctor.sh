@@ -189,34 +189,6 @@ sprawdz_obsidian() {
   [ "$ile" -gt 0 ] || wpis "Obsidian" ok "brak klonów w $SH_OBSIDIAN_DIR"
 }
 
-# Data ostatniej udanej synchronizacji (wszystkie klony aktualne) z /Users/Shared/sh/stan/obsidian-sync.json.
-sprawdz_obsidian_sync() {
-  local plik="$STAN/obsidian-sync.json" udana przebieg prob wiek
-  [ -n "${SH_OBSIDIAN_DIR:-}" ] || return 0
-  if [ -e "$STAN/obsidian-sync.off" ]; then
-    wpis "Obsidian sync" uwaga "wyłączona flagą $STAN/obsidian-sync.off"
-    return 0
-  fi
-  if [ ! -f "$plik" ]; then
-    wpis "Obsidian sync" uwaga "jeszcze nie było przebiegu (LaunchAgent pl.iskt.softwarehouse.obsidian-sync)"
-    return 0
-  fi
-  udana="$(jq -r '.ostatnia_udana // ""' "$plik" 2>/dev/null || true)"
-  przebieg="$(jq -r '.ostatni_przebieg // ""' "$plik" 2>/dev/null || true)"
-  prob="$(jq -r '[.problemy // {} | to_entries[] | "\(.key | split("/") | last): \(.value.powod)"] | join("; ")' "$plik" 2>/dev/null || true)"
-  if [ -z "$udana" ]; then
-    wpis "Obsidian sync" uwaga "brak udanej synchronizacji; ostatni przebieg ${przebieg:-?}${prob:+; $prob}"
-    return 0
-  fi
-  wiek="$(jq -r '.ostatnia_udana_epoch // 0' "$plik" 2>/dev/null || echo 0)"
-  wiek=$(( ($(date +%s) - wiek) / 60 ))
-  if [ -n "$prob" ] || [ "$wiek" -gt 30 ]; then
-    wpis "Obsidian sync" uwaga "ostatnia udana $udana ($wiek min temu)${prob:+; $prob}"
-  else
-    wpis "Obsidian sync" ok "ostatnia udana $udana"
-  fi
-}
-
 # Tylko „nie ma takiego repo” zdejmuje wpis: błąd sieci albo logowania nie może skasować listy.
 sprawdz_do_usuniecia() {
   local plik="$STAN/do-usuniecia.md" nazwy n wyj nowy zostaja="" usuniete="" niepewne="" ile=0 opis
@@ -271,7 +243,6 @@ komenda_main() {
   sprawdz_notify "$test"
   sprawdz_srodowisko
   sprawdz_obsidian
-  sprawdz_obsidian_sync
   sprawdz_do_usuniecia
 
   bledy="$(awk -F'\t' '$2 == "blad" { n++ } END { print n + 0 }' "$SHCTL_TMP/doctor")"
