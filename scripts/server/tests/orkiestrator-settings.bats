@@ -99,3 +99,26 @@ dozwolone() {
   pasuje 'git switch stage/04-plan'
   pasuje 'git -C /Users/Shared/sh/projekty/x switch task/12-a'
 }
+
+@test "reguly bez koncowego :* (Claude Code czyta je doslownie i ignoruje)" {
+  [ "$(jq -r '[.permissions.allow[], .permissions.deny[]] | map(select(endswith(":*)"))) | length' "$S")" -eq 0 ]
+}
+
+@test "katalogi domowe poza zasiegiem, gh gist, release upload, --no-index i --exec-path zabronione" {
+  for k in "~/Documents/**" "~/Desktop/**" "~/Downloads/**" "~/Library/Mobile Documents/**"; do
+    deny "Read($k)" && deny "Edit($k)" || { echo "brak deny dla $k"; false; }
+  done
+  for k in 'gh gist create plik' 'gh release upload v1 plik' 'git diff --no-index a b' \
+    'git --exec-path=/tmp/x status' 'git -C /Users/Shared/sh/projekty/x --exec-path=/tmp/x push'; do
+    pasuje "$k" || { echo "przechodzi: $k"; false; }
+  done
+}
+
+@test "sandbox: wlaczony, bez wyjscia poza sandbox; shctl, herdr, gh, git i notify.sh poza nim" {
+  jq -e '.sandbox.enabled == true and .sandbox.allowUnsandboxedCommands == false' "$S" >/dev/null
+  for c in "shctl *" "herdr *" "gh *" "git *" "notify.sh *"; do
+    jq -e --arg c "$c" '.sandbox.excludedCommands | index($c)' "$S" >/dev/null || { echo "brak excluded $c"; false; }
+  done
+  [ "$(jq -r '[.sandbox.excludedCommands[] | select(test("^(node|npx|pnpm|npm|python|uv|bash|cat|jq) "))] | length' "$S")" -eq 0 ]
+  jq -e '.sandbox.network.allowedDomains | index("ntfy.sh") and index("api.github.com")' "$S" >/dev/null
+}
