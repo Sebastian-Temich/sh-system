@@ -28,8 +28,8 @@ fm() { awk -v k="$2" 'NR == 1 { if ($0 != "---") exit; next } $0 == "---" { exit
 SH_VAULT="$(dirname "$SH_OBSIDIAN_DIR")"
 PODKAT="$(basename "$SH_OBSIDIAN_DIR")"
 WSZYSTKIE="$SH_VAULT/Wszystkie projekty.md"
-tmp="$(mktemp "${TMPDIR:-/tmp}/wszystkie.XXXXXX")"
-{
+# Bez pliku tymczasowego: pod launchd nie ma TMPDIR, a treść jest mała.
+tabela="$(
   echo "# Wszystkie projekty"
   echo
   echo "Generuje obsidian-sync.sh co 5 minut z \`docs/Projekt.md\` każdego projektu. Nie edytuj ręcznie."
@@ -49,9 +49,8 @@ tmp="$(mktemp "${TMPDIR:-/tmp}/wszystkie.XXXXXX")"
       printf '| %s | (brak docs/Projekt.md) | | | | |\n' "$n"
     fi
   done
-} >"$tmp"
-if [ -d "$SH_VAULT" ] && ! cmp -s "$tmp" "$WSZYSTKIE"; then
-  cat "$tmp" >"$WSZYSTKIE" 2>>"$LOG" || printf '%s BŁĄD zapisu %s\n' "$(date '+%FT%T%z')" "$WSZYSTKIE" >>"$LOG"
+)"
+if [ -d "$SH_VAULT" ] && [ "$tabela" != "$(cat "$WSZYSTKIE" 2>/dev/null)" ]; then
+  printf '%s\n' "$tabela" >"$WSZYSTKIE" 2>>"$LOG" || printf '%s BŁĄD zapisu %s\n' "$(date '+%FT%T%z')" "$WSZYSTKIE" >>"$LOG"
 fi
-rm -f "$tmp"
 exit 0
