@@ -130,3 +130,37 @@ tresc() { jq -r --argjson n "$1" '.[] | select(.number == $n) | .body' "$GH_ATRA
   ! grep -qE '^(issue create|api -X)' "$GH_ATRAPA/calls" || false
   [ -z "$(git status --porcelain)" ]
 }
+
+@test "create: kategoria, stack i skille w sekcji i znaczniku warstw" {
+  cat >"$T/w.yaml" <<'YAML'
+- id: A
+  tytul: Strona cennika
+  cel: Cennik pod /cennik.
+  kryteria: [strona podpięta w routingu pod /cennik]
+  kategoria: frontend
+  stack: nextjs
+  skille: [projekt-ui]
+- id: B
+  tytul: Bez warstw
+  cel: x
+  kryteria: [y]
+YAML
+  run --separate-stderr "$SHCTL" task create --plik "$T/w.yaml" --json
+  echo "$output $stderr"
+  [ "$status" -eq 0 ]
+  a="$(numer_dla A)"; b="$(numer_dla B)"
+  tresc "$a" | grep -qx -- '- kategoria: frontend'
+  tresc "$a" | grep -qx -- '- stack: nextjs'
+  d="$(tresc "$a" | sed -nE 's/^<!-- shctl:warstwy ([A-Za-z0-9+\/=]+) -->$/\1/p' | base64 -d)"
+  [ "$(jq -c . <<<"$d")" = '{"kategoria":"frontend","stack":["nextjs"],"skille":["projekt-ui"]}' ]
+  ! tresc "$b" | grep -q 'Warstwy skilli'
+}
+
+@test "create: zla kategoria, stack albo skille to blad uzycia" {
+  printf -- '- id: A\n  tytul: t\n  cel: c\n  kryteria: [k]\n  kategoria: mobile\n  stack: [Next JS]\n  skille: x\n' >"$T/z.yaml"
+  run --separate-stderr "$SHCTL" task create --plik "$T/z.yaml"
+  [ "$status" -eq 2 ]
+  [[ "$stderr" == *"kategoria: frontend, backend"* ]] || false
+  [[ "$stderr" == *"stack to nazwa"* ]] || false
+  [[ "$stderr" == *"skille to lista"* ]] || false
+}

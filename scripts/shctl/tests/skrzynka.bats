@@ -163,9 +163,9 @@ z = zipfile.ZipFile(sys.argv[2], "w"); z.writestr("/etc/abs.txt", "x"); z.close(
 }
 
 @test "--etap wybiera katalog i galaz, zle wartosci to kod 2" {
-  przyjmij --etap 04-architektura/zrodla
+  przyjmij --etap 04-plan/zrodla
   [ "$status" -eq 0 ]
-  [ "$(git --git-dir "$T/remote.git" show stage/04-architektura:docs/04-architektura/zrodla/logo.png)" = "PNG obraz" ]
+  [ "$(git --git-dir "$T/remote.git" show stage/04-plan:docs/04-plan/zrodla/logo.png)" = "PNG obraz" ]
   for e in ../x 00-intake/../x /00-intake 99-nic/zrodla '00-intake/a b'; do
     run --separate-stderr "$SHCTL" skrzynka przyjmij demo --etap "$e"
     [ "$status" -eq 2 ]

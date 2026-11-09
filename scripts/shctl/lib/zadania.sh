@@ -18,6 +18,7 @@ zadania_init() {
   KONFIG="$ROOT_G/docs/konfiguracja.md"
   ST="$ROOT_G/docs/status.md"
   [ -f "$KONFIG" ] || die "$E_BRAK" "brak $KONFIG"
+  ustal_etapy
   ROOT="$ROOT_G"
   SLUG="$(slug_repo)"
   [ -n "$SLUG" ] || die "$E_BRAK" "origin projektu $PROJEKT nie wskazuje repo GitHub"

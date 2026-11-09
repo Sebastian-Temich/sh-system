@@ -23,13 +23,13 @@ JSON
 }
 
 @test "pokazuje etap, eskalacje i wstrzymania" {
-  "$SHCTL" stage start 05-plan
-  "$SHCTL" escalate --dotyczy 05-plan --powod "spór" --potrzebne x
+  "$SHCTL" stage start 04-plan
+  "$SHCTL" escalate --dotyczy 04-plan --powod "spór" --potrzebne x
   printf '# Limity\n\n| Wykonawca | Do kiedy |\n|---|---|\n| claude | 18:00 |\n\n- codex do 20:00\n' >"$SH_DIR/limity.md"
   run "$SHCTL" status show
   [ "$status" -eq 0 ]
-  [[ "$output" == *'`05-plan`: escalated'* ]] || false
-  [[ "$output" == *"E-001 (05-plan): spór"* ]] || false
+  [[ "$output" == *'`04-plan`: escalated'* ]] || false
+  [[ "$output" == *"E-001 (04-plan): spór"* ]] || false
   [[ "$output" == *"| claude | 18:00 |"* ]] || false
   [[ "$output" == *"- codex do 20:00"* ]] || false
   [[ "$output" != *"Wykonawca"* ]] || false

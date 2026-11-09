@@ -270,9 +270,9 @@ komenda_main() {
   esac
   case "/$CEL/" in */../* | */./*) die "$E_UZYCIE" "niepoprawne --etap: '$etap'" ;; esac
   ETAP1="${CEL%%/*}"
-  case " $ETAPY " in *" $ETAP1 "*) ;; *) die "$E_UZYCIE" "nieznany etap w --etap: $ETAP1 (dozwolone: $ETAPY)" ;; esac
 
   zadania_init
+  case " $ETAPY " in *" $ETAP1 "*) ;; *) die "$E_UZYCIE" "nieznany etap w --etap: $ETAP1 (dozwolone: $ETAPY)" ;; esac
   SKR="$(skrzynka_kat "$PROJEKT")"
   [ -n "$SKR" ] || die "$E_BRAK" "skrzynka nieskonfigurowana: brak SH_SKRZYNKA_DIR i SH_OBSIDIAN_DIR"
   [ -d "$SKR" ] || die "$E_BRAK" "brak skrzynki $SKR (zakłada ją shctl obsidian link $PROJEKT)"

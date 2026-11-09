@@ -125,6 +125,7 @@ komenda_main() {
   fi
 
   [ -f "$KONFIG" ] || die "$E_BRAK" "$katalog nie ma docs/konfiguracja.md"
+  ustal_etapy
   gh repo edit "$slug" --delete-branch-on-merge >/dev/null || die "$E_WYKONANIE" "gh repo edit $slug nieudane"
   rzeczy="$(bash "$ROOT/scripts/setup-labels.sh" --repo "$slug" 2>&1)" || die "$E_WYKONANIE" "setup-labels: $rzeczy"
 

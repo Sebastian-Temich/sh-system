@@ -1,7 +1,7 @@
 # Wspólne środowisko testów shctl: atrapy gh, herdr i notify, projekt w katalogu tymczasowym.
 bats_require_minimum_version 1.5.0
 
-ETAPY="00-intake 04-architektura 05-plan 06-zadania 08-qa wydanie"
+ETAPY="00-intake 04-plan 06-zadania 08-qa wydanie"
 
 wspolny_setup() {
   REPO="$(cd "$BATS_TEST_DIRNAME/../../.." && pwd -P)"
@@ -85,12 +85,12 @@ MD
 # Minimalna kopia układu szablonu; check-dod to uproszczona wersja reguły „done bez braków”.
 szablon_projektu() {
   local d="$1" e
-  mkdir -p "$d/docs/_szablony" "$d/scripts" "$d/docs/07-realizacja/escalations" "$d/docs/04-architektura/adr"
+  mkdir -p "$d/docs/_szablony" "$d/scripts" "$d/docs/07-realizacja/escalations" "$d/docs/04-plan/adr"
   for e in $ETAPY; do
     mkdir -p "$d/docs/$e"
     printf -- '---\netap: %s\nstatus: todo\niteracja: 0\n---\n\n# DoD\n\n## Dokumentacja\n\n- [ ] punkt\n' "$e" >"$d/docs/$e/DoD.md"
   done
-  printf -- '---\netap_wdrozenia: A\ntryb_procesu: M\nmax_local: 1\n---\n\n# Konfiguracja\n\nTekst.\n' >"$d/docs/konfiguracja.md"
+  printf -- '---\nwersja_procesu: 2\netap_wdrozenia: A\ntryb_procesu: M\nmax_local: 1\n---\n\n# Konfiguracja\n\nTekst.\n' >"$d/docs/konfiguracja.md"
   printf -- '---\nzadania_todo: 2\nzadania_in_progress: 1\nzadania_review: 0\nzadania_blocked: 0\nzadania_escalated: 0\nzadania_done: 3\nzadania_anulowane: 0\n---\n\n# Status projektu\n\n## Bieżący etap\n\n(brak)\n\n## Punkt przekazania\n\n(brak)\n' >"$d/docs/status.md"
   printf '# Decyzje projektu\n\n| Data | Źródło | Pytanie | Decyzja |\n|---|---|---|---|\n' >"$d/docs/decyzje.md"
   printf '# Zlecenie źródłowe\n\nTreść.\n' >"$d/docs/00-intake/zrodlo.md"

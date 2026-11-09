@@ -47,7 +47,7 @@ description: Realizuje jedno zadanie (issue) w worktree /Users/Shared/sh/wt/NAZW
 
 ## 1. Rola i granice
 
-- Jedno zdanie, kim jest skill i dla jakiej roli procesu działa (intake, architekt, zadania, worker,
+- Jedno zdanie, kim jest skill i dla jakiej roli procesu działa (intake, plan, worker,
   review, qa, orkiestrator, status).
 - Lista „Robi” i „Nie robi”. „Nie robi” zawsze wymienia pracę innych ról, którą łatwo pomylić z własną
   (np. worker nie merguje, reviewer nie poprawia kodu).

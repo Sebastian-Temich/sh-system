@@ -27,7 +27,7 @@ Nie robisz:
 
 - poprawek kodu aplikacji, także oczywistych (to `sh-worker` w issue z QA);
 - review PR zadań ani review etapu (to `sh-review`);
-- zmian zakresu, planu i kamieni (to `sh-architekt` przez orkiestratora);
+- zmian zakresu, planu i kamieni (to `sh-plan` przez orkiestratora);
 - startu kolejnego kamienia, dispatchu, merge'a, statusu etapu i commitów na `main` (orkiestrator);
 - ręcznych issue i etykiet przez `gh`: zakłada je wyłącznie `shctl task create`;
 - testów na stagingu i produkcji: QA działa lokalnie, a staging sprawdza właściciel przy odbiorze.
@@ -36,9 +36,10 @@ Nie robisz:
 
 - `gh issue list --milestone "MN NAZWA" --state all --limit 200 --json number,title,state,stateReason,labels,body`:
   zadania kamienia, ich kryteria i stan
-- `docs/05-plan/plan.md`: kamień MN (rezultat, wymagania, warunek startu) i jego scenariusze odbioru
+- `docs/04-plan/plan.md` (projekt v1: `docs/05-plan/plan.md`): kamień MN (rezultat, wymagania, warunek startu) i jego scenariusze odbioru
 - `docs/00-intake/specyfikacja.md`: wymagania `W-n` kamienia z kryteriami Given/When/Then
-- `docs/04-architektura/architektura.md`: moduły i przepływy danych między funkcjami
+- `docs/04-plan/plan.md`, sekcja „Architektura” (v1: `docs/04-architektura/architektura.md`): moduły,
+  punkty wejścia i przepływy danych między funkcjami
 - `AGENTS.md`: „Stack (kontrakt)”, czyli komendy instalacji, testów, buildu, uruchomienia i E2E
 - `docs/konfiguracja.md`: `playwright_version`, `playwright_workers`, `blok_portow`, `tryb_procesu`
 - `playwright.config.ts` (albo `.js`) i katalog `e2e/`: projekty przeglądarek i istniejące testy
@@ -88,7 +89,9 @@ shctl escalate --dotyczy 08-qa --powod "..." --potrzebne "..." --opcje "A;B"
 2. Pobierz issue kamienia. Otwarte zadanie inne niż `typ:qa` oznacza, że kamień nie jest skończony:
    kończysz i mówisz orkiestratorowi, które. Zadania zamknięte jako „not planned” wpisujesz do
    raportu jako poza zakresem.
-3. Załóż gałąź `stage/08-qa` od `main` i utwórz `docs/08-qa/raport-MN.md` z szablonu, z tytułem
+3. Załóż worktree `/Users/Shared/sh/wt/NAZWA/stage-08-qa` na gałęzi `stage/08-qa` od `origin/main`
+   (`git -C /Users/Shared/sh/projekty/NAZWA worktree add -b stage/08-qa …`, bez przełączania gałęzi
+   głównego klonu) i utwórz `docs/08-qa/raport-MN.md` z szablonu, z tytułem
    „MN NAZWA” (istniejącego raportu kamienia nie nadpisujesz).
 4. Zrób listę do sprawdzenia: kryteria zamkniętych issue, wymagania `W-n` kamienia, scenariusze odbioru
    kamienia z planu i przepływy między funkcjami (miejsca, gdzie wynik jednej funkcji jest wejściem
@@ -273,7 +276,7 @@ sekretu nie zapisujesz nigdzie.
 Orkiestrator: „QA kamienia M2 skillem sh-qa.”
 
 1. `main` na `9c1e2f0`; issue M2: #14, #15, #16 zamknięte, otwartych brak.
-2. `git switch -c stage/08-qa`, `docs/08-qa/raport-M2.md` z szablonu, tytuł „M2 Katalog i koszyk”.
+2. Worktree `stage-08-qa` na `stage/08-qa`, `docs/08-qa/raport-M2.md` z szablonu, tytuł „M2 Katalog i koszyk”.
 3. `supabase start`, `pnpm build`, `pnpm exec playwright test --project=chromium --project=webkit
    --workers=1`: chromium 18/18, webkit 17/18 (`koszyk.spec.ts` czerwony także w powtórce).
 4. Nowy test `e2e/qa/M2-koszyk-logowanie.spec.ts` (przepływ koszyk → logowanie) pokazuje błąd w webkit:

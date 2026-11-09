@@ -1,4 +1,5 @@
-# shctl task create|ready|dispatch|iter|close|resume-check|cancel|wait (docs/shctl.md, „task”).
+# shctl task create|ready|dispatch|iter|close|resume-check|wait (docs/shctl.md, „task”).
+# task close NR --anuluj zastępuje task cancel (alias z ostrzeżeniem do następnej wersji).
 # Etap A: każde zadanie ma runner:local i wykonawca:claude, a review robi Codex (shctl review run).
 # shellcheck shell=bash
 
@@ -38,7 +39,10 @@ argument_nr() {
 
 JQ_WALIDACJA='
 def tekst: type == "string" and length > 0;
-def pola: ["id","tytul","cel","kryteria","pliki","testy","zaleznosci","typ","tryb","db_migracja","milestone","waga"];
+def pola: ["id","tytul","cel","kryteria","pliki","testy","zaleznosci","typ","tryb","db_migracja","milestone","waga",
+  "kategoria","stack","skille"];
+def kategorie: ["frontend","backend","baza","integracje","bezpieczenstwo","testy","ci","ai-dane","refaktoryzacja"];
+def nazwa: type == "string" and test("^[a-z0-9][a-z0-9._:-]*$");
 ([.[].id]) as $ids
 | [to_entries[] | .key as $k | .value as $z
     | ("zadanie \($k + 1)" + (if ($z.id | type) == "string" then " (\($z.id))" else "" end)) as $kto
@@ -57,6 +61,12 @@ def pola: ["id","tytul","cel","kryteria","pliki","testy","zaleznosci","typ","try
         (if ($z.tryb // "") | IN("", "S", "M") then empty else "\($kto): tryb S albo M (L od etapu B)" end),
         (if ($z.db_migracja // false) | type == "boolean" then empty else "\($kto): db_migracja to true albo false" end),
         (if ($z.milestone // "") | type == "string" then empty else "\($kto): milestone to tekst" end),
+        (if ($z.kategoria // "") | . == "" or IN(kategorie[]) then empty
+          else "\($kto): kategoria: \(kategorie | join(", "))" end),
+        (if ($z.stack // []) | (type == "array" and all(nazwa)) or nazwa then empty
+          else "\($kto): stack to nazwa albo lista nazw (małe litery, cyfry, . _ : -)" end),
+        (if ($z.skille // []) | type == "array" and all(nazwa) then empty
+          else "\($kto): skille to lista nazw skilli" end),
         (if ($z.waga // "") | IN("", "krytyczne", "istotne", "drobne") then empty
           else "\($kto): waga: krytyczne, istotne albo drobne" end),
         (if ($z.typ // "") == "qa" and (($z.waga // "") | IN("krytyczne", "istotne") | not)
@@ -80,6 +90,7 @@ JQ_TOPO='
 | .wynik[]'
 
 JQ_TRESC='
+def warstwy: {kategoria: (.kategoria // null), stack: ([.stack // empty] | flatten), skille: (.skille // [])};
 def zal: [(.zaleznosci // [])[] | if startswith("#") then . elif $mapa[.] then "#\($mapa[.])" else "(\(.))" end];
 "### Cel\n\n\(.cel | sub("\\s+$"; ""))\n\n"
 + "### Kryteria akceptacji\n\n" + ([.kryteria[] | "- [ ] \(.)"] | join("\n")) + "\n\n"
@@ -90,6 +101,10 @@ def zal: [(.zaleznosci // [])[] | if startswith("#") then . elif $mapa[.] then "
 + "### Zależności\n\n" + (zal | if length == 0 then "brak" else join(", ") end) + "\n\n"
 + "### Baza danych\n\n- [" + (if .db_migracja then "x" else " " end)
 + "] Zadanie zawiera migrację lub reset bazy (etykieta db:migracja, realizacja pojedynczo)\n\n"
++ (warstwy as $w | if ($w.kategoria // "") == "" and ($w.stack | length) == 0 and ($w.skille | length) == 0 then ""
+    else "### Warstwy skilli\n\n- kategoria: \($w.kategoria // "-")\n- stack: \($w.stack | if length == 0 then "-" else join(", ") end)\n"
+      + "- skille: \($w.skille | if length == 0 then "-" else join(", ") end)\n\n"
+      + "<!-- shctl:warstwy \($w | tojson | @base64) -->\n" end)
 + "<!-- shctl:id=\(.id) -->\n"'
 
 MAPA_START='<!-- shctl:mapa:start -->'
@@ -283,6 +298,56 @@ polecenie_workera() {
   printf '%s %s' "$c" "$(cytuj "$prompt")"
 }
 
+# Warstwy skilli workera (plugin/warstwy-skilli.yaml): bazowe + kategoria + stack + skille z zadania
+# + skille projektu (.claude/skills w worktree, zawsze). Kategoria, stack i skille są w znaczniku
+# shctl:warstwy w treści issue (task create). Skill bez SKILL.md w pluginie, projekcie ani
+# ~/.claude/skills jest pomijany z ostrzeżeniem, a dispatch idzie dalej.
+WARSTWY_SKILLI="${SH_WARSTWY_SKILLI:-$SHCTL_DIR/../../plugin/warstwy-skilli.yaml}"
+SKILLE_PLUGINU="${SH_SKILLE_PLUGINU:-$SHCTL_DIR/../../plugin/skills}"
+SKILLE_W='{"skille":[],"brak":[]}'
+
+warstwy_issue() {
+  jq -c '(.body // "") | [capture("<!-- shctl:warstwy (?<d>[A-Za-z0-9+/=]+) -->")][0].d // empty | @base64d | fromjson' <<<"$1" 2>/dev/null |
+    grep . || echo '{}'
+}
+
+skill_istnieje() {
+  local n="${2##*:}" d
+  for d in "$SKILLE_PLUGINU" "$1/.claude/skills" "$HOME/.claude/skills"; do
+    [ ! -f "$d/$n/SKILL.md" ] || return 0
+  done
+  return 1
+}
+
+# Ustawia SKILLE_W {skille, brak} dla issue (JSON) i worktree workera.
+skille_workera() {
+  local j="$1" kat="$2" w mapa='{}' lista n ok='[]' brak='[]' d
+  w="$(warstwy_issue "$j")"
+  [ ! -f "$WARSTWY_SKILLI" ] || mapa="$(yq -o=json '.' "$WARSTWY_SKILLI" 2>/dev/null || echo '{}')"
+  lista="$(jq -c --argjson m "$mapa" '
+    ($m.bazowe // [])
+    + (if (.kategoria // "") != "" then ($m.kategoria[.kategoria] // ["sh-kat-" + .kategoria]) else [] end)
+    + ((.stack // []) | map($m.stack[.] // ["sh-stack-" + .]) | add // [])
+    + (.skille // [])' <<<"$w")"
+  for d in "$kat/.claude/skills"/*/SKILL.md; do
+    [ -f "$d" ] || continue
+    lista="$(jq -c --arg n "$(basename "$(dirname "$d")")" '. + [$n]' <<<"$lista")"
+  done
+  while IFS= read -r n; do
+    [ -n "$n" ] || continue
+    if skill_istnieje "$kat" "$n"; then ok="$(jq -c --arg n "$n" '. + [$n]' <<<"$ok")"
+    else brak="$(jq -c --arg n "$n" '. + [$n]' <<<"$brak")"; uwaga "brak skilla $n (warstwy skilli); worker go nie wczyta"; fi
+  done < <(jq -r 'reduce .[] as $s ([]; if index([$s]) then . else . + [$s] end) | .[]' <<<"$lista")
+  SKILLE_W="$(jq -nc --argjson s "$ok" --argjson b "$brak" '{skille:$s, brak:$b}')"
+}
+
+# Dopisek do polecenia workera: skille do wczytania przed pracą.
+z_skillami() {
+  local s
+  s="$(jq -r '.skille | join(", ")' <<<"$SKILLE_W")"
+  if [ -n "$s" ]; then printf '%s Przed pracą wczytaj skille: %s.' "$1" "$s"; else printf '%s' "$1"; fi
+}
+
 galaz_zadania() {
   local nr="$1" tytul="$2" b s
   b="$(git -C "$ROOT_G" for-each-ref --format='%(refname:short)' "refs/heads/task/$nr-*" | head -1)"
@@ -396,7 +461,9 @@ task_dispatch() {
 
   zaufanie="$(zaufaj_projektowi)"
   [ "$zaufanie" = false ] || krok "zaufanie folderu Claude Code dla $ROOT_G (~/.claude.json)"
-  cmd="$(polecenie_workera "$kat" "Zrealizuj issue #$nr skillem sh-worker.")"
+  skille_workera "$j" "$kat"
+  krok "skille: $(jq -r '(.skille | if length == 0 then "brak" else join(", ") end) + (if (.brak | length) > 0 then " (brak: " + (.brak | join(", ")) + ")" else "" end)' <<<"$SKILLE_W")"
+  cmd="$(polecenie_workera "$kat" "$(z_skillami "Zrealizuj issue #$nr skillem sh-worker.")")"
   if [ -z "$pane" ]; then
     krok "panel $label i start claude (model $(model_workera))"
     uruchom=1
@@ -432,9 +499,9 @@ task_dispatch() {
   info "#$nr: $( [ "$zmiana" -eq 1 ] && echo "dispatch" || echo "bez zmian") ($label, $kat)"
   wynik_json "$(jq -nc --argjson n "$nr" --arg g "$br" --arg w "$kat" --arg p "$pane" --arg l "$label" \
     --argjson e "$env" --argjson u "$uruchom" --argjson z "$zmiana" --argjson k "$KROKI" --arg c "$cmd" \
-    --argjson zf "$zaufanie" \
+    --argjson zf "$zaufanie" --argjson sk "$SKILLE_W" \
     '{nr:$n, galaz:$g, worktree:$w, panel:$p, label:$l, env:$e, uruchomiono:($u == 1), polecenie:$c,
-      zaufanie_dopisane:$zf, zmiana:($z == 1), kroki:$k}')"
+      skille:$sk.skille, skille_brak:$sk.brak, zaufanie_dopisane:$zf, zmiana:($z == 1), kroki:$k}')"
 }
 
 # =========================================================================================
@@ -498,8 +565,9 @@ task_iter() {
     else
       worktree_tego_repo "$kat" || die "$E_ODMOWA" "brak panelu $label i worktree $kat; sprawdź shctl task resume-check $nr"
       zaufaj_projektowi >/dev/null
+      skille_workera "$j" "$kat"
       pane="$(otworz_panel "$label" "$kat")"
-      herdr pane run "$pane" "$(polecenie_workera "$kat" "$msg")" >/dev/null ||
+      herdr pane run "$pane" "$(polecenie_workera "$kat" "$(z_skillami "$msg")")" >/dev/null ||
         die "$E_WYKONANIE" "nie można uruchomić claude w panelu $pane"
     fi
     stan_zapisz "$nr" "$(jq -nc --arg p "$pane" --arg l "$label" --argjson c "$cel" '{panel:$p, label:$l, iteracja:$c, iter_wyslano:true, uruchomiono:true}')"
@@ -592,54 +660,42 @@ wpis_changelog() {
 }$linia"
 }
 
-# Propozycje dla systemu: jeden otwarty PR miesiąca w sh-system (gałąź propozycje-RRRR-MM). Każda
-# propozycja to pusty commit z treścią w opisie, więc PR nie zmienia plików. Znacznik w opisie chroni
-# przed dublowaniem; po scaleniu albo zamknięciu PR miesiąca następne zadanie zakłada nowy od main.
+# Propozycje dla systemu: jedno otwarte issue miesiąca w sh-system (etykieta propozycja, tytuł
+# „Propozycje RRRR-MM”), każda propozycja to komentarz. Znacznik w komentarzu chroni przed dublowaniem.
+# Gdy issue miesiąca nie ma (albo zostało zamknięte), task close zakłada nowe.
 SH_SYSTEM_DIR="${SH_SYSTEM_DIR:-$SH_DIR/sh-system}"
-galaz_propozycji() { printf 'propozycje-%s' "${SHCTL_MIESIAC:-$(date +%Y-%m)}"; }
+miesiac_propozycji() { printf '%s' "${SHCTL_MIESIAC:-$(date +%Y-%m)}"; }
 
-pr_propozycji() {
-  local nr="$1" tekst="$2" sys="$SH_SYSTEM_DIR" sslug galaz pr baza znacznik url sha push_opt=""
+issue_propozycji() {
+  local nr="$1" tekst="$2" sys="$SH_SYSTEM_DIR" sslug tytul znacznik n url t
   [ -d "$sys/.git" ] || { uwaga "brak repo sh-system w $sys; propozycje zostają w raporcie"; return 1; }
   sslug="$(git -C "$sys" config --get remote.origin.url | sed -nE 's#^(https://github\.com/|git@github\.com:)([^/]+/[^/]+)$#\2#p' | sed 's/\.git$//')"
   [ -n "$sslug" ] || { uwaga "origin sh-system nie wskazuje GitHuba"; return 1; }
-  galaz="$(galaz_propozycji)"
+  tytul="Propozycje $(miesiac_propozycji)"
   znacznik="<!-- propozycje:$PROJEKT:T-$nr -->"
-  z_limitem 120 git -C "$sys" fetch -q origin main || { uwaga "git fetch sh-system nie powiódł się"; return 1; }
-  if git -C "$sys" log --format=%B origin/main | grep -qF "$znacznik"; then
-    printf 'już na main'
-    return 0
-  fi
-  pr="$(gh pr list --repo "$sslug" --head "$galaz" --state open --json url --jq '.[0].url // ""' 2>/dev/null)" ||
-    { uwaga "nie można sprawdzić PR propozycji w $sslug"; return 1; }
-  if [ -n "$pr" ]; then
-    z_limitem 120 git -C "$sys" fetch -q origin "+refs/heads/$galaz:refs/remotes/origin/$galaz" ||
-      { uwaga "git fetch $galaz nie powiódł się"; return 1; }
-    if git -C "$sys" log --format=%B "origin/main..origin/$galaz" | grep -qF "$znacznik"; then
-      printf '%s' "$pr"
+  n="$(gh issue list --repo "$sslug" --label propozycja --state open --limit 100 --json number,title |
+    jq -r --arg t "$tytul" '[.[] | select(.title == $t)] | min_by(.number).number // ""')" ||
+    { uwaga "nie można sprawdzić issue propozycji w $sslug"; return 1; }
+  if [ -n "$n" ]; then
+    url="https://github.com/$sslug/issues/$n"
+    if gh issue view "$n" --repo "$sslug" --json comments | jq -e --arg z "$znacznik" 'any((.comments // [])[]; .body | contains($z))' >/dev/null; then
+      printf '%s' "$url"
       return 0
     fi
-    baza="origin/$galaz"
-  else
-    # Gałąź po zamkniętym albo scalonym PR zaczyna się od nowa od main.
-    baza=origin/main
-    push_opt="--force"
   fi
-  [ "$DRY" -eq 0 ] || { printf 'do dopisania: %s' "${pr:-$galaz (nowy PR)}"; return 0; }
-  # Pusty commit bez worktree: drzewo bazy, rodzic baza.
-  sha="$(git -C "$sys" commit-tree "$baza^{tree}" -p "$baza" -m "propozycje: $PROJEKT T-$nr ($(dzis))" \
-    -m "$znacznik" -m "$tekst")" || { uwaga "commit propozycji nie powstał"; return 1; }
-  # shellcheck disable=SC2086
-  z_limitem 120 git -C "$sys" push -q $push_opt origin "$sha:refs/heads/$galaz" ||
-    { uwaga "push propozycji nie powiódł się"; return 1; }
-  if [ -n "$pr" ]; then
-    url="$pr"
-  else
-    url="$(gh pr create --repo "$sslug" --head "$galaz" --base main --title "Propozycje $(date +%Y-%m)" \
-      --body "Zbiorczy PR propozycji z raportów zadań (sekcja „Propozycje dla systemu” w \`docs/07-realizacja/T-NR.md\`). Każda propozycja to pusty commit z treścią w opisie (zakładka Commits); PR nie zmienia plików. Kolejne wpisy dopisuje \`shctl task close\`. Decyzję podejmuje retro.")" ||
-      { uwaga "gh pr create w $sslug nie powiódł się"; return 1; }
+  [ "$DRY" -eq 0 ] || { printf 'do dopisania: %s' "${url:-$tytul (nowe issue)}"; return 0; }
+  if [ -z "$n" ]; then
+    gh label create propozycja --repo "$sslug" --color C5DEF5 --description "Propozycje dla systemu z raportów zadań" --force >/dev/null 2>&1 || true
+    url="$(gh issue create --repo "$sslug" --title "$tytul" --label propozycja \
+      --body "Propozycje dla systemu z raportów zadań (sekcja „Propozycje dla systemu” w \`docs/07-realizacja/T-NR.md\`). Każda propozycja to komentarz; kolejne dopisuje \`shctl task close\`. Decyzję podejmuje retro.")" ||
+      { uwaga "gh issue create w $sslug nie powiódł się"; return 1; }
+    url="$(printf '%s' "$url" | tail -1)"
+    n="${url##*/}"
   fi
-  printf '%s' "$url" | tail -1
+  t="$(tmp_plik)"
+  printf '**Propozycje: %s T-%s** (%s)\n\n%s\n\n%s\n' "$PROJEKT" "$nr" "$(dzis)" "$tekst" "$znacznik" >"$t"
+  gh issue comment "$n" --repo "$sslug" --body-file "$t" >/dev/null || { uwaga "komentarz propozycji w $sslug#$n nie powstał"; return 1; }
+  printf '%s' "$url"
 }
 
 task_close() {
@@ -693,7 +749,7 @@ task_close() {
       d_n="$(przenies_decyzje "$dec" "T-$nr")"
       u_n="$(przenies_uwagi "$uw" "T-$nr")"
       if [ -n "$(printf '%s\n' "$prop" | pozycje)" ]; then
-        prop_url="$(pr_propozycji "$nr" "$prop")" || { bledy=$((bledy + 1)); prop_url=""; }
+        prop_url="$(issue_propozycji "$nr" "$prop")" || { bledy=$((bledy + 1)); prop_url=""; }
       fi
     else
       uwaga "brak raportu docs/07-realizacja/T-$nr.md; decyzje i uwagi nie zostały przeniesione"
@@ -834,7 +890,7 @@ task_resume_check() {
 }
 
 # =========================================================================================
-# task cancel NR [--powod "..."]
+# task close NR --anuluj [--powod "..."] (dawniej task cancel)
 # =========================================================================================
 
 # Anulowanie zadania: issue „not planned”, PR zamknięty z gałęzią, worktree, gałąź lokalna, panele
@@ -861,7 +917,7 @@ task_cancel() {
   kat="$WT/$nr"
   wt_rev="$WT/review-$nr"
   label="$(etykieta_workera "$nr")"
-  komentarz="Anulowane przez orkiestratora${powod:+: $powod} (shctl task cancel)."
+  komentarz="Anulowane przez orkiestratora${powod:+: $powod} (shctl task close --anuluj)."
 
   if [ "$prst" = OPEN ]; then
     krok "zamknięcie PR #$prn z gałęzią"
@@ -987,25 +1043,31 @@ komenda_main() {
   local -a reszta=()
   # Podkomenda to pierwszy argument niebędący opcją ani jej wartością.
   SUB=""
+  ANULUJ=0
   for a in "$@"; do
     case "$poprz" in
       --projekt | --plik | --testy | --powod | --timeout) reszta+=("$a") ;;
       *)
-        if [ -z "$SUB" ] && [ "${a#-}" = "$a" ]; then SUB="$a"; else reszta+=("$a"); fi
+        if [ "$a" = --anuluj ]; then ANULUJ=1
+        elif [ -z "$SUB" ] && [ "${a#-}" = "$a" ]; then SUB="$a"; else reszta+=("$a"); fi
         ;;
     esac
     poprz="$a"
   done
+  [ "$ANULUJ" -eq 0 ] || [ "$SUB" = close ] || die "$E_UZYCIE" "--anuluj tylko z shctl task close NR"
   set -- ${reszta[@]+"${reszta[@]}"}
   case "$SUB" in
     create) task_create "$@" ;;
     ready) task_ready "$@" ;;
     dispatch) task_dispatch "$@" ;;
     iter) task_iter "$@" ;;
-    close) task_close "$@" ;;
+    close) if [ "$ANULUJ" -eq 1 ]; then task_cancel "$@"; else task_close "$@"; fi ;;
     resume-check) task_resume_check "$@" ;;
-    cancel) task_cancel "$@" ;;
+    cancel)
+      uwaga "shctl task cancel jest przestarzałe: użyj shctl task close NR --anuluj (alias działa do następnej wersji)"
+      task_cancel "$@"
+      ;;
     wait) task_wait "$@" ;;
-    *) die "$E_UZYCIE" "użycie: shctl task create|ready|dispatch|iter|close|resume-check|cancel|wait (shctl --help)" ;;
+    *) die "$E_UZYCIE" "użycie: shctl task create|ready|dispatch|iter|close [--anuluj]|resume-check|wait (shctl --help)" ;;
   esac
 }

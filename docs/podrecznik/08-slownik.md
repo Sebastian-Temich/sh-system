@@ -4,7 +4,7 @@ Wróć do: [[00-start-tutaj]]
 
 | Pojęcie | Znaczenie |
 |---|---|
-| **ADR** | Architecture Decision Record: krótki dokument jednej ważnej decyzji technicznej (opcje, wybór, konsekwencje). Leży w `docs/04-architektura/adr/` |
+| **ADR** | Architecture Decision Record: krótki dokument jednej ważnej decyzji technicznej (opcje, wybór, konsekwencje). Leży w `docs/04-plan/adr/` |
 | **Autoryzacja (rejestr autoryzacji)** | Twoja zgoda na realizację planu zapisana w `decyzje.md`: na co, w jakim zakresie, do kiedy, jak cofnąć. Powstaje przy akceptacji planu |
 | **Backlog drobnych** | `docs/backlog-drobne.md`: drobne uwagi z review i QA, odłożone na później |
 | **CI** | Automatyczne kontrole na GitHubie przy każdym PR: lint, testy, build, szukanie sekretów. Zielone CI to warunek review i merge'a |

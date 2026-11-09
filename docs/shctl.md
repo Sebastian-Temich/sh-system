@@ -32,16 +32,16 @@ Format `--json`:
 
 ```json
 {"ok":true,"komenda":"stage","dry_run":false,"wynik":{}}
-{"ok":false,"komenda":"stage","kod":4,"blad":"stage done niedozwolone dla 05-plan w statusie todo"}
+{"ok":false,"komenda":"stage","kod":4,"blad":"stage done niedozwolone dla 04-plan w statusie todo"}
 ```
 
 Komunikaty błędów i ostrzeżenia idą na stderr. Każde wywołanie dopisuje linię do
 `/Users/Shared/sh/logs/shctl.log` (czas, kod, `dry`, projekt, komenda i argumenty ucięte do 400 znaków).
 
 shctl commituje w projekcie tylko w `new-project`. Pozostałe komendy zostawiają zmiany w drzewie
-roboczym, a commit na main robi orkiestrator. Wyjątki poza plikami projektu: `task close` commituje
-propozycje w gałęzi miesiąca `propozycje-RRRR-MM` w `sh-system` (jeden otwarty PR, do którego
-dopisuje), a `reset-dryrun` przestawia main `sh-dryrun` na
+roboczym, a commit na main robi orkiestrator. Wyjątki poza plikami projektu: `task close` dopisuje
+propozycje jako komentarz do issue miesiąca „Propozycje RRRR-MM” (etykieta `propozycja`) w
+`sh-system`, a `reset-dryrun` przestawia main `sh-dryrun` na
 tag (force push). Komendy zmieniające pliki wspólne ostrzegają poza gałęzią `main`.
 
 Zmienne środowiska (dla testów i innego układu):
@@ -56,6 +56,8 @@ Zmienne środowiska (dla testów i innego układu):
 | `SH_OBSIDIAN_DIR` | Z `SH_CONFIG`; bez wartości `new-project` pomija klon w vaulcie |
 | `SH_SKRZYNKA_DIR` | `Skrzynka` obok `SH_OBSIDIAN_DIR` (`Obsidian Vault/SH/Skrzynka`); skrzynki na materiały |
 | `SH_SYSTEM_DIR` | `$SH_DIR/sh-system`; repo, do którego `task close` wysyła propozycje |
+| `SH_WARSTWY_SKILLI` | `sh-system/plugin/warstwy-skilli.yaml`; mapa warstw skilli workera (`task dispatch`) |
+| `SH_SKILLE_PLUGINU` | `sh-system/plugin/skills`; gdzie `task dispatch` sprawdza skille pluginu |
 | `SHCTL_REVIEW_TIMEOUT` | `3600`; limit czekania `review run` na Codexa, w sekundach |
 | `SHCTL_TEST_TIMEOUT` | `1800`; limit testów w `task resume-check`, w sekundach |
 | `SHCTL_DRYRUN_NAZWA` | `sh-dryrun`; jedyny projekt, na którym działa `reset-dryrun` |
@@ -109,11 +111,14 @@ Przy `--dry-run` pole `porty` to sam zakres, np. `"55121-55129"`.
 ## stage
 
 ```sh
-shctl stage start|review|done|escalate ETAP [--notatka "..."]
-shctl stage iter ETAP
+shctl stage start|review|iter|done|escalate ETAP [--notatka "..."]
 ```
 
-`ETAP` to nazwa folderu, np. `00-intake`, `04-architektura`, `wydanie`. Mapowanie etapów trybu M:
+Jedna komenda etapu z akcjami; `iter` nie przyjmuje `--notatka`. `ETAP` to nazwa folderu, np.
+`00-intake`, `04-plan`, `wydanie`. Zestaw etapów zależy od `wersja_procesu` w `docs/konfiguracja.md`
+projektu: `2` to `00-intake`, `04-plan`, `06-zadania`, `08-qa`, `wydanie`; brak pola (wersja 1,
+projekty sprzed migracji) to `04-architektura` i `05-plan` zamiast `04-plan`. Etap spoza wersji
+projektu to kod 2. Mapowanie etapów trybu M:
 `proces-v1.md`, „Definition of Done”. Komenda zmienia `status` w `DoD.md`, sekcję „Bieżący etap” i
 „Dziennik etapów” w `status.md`.
 
@@ -128,18 +133,18 @@ shctl stage iter ETAP
 się kodem 4, a status zostaje. Komendy pominięcia nie ma: orkiestrator zapisuje decyzję
 (`decision add`) i ustawia w `DoD.md` na `main` `status: pominiety` oraz `decyzja: "..."`;
 `check-dod.sh` odrzuca `pominiety` bez decyzji, a `stage` nie zmienia statusu `pominiety`. Etapy z
-`DoD.md`: `00-intake`, `04-architektura`, `05-plan`, `06-zadania`, `08-qa`, `wydanie` (tryb L z
+`DoD.md` według wersji procesu (wyżej) (tryb L z
 etapami `01`–`03` jest odłożony, `07-realizacja` nie ma `DoD.md`). `stage escalate`
 zmienia tylko status: eskalację z plikiem i powiadomieniem otwiera `shctl escalate`. Etap czekający
 na coś zewnętrznego to `stage start ETAP --notatka "czeka na ..."`.
 
 ```sh
-shctl stage review 04-architektura --notatka "gotowe do review" --json
+shctl stage review 04-plan --notatka "gotowe do review" --json
 ```
 
 ```json
 {"ok":true,"komenda":"stage","dry_run":false,"wynik":{
-  "projekt":"sklep","etap":"04-architektura","poprzedni":"in-progress","status":"review","zmiana":true}}
+  "projekt":"sklep","etap":"04-plan","poprzedni":"in-progress","status":"review","zmiana":true}}
 ```
 
 ### stage iter
@@ -149,7 +154,7 @@ main (`proces-v1.md`, „Pliki wspólne i konflikty”). Gałąź `stage/ETAP` f
 PR etapu nie ma konfliktu z main. Wymaga otwartego PR z gałęzi `stage/ETAP` i wyniku `review run` FAIL
 dla jego bieżącego commita (inaczej kod 4). Iteracja 0 liczy się jak 1. Powtórka dla tego samego
 review nic nie zmienia (`.etapy[ETAP].iter_review` w `/Users/Shared/sh/stan/NAZWA.json`). Limit
-iteracji: etapy dokumentowe `00-intake`, `04-architektura`, `05-plan` i `06-zadania` mają najwyżej
+iteracji: etapy dokumentowe `00-intake`, `04-plan` (v1: `04-architektura`, `05-plan`) i `06-zadania` mają najwyżej
 jedną iterację poprawek, więc FAIL w iteracji 2 otwiera eskalację przez `shctl escalate` zamiast
 podbicia (review w iteracji 2 daje istotne uwagi jako ⚪ „(do decyzje.md)”, więc FAIL oznacza 🔴).
 Etap `wydanie`: eskalacja po FAIL w iteracji 3. `08-qa` nie ma review etapu: `stage iter 08-qa` to
@@ -234,7 +239,7 @@ strażnik limitów. Komenda tylko czyta.
 
 ```json
 {"ok":true,"komenda":"status","dry_run":false,"wynik":{
-  "projekt":"sklep","tryb":"M","etap":"- `05-plan`: in-progress",
+  "projekt":"sklep","tryb":"M","etap":"- `04-plan`: in-progress",
   "zadania":{"todo":3,"in_progress":1,"review":0,"blocked":0,"escalated":0,"done":2,"anulowane":0},
   "zrodlo_zadan":"github","eskalacje":[],"wstrzymania":[]}}
 ```
@@ -402,8 +407,8 @@ archiwum i śmieci systemowe (`__MACOSX`, pliki ukryte) są pomijane (`ARCHIWUM:
 `odrzucone`). Archiwum bez plików do przyjęcia jest odrzucane. Inne archiwa (`.tar`, `.7z`) trafiają
 do repo bez rozpakowania.
 
-`--etap` to ścieżka względem `docs/`, której pierwszy element jest etapem (`04-architektura/zrodla` daje
-gałąź `stage/04-architektura`). Przy trwającym intake domyślny cel `00-intake/zrodla` trafia do
+`--etap` to ścieżka względem `docs/`, której pierwszy element jest etapem (`04-plan/zrodla` daje
+gałąź `stage/04-plan`). Przy trwającym intake domyślny cel `00-intake/zrodla` trafia do
 otwartego PR etapu. `..`, `/` na początku i znaki spoza `A-Za-z0-9._/-` to kod 2. Gdy skrzynka
 nie zawiera niczego nowego: `stan: pusto`. Gdy wszystko zostało odrzucone: kod 4. Ta sama treść już na
 `main`: pliki od razu do `_przeniesione/`, bez PR. Brak skrzynki: kod 3. `--dry-run` sprawdza pliki,
@@ -458,7 +463,7 @@ jego jedyny zapis; przy `--dry-run` tylko je wskazuje. Błąd sieci lub logowani
 Cykl zadania w etapie A: `task create` → `task ready` → `task dispatch` → praca workera (`task wait`
 do PR z raportem) → `pr check --czekaj` → `review run` → przy FAIL `task iter` i znów `review run` →
 `task close`. Każde zadanie ma `runner:local` i `wykonawca:claude`, a review robi Codex. Po przerwie:
-`task resume-check`. Rezygnacja z zadania: `task cancel`.
+`task resume-check`. Rezygnacja z zadania: `task close --anuluj`.
 
 ### Pliki, panele, stan
 
@@ -466,7 +471,6 @@ do PR z raportem) → `pr check --czekaj` → `review run` → przy FAIL `task i
 |---|---|
 | Worktree workera | `/Users/Shared/sh/wt/NAZWA/NR`, gałąź `task/NR-slug` |
 | Worktree review | `/Users/Shared/sh/wt/NAZWA/review-NR`, odłączony HEAD na commicie PR, bez plików env |
-| Worktree propozycji | `/Users/Shared/sh/wt/NAZWA/sys-propozycje-NR`, gałąź `propozycje-RRRR-MM` w `sh-system`, usuwany po pushu |
 | Panel workera | Karta herdr w workspace `sh` z panelem `worker:NAZWA:NR`; po eskalacji `eskalacja:NAZWA:NR` |
 | Panel review | Karta z panelem `review:NAZWA:NR`, zamykana po review |
 | Mapa NR → panel | `/Users/Shared/sh/stan/NAZWA.json`, klucz `zadania` (`stop-all` go zachowuje) |
@@ -519,18 +523,22 @@ zadania:
     db_migracja: true          # etykieta db:migracja
     milestone: M1 Szkielet
     waga: istotne              # krytyczne, istotne, drobne; etykieta sev:X; typ qa: tylko krytyczne albo istotne
+    kategoria: baza            # frontend, backend, baza, integracje, bezpieczenstwo, testy, ci, ai-dane, refaktoryzacja
+    stack: [supabase]          # nazwa albo lista nazw (małe litery, cyfry, . _ : -)
+    skille: [projekt-db]       # dodatkowe skille workera spoza warstw
 ```
 
 Etykiety: `status:todo`, `runner:local`, `wykonawca:claude`, `typ:X`, opcjonalnie `tryb:X`,
 `db:migracja` i `sev:X`. Treść issue ma sekcje formularza (Cel, Kryteria akceptacji, Zakres, Komenda testów, Typ,
-Zależności, Baza danych) i znacznik `<!-- shctl:id=T1 -->`. Issue powstają w kolejności zależności, więc
+Zależności, Baza danych), przy kategorii, stacku albo skillach sekcję „Warstwy skilli” ze znacznikiem
+`<!-- shctl:warstwy BASE64 -->` (czyta go `task dispatch`) i znacznik `<!-- shctl:id=T1 -->`. Issue powstają w kolejności zależności, więc
 zależności mają już numery. Brakujące milestone'y komenda zakłada.
 
 Na końcu dopisuje mapę do sekcji „Mapa zadań z planu” w `docs/06-zadania/index.md` (znaczniki
 `shctl:mapa`, poza tabelą `sync-status`) i uruchamia `scripts/sync-status.sh`.
 
 Powtórka rozpoznaje issue po znaczniku i niczego nie dubluje; przerwane tworzenie dokańcza. Nieznane
-pole, nieznana zależność, cykl, zły typ, tryb lub waga (także `typ: qa` bez wagi `krytyczne` albo `istotne`) dają kod 2 przed jakąkolwiek zmianą. ID użyte już
+pole, nieznana zależność, cykl, zły typ, tryb, waga, kategoria, stack lub skille (także `typ: qa` bez wagi `krytyczne` albo `istotne`) dają kod 2 przed jakąkolwiek zmianą. ID użyte już
 przez issue o innym tytule daje kod 4.
 
 ```json
@@ -583,10 +591,12 @@ niespełnionym odmawia kodem 4 z powodem. Potem:
 2. kopia `.env.local` i `env_files` z repo głównego do worktree (prawa `go-rwx`); brak pliku to
    ostrzeżenie;
 3. zaufanie folderu Claude Code dla repo projektu (sekcja „Zaufanie folderu”);
-4. karta herdr z panelem `worker:NAZWA:NR` i w nim
-   `SH_NOTIFY=1 claude --settings .claude/roles/worker/settings.json --model MODEL 'Zrealizuj issue #NR skillem sh-worker.'`;
-5. etykiety `status:in-progress` i `iter:1`;
-6. wpis w `/Users/Shared/sh/stan/NAZWA.json`: panel, etykieta, worktree, gałąź, start, iteracja.
+4. lista skilli workera według warstw (sekcja „Warstwy skilli”);
+5. karta herdr z panelem `worker:NAZWA:NR` i w nim
+   `SH_NOTIFY=1 claude --settings .claude/roles/worker/settings.json --model MODEL 'Zrealizuj issue #NR skillem sh-worker. Przed pracą wczytaj skille: A, B.'`
+   (bez skilli zdanie o skillach odpada);
+6. etykiety `status:in-progress` i `iter:1`;
+7. wpis w `/Users/Shared/sh/stan/NAZWA.json`: panel, etykieta, worktree, gałąź, start, iteracja.
 
 Przy `status:in-progress` dokańcza brakujące kroki bez bramek; agenta, który już działa w panelu, nie
 uruchamia drugi raz. Inny status to kod 4. Brak `.claude/roles/worker/settings.json` to kod 3.
@@ -595,8 +605,25 @@ uruchamia drugi raz. Inny status to kod 4. Brak `.claude/roles/worker/settings.j
 {"ok":true,"komenda":"task","dry_run":false,"wynik":{
   "nr":12,"galaz":"task/12-schemat-bazy","worktree":"/Users/.../sh/wt/sklep/12","panel":"w1:p7",
   "label":"worker:sklep:12","env":[".env.local"],"uruchomiono":true,"polecenie":"cd ... && SH_NOTIFY=1 claude ...",
-  "zaufanie_dopisane":false,"zmiana":true,"kroki":["worktree ...","env: .env.local","panel worker:sklep:12 i start claude (model opus)"]}}
+  "skille":["sh-kat-baza"],"skille_brak":["sh-stack-supabase"],
+  "zaufanie_dopisane":false,"zmiana":true,"kroki":["worktree ...","env: .env.local","skille: sh-kat-baza (brak: sh-stack-supabase)","panel worker:sklep:12 i start claude (model opus)"]}}
 ```
+
+### Warstwy skilli
+
+Lista skilli do wczytania przez workera składa się z warstw, w tej kolejności i bez powtórzeń:
+
+1. bazowe: `bazowe` z `sh-system/plugin/warstwy-skilli.yaml`;
+2. kategoria: `kategoria.NAZWA` z tego pliku (bez wpisu: `sh-kat-NAZWA`);
+3. stack: `stack.NAZWA` z tego pliku dla każdej pozycji stacku (bez wpisu: `sh-stack-NAZWA`);
+4. `skille` z zadania;
+5. projekt, zawsze: każdy `.claude/skills/*/SKILL.md` w worktree zadania.
+
+Kategoria, stack i skille pochodzą ze znacznika `shctl:warstwy` w treści issue (`task create`); issue bez
+niego (np. zlecenie S) dostaje tylko warstwy bazowe i projektu. Skill istnieje, gdy ma `SKILL.md` w
+`sh-system/plugin/skills`, w `.claude/skills` worktree albo w `~/.claude/skills`. Brakujący skill to
+ostrzeżenie i wpis w `skille_brak`; dispatch idzie dalej bez niego. `task iter` przekazuje tę samą
+listę, gdy otwiera nowy panel.
 
 ### Zaufanie folderu
 
@@ -778,14 +805,14 @@ niezacommitowane zmiany albo commity spoza PR. Potem, na main po `git pull --ff-
 | Zgłoszenia ⚪ z ostatniego review (komentarz w PR) | `docs/backlog-drobne.md`, źródło `review PR #N` |
 | Czas od dispatchu, iteracje, eskalacje | Wiersz `| #NR tytuł | tryb | czas | 1 | iteracje | eskalacje | PR #N |` na końcu ostatniej tabeli `docs/metryki.md` (w `sh-dryrun`: tabela bieżącego przebiegu) |
 | Tytuł i PR | `- #NR: tytuł (PR #N)` w sekcji „Niewydane” `CHANGELOG.md` |
-| „Propozycje dla systemu” | Pusty commit z treścią i znacznikiem `<!-- propozycje:NAZWA:T-NR -->` w opisie, w jednym otwartym PR miesiąca do `sh-system` (gałąź `propozycje-RRRR-MM`, tytuł „Propozycje RRRR-MM”); PR nie zmienia plików; brak otwartego PR: nowy od `main` |
+| „Propozycje dla systemu” | Komentarz z treścią i znacznikiem `<!-- propozycje:NAZWA:T-NR -->` w otwartym issue miesiąca w `sh-system` (etykieta `propozycja`, tytuł „Propozycje RRRR-MM”); brak otwartego issue: nowe; wynik `propozycje` to link do issue |
 
 Pozycje sekcji to punkty listy (z kontynuacją) albo akapity; „brak” jest pomijane. Na końcu usuwa
 worktree, gałąź `task/NR-*` i panel (także `eskalacja:NAZWA:NR`), zamyka issue, zdejmuje etykiety `status:*`, uruchamia
 `scripts/sync-status.sh` i kasuje wpis zadania w stanie. Zmian w plikach wspólnych nie commituje.
 
-Powtórka po merge'u pomija gotowe kroki: wiersze nie są dopisywane drugi raz, a istniejący PR propozycji
-(także scalony) nie powstaje ponownie. Nieudany krok poboczny (PR propozycji, panel, sync-status) daje
+Powtórka po merge'u pomija gotowe kroki: wiersze nie są dopisywane drugi raz, a komentarz ze znacznikiem
+zadania nie powstaje ponownie. Nieudany krok poboczny (komentarz propozycji, panel, sync-status) daje
 kod 1 po wykonaniu pozostałych; powtórka go dokańcza.
 
 ### task resume-check
@@ -812,13 +839,15 @@ Komenda nie zmienia etykiet: przerwanie przez limit nie podbija iteracji.
   "sugestia":"rebase i kontynuuj","uwaga":"przerwanie przez limit nie podbija iteracji"}}
 ```
 
-### task cancel
+### task close --anuluj
 
 ```sh
-shctl task cancel NR [--powod "..."]
+shctl task close NR --anuluj [--powod "..."]
 ```
 
-Anulowanie zadania: zamyka PR z usunięciem gałęzi, zamyka panele `worker:`, `eskalacja:` i `review:`
+Dawniej `task cancel NR`: stara nazwa działa jako alias z ostrzeżeniem do następnej wersji.
+`--anuluj` poza `task close` to kod 2. Anulowanie zadania: zamyka PR z usunięciem gałęzi, zamyka
+panele `worker:`, `eskalacja:` i `review:`
 zadania, usuwa worktree `NR` i `review-NR` (bez zachowania zmian) i gałąź lokalną, zamyka issue jako
 „not planned” z komentarzem (powód), zdejmuje etykiety `status:*`, usuwa wpis z `/Users/Shared/sh/stan/NAZWA.json`
 i uruchamia `sync-status.sh`. Zwalnia slot. Scalony PR to kod 4. Powtórka nic nie zmienia

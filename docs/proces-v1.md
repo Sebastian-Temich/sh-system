@@ -52,8 +52,10 @@ Plik `docs/konfiguracja.md` projektu ma pole `etap_wdrozenia`: A albo B. W etapi
 - nie ma workerów w chmurze, Lovable ani GitHub Projects;
 - strażnik limitów tylko wykrywa limit i powiadamia, a wznowienie wywołuje właściciel („wznów”);
 - `auto_merge_S` działa, ale domyślnie ma wartość `false`; włączamy go po kilku udanych zleceniach S;
-- dostępne skille: `sh-intake`, `sh-architekt`, `sh-zadania`, `sh-worker`, `sh-review`, `sh-qa`,
-  `sh-orkiestrator`.
+- dostępne skille: `sh-intake`, `sh-plan`, `sh-worker`, `sh-review`, `sh-qa`, `sh-orkiestrator`;
+- wersja procesu projektu jest w `docs/konfiguracja.md` (`wersja_procesu`): `2` ma jeden etap `04-plan`,
+  a projekt bez pola (wersja 1, sprzed migracji) etapy `04-architektura` i `05-plan`. shctl obsługuje
+  obie do czasu migracji projektów.
 
 Wszystko inne w tym dokumencie to model docelowy, wdrażany w etapie B.
 
@@ -139,8 +141,10 @@ Tryb L (nowy produkt, MVP, duża przebudowa, z osobnymi etapami briefu, designu 
 
 1. Specyfikacja (`docs/00-intake/specyfikacja.md`: cel, zakres, wymagania z kryteriami, stack,
    hosting, notatka o designie).
-2. Architektura i plan (`docs/04-architektura/architektura.md` jako krótka notatka + ADR dla
-   ważnych decyzji, `docs/05-plan/plan.md` z kamieniami milowymi) i zadania (issue).
+2. Plan (`docs/04-plan/plan.md`: krótka architektura z punktem wejścia każdej funkcji i plan
+   kamieni milowych, ADR dla ważnych decyzji w `docs/04-plan/adr/`) i zadania (`zadania.yaml` z
+   kategorią i stackiem, issue). Jedna funkcja albo strona to jedno zadanie, podpięte do punktu
+   wejścia lub routingu w kryteriach. Skill `sh-plan` prowadzi oba etapy.
 3. Realizacja (pierwsze zadanie to szkielet projektu, wykonywany sekwencyjnie).
 4. QA zbiorcze.
 5. Odbiór i dokumentacja (`wydanie/techniczna` + `wydanie/produktowa` w krótkiej formie, jako
@@ -195,8 +199,7 @@ Nie ma osobnych plików profili.
 ```text
 docs/
 ├── 00-intake/         specyfikacja.md, zrodlo.md, zrodla/ (materiały właściciela ze skrzynki)
-├── 04-architektura/   architektura.md, adr/
-├── 05-plan/
+├── 04-plan/           plan.md (krótka architektura i kamienie), adr/
 ├── 06-zadania/        index.md
 ├── 07-realizacja/     raporty T-NR.md, escalations/ (bez DoD.md: stan realizacji jest w issue)
 ├── 08-qa/
@@ -219,7 +222,9 @@ Pliki wspólne (`status.md`, `decyzje.md`, `metryki.md`, `06-zadania/index.md`, 
 
 Frontmatter `DoD.md` (`status`, `iteracja`) zmienia się tylko na main, przez `shctl stage`. Gałąź
 `stage/ETAP` zmienia wyłącznie treść dokumentów i pola checklisty, więc PR etapu nie ma konfliktu z
-main. Eskalacje (`escalations/E-NNN.md`) też powstają tylko na main: `shctl escalate` wywołane z
+main. Główne klony projektów i `sh-system` są zawsze na main: nikt nie przełącza w nich
+gałęzi. Zadanie ma worktree `wt/NAZWA/NR`, review `wt/NAZWA/review-NR`, a dokumenty etapu powstają w
+worktree `wt/NAZWA/stage-ETAP`; zmiany ogląda się przez `git -C WORKTREE …` albo `gh pr diff`. Eskalacje (`escalations/E-NNN.md`) też powstają tylko na main: `shctl escalate` wywołane z
 worktree zapisuje je w głównej kopii projektu, a commituje orkiestrator. Numeracja E-NNN jest jedna
 dla projektu.
 
@@ -230,15 +235,15 @@ zamiast czekać na CI. Konflikt rozwiązuje autor gałęzi: `git merge origin/ma
 Worker pisze tylko własne pliki: kod, testy, docs obszaru swojego zadania i raport
 `docs/07-realizacja/T-NR.md` z sekcjami „Decyzje”, „Drobne uwagi” i „Propozycje dla systemu”.
 Orkiestrator przenosi dwie pierwsze do plików wspólnych, a propozycje trafiają do jednego otwartego
-PR miesiąca w `sh-system` (`propozycje-RRRR-MM`): `shctl task close` dopisuje każdą jako pusty commit z
-treścią w opisie, więc PR nie zmienia plików. Decyzję o nich podejmuje retro: w etapie A
+issue miesiąca w `sh-system` (etykieta `propozycja`, tytuł „Propozycje RRRR-MM”): `shctl task close`
+dopisuje każdą jako komentarz. Decyzję o nich podejmuje retro: w etapie A
 właściciel przegląda je w retro pilota (prompt ręczny), a od etapu B robi to skill `sh-retro`.
 
 ## Definition of Done
 
 `DoD.md` etapu zawiera:
 
-- frontmatter: `etap` (nazwa folderu, np. `04-architektura`), `status`
+- frontmatter: `etap` (nazwa folderu, np. `04-plan`), `status`
   (`todo|in-progress|review|done|escalated|pominiety`), `iteracja` (`0-3`), przy pominięciu etapu
   `decyzja`;
 - sekcje: Dokumentacja, Funkcjonalność, Checklisty jakości, Checkpoint (review PASS, akceptacja
@@ -269,7 +274,7 @@ Etapy trybu M zapisujemy w tych folderach:
 | Etap trybu M | Foldery z `DoD.md` |
 |---|---|
 | Specyfikacja | `00-intake` |
-| Architektura i plan | `04-architektura`, `05-plan`, `06-zadania` |
+| Plan i zadania | `04-plan`, `06-zadania` (wersja 1: `04-architektura`, `05-plan`, `06-zadania`) |
 | Realizacja | brak (stan w issue i PR) |
 | QA | `08-qa` |
 | Odbiór i dokumentacja | `wydanie` |
@@ -300,7 +305,7 @@ migracje zgodne wstecz.
   review run` mimo czerwonego CI, a FAIL idzie zwykłą pętlą iteracji; przyczyna poza zadaniem
   (środowisko, sekret, sprzeczne kryteria, CI szablonu) → `shctl escalate`. Merge nadal wymaga
   zielonego CI.
-- **Anulowanie zadania:** `shctl task cancel NR --powod "..."` zamyka issue jako „not planned”, PR z
+- **Anulowanie zadania:** `shctl task close NR --anuluj --powod "..."` zamyka issue jako „not planned”, PR z
   gałęzią, worktree i panele oraz czyści stan zadania. Scalonego PR nie anuluje się.
 
 Waga zgłoszeń:

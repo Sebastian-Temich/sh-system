@@ -37,7 +37,10 @@ Nie robisz:
   zależności, `db:migracja`, iteracja z etykiety `iter:N`
 - `AGENTS.md`: „Stack (kontrakt)”, komendy, zasady gałęzi, migracji i sekretów
 - `docs/00-intake/specyfikacja.md`: wymagania `W-n`, które przywołuje issue
-- `docs/04-architektura/architektura.md`: moduły, granice, model danych, testy
+- `docs/04-plan/plan.md`, sekcja „Architektura” (projekt v1: `docs/04-architektura/architektura.md`):
+  moduły, punkty wejścia, model danych, testy
+- skille z polecenia startowego („Przed pracą wczytaj skille: …”): warstwy bazowe, kategorii, stacku
+  i projektu, które składa `shctl task dispatch`
 - pliki i katalogi z sekcji „Zakres” issue: kod, który zmieniasz
 - `gh pr view task/NR-slug --json number,url,headRefOid,comments`: w iteracji 2+ ostatni komentarz
   „Review …: FAIL” dla bieżącego commita; przy wznowieniu, czy PR istnieje
@@ -76,8 +79,11 @@ shctl escalate --dotyczy "#NR" --powod "..." --potrzebne "..." --opcje "A;B"
 2. Przeczytaj issue i ustal iterację z etykiety `iter:N`. Przy `iter:2` i wyżej przejdź do
    „Iteracji 2+” (niżej). Gdy gałąź ma już commity albo PR istnieje, a review nie było, to wznowienie:
    przeczytaj raport i `git log origin/main..HEAD`, potem kontynuuj od brakującego kroku.
-3. Przeczytaj `AGENTS.md`, specyfikację, architekturę i pliki z „Zakresu”. Zapisz kryteria z issue jako
-   listę do odhaczenia.
+3. Gdy polecenie startowe wymienia skille („Przed pracą wczytaj skille: …”), wczytaj każdy narzędziem
+   Skill przed pracą. Skilla, którego nie da się wczytać, nie szukasz: zapisujesz go w „Drobnych
+   uwagach” raportu i pracujesz dalej. Przeczytaj `AGENTS.md`, specyfikację, architekturę i pliki z
+   „Zakresu”. Zapisz kryteria z issue jako listę do odhaczenia; kryterium podpięcia funkcji do punktu
+   wejścia (trasa, nawigacja, eksport) sprawdzasz testem, który wchodzi od tego punktu.
 4. Zrób `git fetch origin`, a gdy gałąź jest za `main`: `git merge --no-edit origin/main`. Nie
    rebase'ujesz: `rebase --continue` wymaga edytora, a `git -c` jest zablokowane.
 5. Dla każdego kryterium napisz najpierw test, który je sprawdza, potem kod. Zostajesz w plikach z
@@ -182,7 +188,7 @@ dokładnie w tej kolejności i z tymi nazwami, bo `shctl task close` czyta je po
 - „Drobne uwagi”: rzeczy poza zakresem, do `backlog-drobne.md`.
 - „Ryzyka”: co może nie działać, czego nie sprawdziłeś (np. brak podglądu Vercel), czerwone testy.
 - „Propozycje dla systemu”: zmiany w procesie, skillach, shctl albo szablonie, w tym operacje wykonane
-  ręcznie z braku komendy; `shctl task close` dopisuje je do zbiorczego PR miesiąca w `sh-system`.
+  ręcznie z braku komendy; `shctl task close` dopisuje je jako komentarz do issue miesiąca w `sh-system`.
 - Pusta sekcja ma jedną pozycję `brak`. Sekrety, tokeny i dane osobowe nie trafiają do raportu.
 
 ## Tryby

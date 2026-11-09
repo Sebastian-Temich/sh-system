@@ -70,3 +70,13 @@ pasuje() {
     ! pasuje "$k" || { echo "zablokowane: $k"; false; }
   done
 }
+
+@test "worktree etapu: add i remove przez -C, bez --force; switch zabroniony takze bez -C" {
+  for r in 'Bash(git -C * worktree add *)' 'Bash(git -C * worktree remove *)'; do
+    allow "$r" || { echo "brak allow: $r"; false; }
+  done
+  pasuje 'git -C /Users/Shared/sh/projekty/x worktree remove --force /Users/Shared/sh/wt/x/stage-04-plan'
+  pasuje 'git -C /Users/Shared/sh/projekty/x worktree remove /Users/Shared/sh/wt/x/stage-04-plan -f'
+  pasuje 'git switch stage/04-plan'
+  pasuje 'git -C /Users/Shared/sh/projekty/x switch task/12-a'
+}

@@ -129,7 +129,7 @@ Przenosi Twoje materiały ze skrzynki `SH/Skrzynka/NAZWA` do repo projektu.
 
 ```sh
 shctl skrzynka przyjmij strona-firmowa                                # do docs/00-intake/zrodla
-shctl skrzynka przyjmij strona-firmowa --etap 04-architektura/zrodla  # inne miejsce
+shctl skrzynka przyjmij strona-firmowa --etap 04-plan/zrodla  # inne miejsce
 shctl skrzynka przyjmij strona-firmowa --dry-run                # tylko sprawdza pliki
 ```
 
@@ -152,14 +152,16 @@ Te komendy wywołują skille i orkiestrator. Opis dla zrozumienia, co widzisz w 
 
 ### stage
 
-Zmienia status etapu w `DoD.md` i w `status.md`.
+Jedna komenda etapu: zmienia status etapu w `DoD.md` i w `status.md`, a po FAIL review podbija
+iterację. Projekty sprzed migracji (bez `wersja_procesu` w `konfiguracja.md`) mają etapy
+`04-architektura` i `05-plan` zamiast `04-plan`.
 
 ```sh
-shctl stage start 04-architektura --projekt strona-firmowa
-shctl stage review 04-architektura --projekt strona-firmowa
-shctl stage done 04-architektura --projekt strona-firmowa
-shctl stage escalate 04-architektura --projekt strona-firmowa
-shctl stage iter 04-architektura --projekt strona-firmowa
+shctl stage start 04-plan --projekt strona-firmowa
+shctl stage review 04-plan --projekt strona-firmowa
+shctl stage iter 04-plan --projekt strona-firmowa
+shctl stage done 04-plan --projekt strona-firmowa
+shctl stage escalate 04-plan --projekt strona-firmowa
 ```
 
 `done` przechodzi tylko przy kompletnym `DoD.md`; pole bez zastosowania ma postać
@@ -206,13 +208,13 @@ Pętla realizacji. Wywołuje ją orkiestrator.
 |---|---|
 | `shctl task create --plik zadania.yaml` | Zakłada issue i kamienie z pliku YAML |
 | `shctl task ready` | Czyta: zadania gotowe do startu i blokady |
-| `shctl task dispatch NR` | Kopia robocza, panel `worker:PROJEKT:NR`, start workera |
+| `shctl task dispatch NR` | Kopia robocza, panel `worker:PROJEKT:NR`, start workera z listą skilli (bazowe, kategoria, stack, projekt) |
 | `shctl task wait NR` | Czeka na workera z limitem czasu; zwraca stan: gotowe, idle, blocked, pracuje |
 | `shctl pr check PR` | Konflikt z `main` i wynik CI; z `--czekaj` czeka na CI, liczy nieudane naprawy |
 | `shctl review run PR` | Review Codexa w czystej kopii, komentarz z werdyktem w PR; jedno naraz na PR |
 | `shctl task iter NR` | Po FAIL: kolejna iteracja poprawek; po 3. FAIL eskalacja |
-| `shctl task close NR` | Merge (tylko zielone CI i PASS), wpisy w plikach wspólnych, sprzątanie |
-| `shctl task cancel NR` | Anuluje zadanie: issue „not planned”, PR, kopia robocza, panel, stan |
+| `shctl task close NR` | Merge (tylko zielone CI i PASS), wpisy w plikach wspólnych, propozycje do issue miesiąca, sprzątanie |
+| `shctl task close NR --anuluj` | Anuluje zadanie: issue „not planned”, PR, kopia robocza, panel, stan (dawniej `task cancel`) |
 | `shctl task resume-check NR` | Czyta: stan zadania po przerwie |
 
 ```sh
@@ -280,8 +282,8 @@ systemem. Zadania w toku dostają nowe profile dopiero po rebase'ie na `main`.
 ## Czego `shctl` nie ma
 
 Tych operacji nie ma jeszcze komendą: merge PR etapu, przypomnienie bezczynnemu workerowi, wpis
-drobnych uwag z QA do backlogu. Orkiestrator robi je ręcznie, a propozycje trafiają do
-zbiorczego PR miesiąca w `sh-system`.
+drobnych uwag z QA do backlogu. Orkiestrator robi je ręcznie, a propozycje trafiają jako
+komentarze do issue miesiąca „Propozycje RRRR-MM” w `sh-system`.
 
 Zapowiedziane komendy:
 

@@ -57,30 +57,30 @@ ZGL='[{"waga":"istotne","plik":"src/a.ts","linia":4,"opis":"brak walidacji"},{"w
 }
 
 @test "review etapu: PR z galezi stage/ETAP bez issue, iteracja z DoD.md" {
-  git checkout -q -b stage/04-architektura
-  yq -i --front-matter=process '.iteracja = 2' docs/04-architektura/DoD.md
-  printf '# Architektura\n' >docs/04-architektura/architektura.md
+  git checkout -q -b stage/04-plan
+  yq -i --front-matter=process '.iteracja = 2' docs/04-plan/DoD.md
+  printf '# Architektura\n' >docs/04-plan/architektura.md
   git add -A
-  git commit -qm "04-architektura: architektura"
+  git commit -qm "04-plan: architektura"
   git push -q origin HEAD "HEAD:refs/pull/30/head"
-  jq --arg r "$R" --arg s "$(git rev-parse HEAD)" '. + [{repo:$r, number:30, title:"04-architektura", state:"OPEN",
-    headRefName:"stage/04-architektura", headRefOid:$s, closingIssuesReferences:[], url:"https://github.com/\($r)/pull/30",
+  jq --arg r "$R" --arg s "$(git rev-parse HEAD)" '. + [{repo:$r, number:30, title:"04-plan", state:"OPEN",
+    headRefName:"stage/04-plan", headRefOid:$s, closingIssuesReferences:[], url:"https://github.com/\($r)/pull/30",
     createdAt:"2026-11-01T10:00:00Z", comments:[], statusCheckRollup:[]}]' "$GH_ATRAPA/prs.json" >"$T/x" && mv "$T/x" "$GH_ATRAPA/prs.json"
   git checkout -q main
   wynik_codex FAIL "$ZGL"
   run --separate-stderr "$SHCTL" review run 30 --json
   echo "$output $stderr"
   [ "$status" -eq 0 ]
-  [ "$(jq -r '.wynik.nr, .wynik.etap, .wynik.werdykt' <<<"$output" | tr '\n' ' ')" = "null 04-architektura FAIL " ]
+  [ "$(jq -r '.wynik.nr, .wynik.etap, .wynik.werdykt' <<<"$output" | tr '\n' ' ')" = "null 04-plan FAIL " ]
   grep -q 'Tryb review: etap' "$CODEX_ATRAPA/prompt"
-  grep -q 'DoD etapu: `docs/04-architektura/DoD.md`' "$CODEX_ATRAPA/prompt"
+  grep -q 'DoD etapu: `docs/04-plan/DoD.md`' "$CODEX_ATRAPA/prompt"
   grep -q 'Iteracja: 2' "$CODEX_ATRAPA/prompt"
   ! grep -q 'Zadanie: #' "$CODEX_ATRAPA/prompt"
-  grep -q "/wt/demo/review-04-architektura | exec -p reviewer" "$CODEX_ATRAPA/calls"
-  grep -q '^tab create.*--label review:demo:04-architektura' "$HERDR_ATRAPA/calls"
+  grep -q "/wt/demo/review-04-plan | exec -p reviewer" "$CODEX_ATRAPA/calls"
+  grep -q '^tab create.*--label review:demo:04-plan' "$HERDR_ATRAPA/calls"
   komentarze 30 | grep -q '^## Review Codex: FAIL'
   komentarze 30 | grep -q 'iteracja 2\.'
-  [ ! -e "$SH_DIR/wt/demo/review-04-architektura" ]
+  [ ! -e "$SH_DIR/wt/demo/review-04-plan" ]
   [[ "$(etykiety 12)" != *"status:review"* ]] || false
 }
 

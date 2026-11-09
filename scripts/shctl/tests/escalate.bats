@@ -46,14 +46,14 @@ esk() { "$SHCTL" escalate --dotyczy "#7" --powod "brak klucza" --potrzebne "kluc
 }
 
 @test "etap: status DoD i powrot po zamknieciu" {
-  "$SHCTL" stage start 05-plan
-  run "$SHCTL" escalate --dotyczy 05-plan --powod "sprzeczność" --potrzebne "decyzja"
+  "$SHCTL" stage start 04-plan
+  run "$SHCTL" escalate --dotyczy 04-plan --powod "sprzeczność" --potrzebne "decyzja"
   [ "$status" -eq 0 ]
-  [ "$(fm docs/05-plan/DoD.md status)" = escalated ]
-  grep -qx 'Etap: 05-plan' "$E1"
+  [ "$(fm docs/04-plan/DoD.md status)" = escalated ]
+  grep -qx 'Etap: 04-plan' "$E1"
   run "$SHCTL" escalate close E-001 --odpowiedz "wariant A"
   [ "$status" -eq 0 ]
-  [ "$(fm docs/05-plan/DoD.md status)" = in-progress ]
+  [ "$(fm docs/04-plan/DoD.md status)" = in-progress ]
   [ "$(fm "$E1" status)" = zamknieta ]
   grep -qx 'wariant A' "$E1"
   grep -q '^(brak)$' docs/status.md
@@ -105,7 +105,7 @@ esk() { "$SHCTL" escalate --dotyczy "#7" --powod "brak klucza" --potrzebne "kluc
 @test "bledne argumenty: kod 2" {
   run --separate-stderr "$SHCTL" escalate --dotyczy "#x" --powod a --potrzebne b
   [ "$status" -eq 2 ]
-  run --separate-stderr "$SHCTL" escalate --dotyczy 05-plan --powod a --potrzebne b --priorytet zly
+  run --separate-stderr "$SHCTL" escalate --dotyczy 04-plan --powod a --potrzebne b --priorytet zly
   [ "$status" -eq 2 ]
   run --separate-stderr "$SHCTL" escalate close E-1 --odpowiedz x
   [ "$status" -eq 2 ]
