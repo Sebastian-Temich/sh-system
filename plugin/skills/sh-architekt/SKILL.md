@@ -63,14 +63,12 @@ Gałąź `stage/04-architektura` i jeden PR do `main`, bo architektura i plan ma
 ## Komendy shctl
 
 ```sh
-shctl doc new 04-architektura architektura
-shctl doc new 04-architektura adr --tytul "TYTUŁ"
-shctl doc new 05-plan plan
 shctl doctor --json
 shctl escalate --dotyczy 04-architektura --powod "..." --potrzebne "..." --opcje "A;B"
 ```
 
-- `doc new`: na gałęzi `stage/04-architektura`. Powtórka z tym samym tytułem ADR zwraca ten sam plik.
+- Dokumenty tworzysz sam (Write) jako kopie szablonów z „Wyjścia”; istniejącego pliku nie nadpisujesz.
+  Numer ADR to najwyższy istniejący w `docs/04-architektura/adr/` plus jeden (`ADR-001`, `ADR-002`).
 - `doctor --json`: raz, przed sekcją „Gotowość środowiska” planu. Stan `blad` nie zatrzymuje planu:
   brak staje się zadaniem właściciela albo ryzykiem. Ponowne `doctor` przed pierwszym dispatchem robi
   orkiestrator.
@@ -81,7 +79,7 @@ shctl escalate --dotyczy 04-architektura --powod "..." --potrzebne "..." --opcje
 ## Procedura
 
 1. Przeczytaj pliki z sekcji „Wejście” i zapisz rewizję specyfikacji (krótki SHA).
-2. Załóż gałąź `stage/04-architektura` od `main` i utwórz dokumenty przez `shctl doc new`.
+2. Załóż gałąź `stage/04-architektura` od `main` i utwórz dokumenty z szablonów (`docs/_szablony/`).
 3. Napisz `architektura.md`: moduły i granice, właściciel danych i reguł w każdym module, model
    danych, kontrakty między frontendem a backendem, integracje, bezpieczeństwo (auth, dostęp do
    danych, sekrety, dane osobowe) i testy. Wymagania przywołujesz numerami `W-n`, bez kopiowania treści.
@@ -169,10 +167,8 @@ L jest dopiero w etapie B.
 
 ### Tryb L i etap B
 
-Tryb L ma osobne etapy wymagań (`03-wymagania`), architektury z Checkpointem 1 i planu, wybór
-wykonawcy (`wykonawca:codex` dla zadań odizolowanych), workery w chmurze (`runner:cloud`), design z
-`docs/02-design/design-spec.md` (Storybook domyślnie, Lovable opcjonalnie) i dokumentację
-architektoniczną wydania. W etapie A tego nie robisz.
+Tryb L jest odłożony. Etap B doda wybór wykonawcy (`wykonawca:codex` dla zadań odizolowanych),
+workery w chmurze (`runner:cloud`) i dokumentację architektoniczną wydania. W etapie A tego nie robisz.
 
 ## DoD
 
@@ -246,9 +242,8 @@ Po eskalacji kończysz części architektury i planu, które od niej nie zależ�
 
 Polecenie: „Architektura i plan dla `sklep`”, po akceptacji specyfikacji (rewizja `4f2a9c1`).
 
-1. `git switch -c stage/04-architektura`; `shctl doc new 04-architektura architektura`,
-   `shctl doc new 05-plan plan`.
-2. ADR: `shctl doc new 04-architektura adr --tytul "Płatności Stripe"` i `--tytul "RLS dla zamówień"`.
+1. `git switch -c stage/04-architektura`; `architektura.md` i `plan.md` z szablonów.
+2. ADR: `adr/ADR-001-platnosci-stripe.md` i `adr/ADR-002-rls-dla-zamowien.md` z `docs/_szablony/adr.md`.
 3. Kamienie: 1 Szkielet (repo, CI, Supabase lokalnie, logowanie); 2 Katalog i koszyk (W-1, W-2); 3
    Płatność w sandboksie (W-3), spike Stripe jako pierwsze zadanie; 4 Konto klienta (W-4) i
    dokumentacja wydania. Razem 11 zadań.

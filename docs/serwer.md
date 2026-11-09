@@ -30,8 +30,7 @@ Pod `/Users/Shared` zapis działa bez pytania.
   nawyków). Dowiązanie nie obchodzi blokady: Claude Code sprawdza ścieżkę po rozwiązaniu. Skrypty,
   plisty (`SH_DIR` w `EnvironmentVariables`), ustawienia Claude, PATH i dokumentacja używają
   `/Users/Shared/sh` wprost.
-- Domyślne `SH_DIR` w `shctl`, `sh-start.sh`, `sh-watchdog.sh`, `install.sh` i `backup-config.sh`
-  to `/Users/Shared/sh`.
+- Domyślne `SH_DIR` w `shctl`, `sh-start.sh`, `sh-watchdog.sh` i `install.sh` to `/Users/Shared/sh`.
 - Pod `~` zostają: `~/.claude` (ustawienia, skille, cache pluginu), `~/.codex`, `~/.config/sh`,
   `~/.local/bin` i klony `docs/` w vaulcie Obsidiana. Narzędzia Claude tylko je czytają (odczyt pod
   ścieżką z kropką działa); do vaultu piszą wyłącznie skrypty.
@@ -98,12 +97,12 @@ cd "$(mktemp -d)" && claude -p --model haiku "Wypisz nazwy wszystkich skilli dos
 
 Test z 2026-11-02 (Claude Code 2.1.316, plugin 0.1.0): lista zawiera `software-house:sh-architekt`,
 `sh-intake`, `sh-orkiestrator`, `sh-qa`, `sh-review`, `sh-status`, `sh-worker` i `sh-zadania`.
-`_szablon` jest ukryty (`user-invocable: false`, `disable-model-invocation: true`).
+2026-11-09 (SH-lite F2) usunięte: `sh-status` (status podaje orkiestrator) i ukryty `_szablon`.
 
 ### Stare skille
 
-Stare skille briefu, wymagań i planowania konkurowały z `sh-*`. Źródło zostaje w repo w
-`zrodla/skille-istniejace/`. 2026-11-02 przenieśliśmy je (bez usuwania) do
+Stare skille briefu, wymagań i planowania konkurowały z `sh-*`. Ich kopia z repo
+(`zrodla/skille-istniejace/`) zniknęła w SH-lite F2. 2026-11-02 przenieśliśmy je (bez usuwania) do
 `/Users/Shared/sh/archiwum/skille-20261102/` (`claude/`, `codex/`, opis i przywracanie w `README.md`):
 
 | Katalog | Przeniesione |
@@ -126,7 +125,7 @@ sekcje „Disabling skills” i „Hiding a skill from settings”.
 | Sesja | Plik |
 |---|---|
 | Orkiestrator (`/Users/Shared/sh`) | `/Users/Shared/sh/.claude/settings.json`, symlink z `install.sh` do `scripts/server/orkiestrator-settings.json` |
-| Worker, reviewer w Claude Code | `.claude/roles/worker/settings.json` i `.claude/roles/reviewer/settings.json` szablonu (`--settings`) |
+| Worker w Claude Code | `.claude/roles/worker/settings.json` szablonu (`--settings`) |
 
 Ustawienia projektu działają tylko w sesji, której katalogiem roboczym jest `/Users/Shared/sh`, a `--settings`
 tylko w sesji, która go dostała. Paperclip działa w innych katalogach i bez tych profili, więc dalej
@@ -694,8 +693,7 @@ startem; zmiana w działającej sesji nic nie da. Ustawiają ją `shctl task dis
 `sh-start.sh` (orkiestrator, `ORCH_CMD`). Orkiestrator uruchomiony przed tą zmianą dostaje ją
 dopiero po ponownym starcie.
 
-`~/.claude/settings.json` nie jest w repo; po odtworzeniu serwera wpisy trzeba dodać ręcznie
-(kopię ma archiwum `backup-config.sh`). Skrypt hooka jest w repo i trafia do `bin` przez
+`~/.claude/settings.json` nie jest w repo; po odtworzeniu serwera wpisy trzeba dodać ręcznie. Skrypt hooka jest w repo i trafia do `bin` przez
 `install.sh`.
 
 Format hooków: <https://code.claude.com/docs/en/hooks>. Hook jest asynchroniczny (`async`),
@@ -759,7 +757,7 @@ PATH=/usr/bin:/bin.
 - Notatki własne trzymaj poza `SH/`, np. w `Witaj.md` albo nowym folderze w katalogu głównym vaulta.
 - Wyjątek to `SH/Skrzynka/NAZWA`: zwykły folder (nie klon), do którego wrzucasz materiały projektu.
   Po poleceniu „materiały w skrzynce” orkiestrator wywołuje `shctl skrzynka przyjmij NAZWA`, które
-  przenosi je przez PR do `docs/02-design/zrodla/`, a po merge'u odkłada w `_przeniesione/RRRRMMDD/`.
+  przenosi je przez PR do `docs/00-intake/zrodla/`, a po merge'u odkłada w `_przeniesione/RRRRMMDD/`.
   `obsidian sync` skrzynki nie dotyka.
 
 ## Strażnik limitów
@@ -922,7 +920,7 @@ Ograniczenia:
 | Sesja | Plik ustawień |
 |---|---|
 | Orkiestrator (`/Users/Shared/sh`) | `/Users/Shared/sh/.claude/settings.json` → `scripts/server/orkiestrator-settings.json` |
-| Worker, reviewer w Claude Code | `.claude/roles/worker/settings.json`, `.claude/roles/reviewer/settings.json` szablonu (`--settings`) |
+| Worker w Claude Code | `.claude/roles/worker/settings.json` szablonu (`--settings`) |
 
 **Zakres odczytu.** Hook `PreToolUse` z `matcher` `Read|Glob|Grep` w obu plikach woła
 `/Users/Shared/sh/bin/odczyt-hook.sh` (`scripts/server/odczyt-hook.sh`). Odczyt jest dozwolony w
@@ -1040,22 +1038,6 @@ Przegląd z 2026-11-01 objął tylko ścieżki i nazwy zmiennych, bez otwierania
 | `~` | `.codex/auth.json`, `.claude.json`, `.docker/config.json`, `.config/gh`, `.supabase`, `.softwarehouse` |
 
 Te ścieżki nie są objęte regułami deny.
-
-### Backup konfiguracji
-
-```sh
-backup-config.sh              # do /Users/Shared/sh/backups
-backup-config.sh /Volumes/X   # do wskazanego katalogu
-```
-
-Archiwum `config-<data>.tar.gz` (tylko dla właściciela) zawiera `~/.claude`, `~/.codex/config.toml`,
-`~/.config/sh`, `/Users/Shared/sh/bin` i `/Users/Shared/sh/porty.md`. `/Users/Shared/sh/bin` trafia tam jako symlinki, więc treści
-skryptów nie ma w archiwum: odtwarza je klon `sh-system` i `install.sh`. Gdy `/Users/Shared/sh/sh-system` ma
-niezacommitowane lub niewypchnięte zmiany, skrypt ostrzega i dopisuje wpis do
-`/Users/Shared/sh/logs/backup-config.log`, ale archiwum powstaje. Z `~/.claude` trafiają tylko ustawienia, skille, lista
-pluginów i pamięć projektów. Nie ma w nim sesji, historii, cache, `auth.json`, `.credentials.json`
-ani `.claude.json`. Po spakowaniu sprawdza je gitleaks; przy trafieniu archiwum jest kasowane.
-Archiwum zawiera temat ntfy, więc traktuj je jak dane poufne.
 
 ## Globalny hook git
 

@@ -85,16 +85,9 @@ for f in "$REPO"/plugin/skills/*/SKILL.md; do
   case "$opis" in *"<"* | *">"*) blad "$wz: description nie może zawierać < ani >" ;; esac
   [ "${#opis}" -le 1536 ] || blad "$wz: description dłuższy niż 1536 znaków"
   blokady="$(pole "$f" disable-model-invocation)/$(pole "$f" user-invocable)"
-  case "$kat" in
-    _*)
-      [ "$blokady" = "true/false" ] || blad "$wz: szablon musi mieć disable-model-invocation: true i user-invocable: false"
-      ;;
-    *)
-      printf '%s' "$name" | grep -qE '^sh-[a-z0-9]+(-[a-z0-9]+)*$' || blad "$wz: name ma postać sh-ROLA"
-      printf '%s' "$opis" | grep -q 'Użyj, gdy' || blad "$wz: description bez triggerów „Użyj, gdy …”"
-      [ "$blokady" != "true/false" ] || blad "$wz: skill zablokowany jak szablon (usuń linie blokujące)"
-      ;;
-  esac
+  printf '%s' "$name" | grep -qE '^sh-[a-z0-9]+(-[a-z0-9]+)*$' || blad "$wz: name ma postać sh-ROLA"
+  printf '%s' "$opis" | grep -q 'Użyj, gdy' || blad "$wz: description bez triggerów „Użyj, gdy …”"
+  [ "$blokady" != "true/false" ] || blad "$wz: skill zablokowany (usuń disable-model-invocation i user-invocable)"
 
   # Sekcje w kolejności, bez dodatkowych.
   jest="$(grep '^## ' "$f" | sed 's/^## //')"

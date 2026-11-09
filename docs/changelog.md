@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-11-09 (SH-lite F2: usunięcie nieużywanych elementów)
+
+- Etapy `01-brief`, `02-design`, `03-wymagania` i `DoD.md` etapu `07-realizacja` usunięte z procesu i szablonu; tryb L odłożony. `ETAPY` w shctl: `00-intake 04-architektura 05-plan 06-zadania 08-qa wydanie`. `shctl skrzynka przyjmij` domyślnie do `docs/00-intake/zrodla` (gałąź `stage/00-intake`).
+- `shctl stage skip` usunięte: pominięcie to `status: pominiety` z polem `decyzja` w `DoD.md` (wymaga go `check-dod.sh` szablonu).
+- Usunięte komendy shctl: `doc new`, `checkpoint`, `sesja`, `ports` (z testami). `new-project` dalej rezerwuje blok w `porty.md`; zwalnianie ręcznie.
+- Propozycje dla systemu: `task close` dopisuje do zbiorczego PR miesiąca pusty commit z treścią (bez worktree), `docs/propozycje.md` usunięty.
+- Usunięte: skill `sh-status`, `plugin/skills/_szablon` (`sprawdz-skille.sh` bez wyjątku dla szablonu), `zrodla/skille-istniejace`, `scripts/server/backup-config.sh` (nigdy nie uruchomiony, bez harmonogramu).
+
 ## 2026-11-04 (lista dozwolonych orkiestratora: git -C)
 
 - CI oszczędza minuty GitHub Actions: `.github/workflows/test.yml` z concurrency (anulowanie tylko PR), jobem `szybkie` (zakres zmian `scripts/ci/zakres.sh`, podręcznik, skille, prompty Codexa) i `bats` tylko na PR z kodem, nocą po świeżych commitach i ręcznie; po merge'u na main tylko `szybkie`; `timeout-minutes`. Testy `scripts/ci/tests/`. Szablon (`sh-template-projekt`): te same zasady w `ci.yml` i `staging.yml`. Pomiar i szacunek: `docs/serwer.md`, „CI i minuty GitHub Actions”.

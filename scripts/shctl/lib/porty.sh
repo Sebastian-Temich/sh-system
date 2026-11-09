@@ -12,13 +12,6 @@ porty_wiersze() {
     }' "$PORTY"
 }
 
-porty_json() {
-  porty_wiersze | jq -Rsc '
-    split("\n") | map(select(length > 0) | split("\t")) | map({
-      x: .[0], projekt: .[1], katalog: .[2], api: .[3], db: .[4], studio: .[5], mail: .[6],
-      analytics: .[7], shadow: .[8], pooler: .[9], inspector: .[10], stan: .[11]})'
-}
-
 # Wynik: "ZZX", np. 551. Pierwszy blok z wolnym wierszem albo bez wiersza, z wolnymi portami.
 porty_wolny_blok() {
   local zakres="$1" x etykieta zajete p n
@@ -79,7 +72,7 @@ porty_rezerwuj() {
       # Podpowłoka $(...) nie ma pułapki EXIT, więc blokadę trzeba zdjąć przed die.
       [ "$DRY" -eq 1 ] || odblokuj "$PORTY.lock"
       [ "$zakres" = 55 ] && die "$E_ODMOWA" \
-        "pula 55X21-55X29 wyczerpana: zwolnij blok archiwalny (shctl ports release) albo użyj --zakres 56"
+        "pula 55X21-55X29 wyczerpana: zwolnij blok archiwalny w porty.md (wiersz na *wolny*) albo użyj --zakres 56"
       die "$E_ODMOWA" "pula ${zakres}X21-${zakres}X29 wyczerpana"
     }
     x="${b#"$zakres"}"
@@ -91,19 +84,6 @@ porty_rezerwuj() {
   fi
   [ "$DRY" -eq 1 ] || odblokuj "$PORTY.lock"
   porty_opis "$p" "$b"
-}
-
-# Wypisuje 1, gdy zwolniono, 0, gdy nie było rezerwacji.
-porty_zwolnij() {
-  local p="$1" etykieta
-  etykieta="$(porty_wiersze | awk -F'\t' -v p="$p" '$2 == p { print $1; exit }')"
-  if [ -z "$etykieta" ]; then echo 0; return 0; fi
-  if [ "$DRY" -eq 0 ]; then
-    zablokuj "$PORTY.lock"
-    porty_zapisz_wiersz "$etykieta" "| $etykieta | *wolny* | | | | | | | | | | |"
-    odblokuj "$PORTY.lock"
-  fi
-  echo 1
 }
 
 # Ustawia klucz w sekcji TOML. Brakujący klucz lub sekcję dopisuje.

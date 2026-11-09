@@ -7,9 +7,8 @@ setup() {
   git tag baseline && git push -q origin main baseline
   S="$T/tpl-src"
   git init -q -b main "$S"
-  mkdir -p "$S/.claude/roles/worker" "$S/.claude/roles/reviewer"
+  mkdir -p "$S/.claude/roles/worker"
   echo '{"nowy":"worker"}' >"$S/.claude/roles/worker/settings.json"
-  echo '{}' >"$S/.claude/roles/reviewer/settings.json"
   git -C "$S" add -A && git -C "$S" commit -qm szablon
   git clone -q --bare "$S" "$T/tpl.git"
   git config --global url."$T/tpl.git".insteadOf https://github.com/test-owner/sh-template-projekt.git

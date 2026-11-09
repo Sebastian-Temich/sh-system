@@ -80,7 +80,7 @@ eskalacji. Merge nadal wymaga zielonego CI.
 
 ## Czerwone CI
 
-**Objaw:** w statusie „CI czerwone na PR #N”, w dashboardzie licznik „CI fail”.
+**Objaw:** w statusie „CI czerwone na PR #N”.
 
 Review nie startuje bez zielonego CI. Czerwone CI naprawia worker. Po dwóch nieudanych próbach
 orkiestrator sprawdza stan zadania i decyduje o dalszym kroku. Ty zwykle nic nie robisz.

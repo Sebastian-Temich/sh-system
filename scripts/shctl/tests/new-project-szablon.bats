@@ -38,10 +38,10 @@ setup() {
   "$SHCTL" new-project demo --opis "Projekt testowy CI" >/dev/null
   P="$SH_DIR/projekty/demo"
   cd "$P"
-  # Typowe pliki wspólne po pierwszych krokach: decyzja, etap w toku, pominięcie z uzasadnieniem.
+  # Typowe pliki wspólne po pierwszych krokach: decyzja, etap w toku, pominięcie z decyzją.
   "$SHCTL" decision add --co "Pierwsza decyzja | z kreską" --dlaczego "test" --cofniecie "brak" --rola wlasciciel >/dev/null
   "$SHCTL" stage start 00-intake >/dev/null
-  "$SHCTL" stage skip 08-qa --notatka "biblioteka bez UI" >/dev/null
+  yq -i --front-matter=process '.status = "pominiety" | .decyzja = "biblioteka bez UI"' docs/08-qa/DoD.md
   printf '\n| #1 Zadanie | M | 3min | 1 | 1 | 0 | PR #2 |\n' >>docs/metryki.md
   git add -A && git commit -qm "orkiestrator: zmiany" && git push -q origin main
   run bash scripts/check-dod.sh "$P"

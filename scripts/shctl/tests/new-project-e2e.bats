@@ -37,7 +37,7 @@ dopisz_do_usuniecia() {
   [ "$(gh repo view "$SLUG" --json deleteBranchOnMerge --jq .deleteBranchOnMerge)" = true ]
   [ "$(gh label list --repo "$SLUG" --limit 100 --json name --jq 'map(select(.name == "status:escalated")) | length')" -eq 1 ]
   gh api "repos/$SLUG/contents/docs/konfiguracja.md" --jq .content | base64 -d | grep -q '^blok_portow: '
-  gh api "repos/$SLUG/contents/docs/02-design/DoD.md" --jq .content | base64 -d | grep -qx 'status: pominiety'
+  gh api "repos/$SLUG/contents/docs/04-architektura/DoD.md" --jq .content | base64 -d | grep -qx 'status: todo'
   bash "$P/scripts/check-dod.sh" "$P"
   [ -f "$SH_OBSIDIAN_DIR/$NAZWA/docs/konfiguracja.md" ]
   [ ! -e "$SH_OBSIDIAN_DIR/$NAZWA/scripts" ]

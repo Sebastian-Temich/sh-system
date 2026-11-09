@@ -7,8 +7,7 @@ Skille procesu AI Software House v1 (`docs/proces-v1.md`) dla Claude Code. Mecha
 |---|---|
 | `.claude-plugin/plugin.json` | Manifest pluginu |
 | `skills/_kontrakt.md` | Obowiązkowe sekcje każdego `SKILL.md` |
-| `skills/_szablon/SKILL.md` | Szablon nowego skilla, zablokowany do wywołania |
-| `skills/sh-*/SKILL.md` | Skille ról (powstają w kolejnych zadaniach) |
+| `skills/sh-*/SKILL.md` | Skille ról |
 
 ## Instalacja lokalna
 
@@ -24,18 +23,16 @@ następnej sesji albo po `/reload-plugins`, bez zmiany `version`. Skille wywołu
 `/software-house:sh-ROLA`.
 
 Sprawdzenie (2026-11-02, Claude Code 2.1.316): `claude plugin validate .` i `claude plugin validate
-./plugin` przechodzą. Instalacja w odizolowanym `CLAUDE_CONFIG_DIR` pokazała 1 skill, `_szablon`.
+./plugin` przechodzą.
 
 ## Nowy skill
 
-1. Skopiuj `skills/_szablon/` do `skills/sh-ROLA/`.
-2. Wypełnij według `skills/_kontrakt.md`; usuń z frontmattera dwie linie blokujące i komentarze HTML.
+1. Skopiuj katalog podobnego skilla do `skills/sh-ROLA/`.
+2. Wypełnij według `skills/_kontrakt.md`.
 3. Uruchom `scripts/plugin/sprawdz-skille.sh` (działa też w CI).
 4. Skill z promptem Codexa (dziś `sh-review`) po każdej zmianie: `scripts/sync-codex.sh`, a wynik
    `codex/sh-review.md` commituj razem ze skillem. CI sprawdza zgodność (`sync-codex.sh --check`).
    Skill pisz bez funkcji jednego narzędzia: czytanie plików, `git`, `gh`.
 
-Claude Code ładuje każdy katalog `skills/NAZWA/SKILL.md`, także `_szablon`. Szablon ma
-`disable-model-invocation: true` i `user-invocable: false`, więc nie uruchomi go ani model, ani
-`/software-house:_szablon`, ale jego nazwa kosztuje ok. 40 tokenów w każdej sesji (`claude plugin
-details software-house`). `_kontrakt.md` nie jest skillem, bo nie leży w osobnym katalogu.
+`_kontrakt.md` nie jest skillem, bo nie leży w osobnym katalogu (Claude Code ładuje tylko
+`skills/NAZWA/SKILL.md`).

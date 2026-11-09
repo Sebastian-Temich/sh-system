@@ -10,11 +10,11 @@ setup() {
 }
 
 przyjmij() { run --separate-stderr "$SHCTL" skrzynka przyjmij demo --json "$@"; }
-zdalny() { git --git-dir "$T/remote.git" show "stage/02-design:docs/02-design/zrodla/$1"; }
+zdalny() { git --git-dir "$T/remote.git" show "stage/00-intake:docs/00-intake/zrodla/$1"; }
 odrzucone() { jq -r '.wynik.odrzucone[] | "\(.plik): \(.powod)"' <<<"$output"; }
 dzien() { date +%Y%m%d; }
 
-@test "pliki trafiaja na stage/02-design i do PR, skrzynka bez zmian do merge'a" {
+@test "pliki trafiaja na stage/00-intake i do PR, skrzynka bez zmian do merge'a" {
   mkdir -p "$S/teksty"
   printf '# O nas\n' >"$S/teksty/o-nas.md"
   printf 'x' >"$S/.DS_Store"
@@ -26,16 +26,16 @@ dzien() { date +%Y%m%d; }
   [ "$(zdalny logo.png)" = "PNG obraz" ]
   [ "$(zdalny teksty/o-nas.md)" = "# O nas" ]
   ! zdalny .DS_Store 2>/dev/null || false
-  [ "$(git --git-dir "$T/remote.git" ls-tree stage/02-design docs/02-design/zrodla/logo.png | cut -c1-6)" = 100644 ]
+  [ "$(git --git-dir "$T/remote.git" ls-tree stage/00-intake docs/00-intake/zrodla/logo.png | cut -c1-6)" = 100644 ]
   n="$(jq -r .wynik.pr <<<"$output")"
-  [ "$(jq -r --argjson n "$n" '.[] | select(.number == $n) | .headRefName' "$GH_ATRAPA/prs.json")" = stage/02-design ]
+  [ "$(jq -r --argjson n "$n" '.[] | select(.number == $n) | .headRefName' "$GH_ATRAPA/prs.json")" = stage/00-intake ]
   [ -f "$S/logo.png" ]
   [ -f "$SH_DIR/stan/skrzynka/demo.json" ]
   # Repo główne zostaje na main, bez zmian i bez lokalnej gałęzi etapu.
   [ "$(git -C "$P" symbolic-ref --short HEAD)" = main ]
   [ -z "$(git -C "$P" status --porcelain)" ]
-  ! git -C "$P" rev-parse -q --verify refs/heads/stage/02-design || false
-  [ ! -e "$SH_DIR/wt/demo/skrzynka-02-design" ]
+  ! git -C "$P" rev-parse -q --verify refs/heads/stage/00-intake || false
+  [ ! -e "$SH_DIR/wt/demo/skrzynka-00-intake" ]
 }
 
 @test "pliki wykonywalne, pakiety i dowiazania sa odrzucane i zostaja w skrzynce" {
@@ -62,7 +62,7 @@ dzien() { date +%Y%m%d; }
   [[ "$o" == *"hosts: dowiązanie symboliczne"* ]] || false
   [ "$(printf '%s\n' "$o" | grep -c 'Aplikacja.app')" -eq 1 ]
   [ -f "$S/instaluj.sh" ] && [ -f "$S/program" ]
-  ! git --git-dir "$T/remote.git" show stage/02-design:docs/02-design/zrodla/instaluj.sh 2>/dev/null || false
+  ! git --git-dir "$T/remote.git" show stage/00-intake:docs/00-intake/zrodla/instaluj.sh 2>/dev/null || false
 }
 
 @test "same odrzucone pliki: kod 4 bez PR" {
@@ -70,7 +70,7 @@ dzien() { date +%Y%m%d; }
   printf 'echo\n' >"$S/a.command"
   przyjmij
   [ "$status" -eq 4 ]
-  [ "$(jq '[.[] | select(.headRefName == "stage/02-design")] | length' "$GH_ATRAPA/prs.json" 2>/dev/null || echo 0)" -eq 0 ]
+  [ "$(jq '[.[] | select(.headRefName == "stage/00-intake")] | length' "$GH_ATRAPA/prs.json" 2>/dev/null || echo 0)" -eq 0 ]
 }
 
 @test "ZIP: rozpakowany do folderu archiwum bez plikow wykonywalnych i smieci systemowych" {
@@ -163,10 +163,10 @@ z = zipfile.ZipFile(sys.argv[2], "w"); z.writestr("/etc/abs.txt", "x"); z.close(
 }
 
 @test "--etap wybiera katalog i galaz, zle wartosci to kod 2" {
-  przyjmij --etap 00-intake/zrodla
+  przyjmij --etap 04-architektura/zrodla
   [ "$status" -eq 0 ]
-  [ "$(git --git-dir "$T/remote.git" show stage/00-intake:docs/00-intake/zrodla/logo.png)" = "PNG obraz" ]
-  for e in ../x 02-design/../x /02-design 99-nic/zrodla '02-design/a b'; do
+  [ "$(git --git-dir "$T/remote.git" show stage/04-architektura:docs/04-architektura/zrodla/logo.png)" = "PNG obraz" ]
+  for e in ../x 00-intake/../x /00-intake 99-nic/zrodla '00-intake/a b'; do
     run --separate-stderr "$SHCTL" skrzynka przyjmij demo --etap "$e"
     [ "$status" -eq 2 ]
   done
@@ -186,7 +186,7 @@ z = zipfile.ZipFile(sys.argv[2], "w"); z.writestr("/etc/abs.txt", "x"); z.close(
   przyjmij --dry-run
   [ "$status" -eq 0 ]
   [ "$(jq -r .wynik.stan <<<"$output")" = do_przyjecia ]
-  ! git --git-dir "$T/remote.git" rev-parse -q --verify refs/heads/stage/02-design || false
+  ! git --git-dir "$T/remote.git" rev-parse -q --verify refs/heads/stage/00-intake || false
   [ ! -e "$SH_DIR/stan/skrzynka/demo.json" ]
 }
 

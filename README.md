@@ -16,7 +16,6 @@ Centralne repozytorium software house'u prowadzonego przez agentów AI.
 | `scripts/docs/` | `sprawdz-podrecznik.sh`: komendy `shctl` i skille z podręcznika istnieją (CI) |
 | `scripts/ci/` | `zakres.sh`: które testy uruchamia CI (oszczędność minut, `docs/serwer.md`, „CI i minuty GitHub Actions”) |
 | `scripts/sync-codex.sh` | Prompty Codexa ze skilli; `--check` w CI (`scripts/tests/sync-codex.bats`) |
-| `zrodla/skille-istniejace/` | Istniejące skille jako materiał źródłowy |
 
 Repo jest źródłem plików serwera. `scripts/server/install.sh` zakłada symlinki `/Users/Shared/sh/bin` i
 `/Users/Shared/sh/Brewfile`, a plisty kopiuje do `~/Library/LaunchAgents` przy różnicy i przeładowuje agenta.

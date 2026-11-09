@@ -106,19 +106,6 @@ shctl new-project strona-firmowa --opis "Strona firmowa z formularzem kontaktowy
 **Kiedy samemu:** nie trzeba. Napisz orkiestratorowi „nowy projekt …”, a on zrobi to i uruchomi
 intake.
 
-### ports
-
-Rejestr portów lokalnych baz Supabase w `/Users/Shared/sh/porty.md`. Każdy projekt ma własny blok.
-
-```sh
-shctl ports list                              # czyta
-shctl ports reserve --projekt strona-firmowa
-shctl ports release --projekt stary-projekt   # przy archiwizacji projektu
-```
-
-**Kiedy samemu:** `list`, gdy chcesz zobaczyć zajęte bloki. `release` przy archiwizacji projektu,
-gdy pula portów się kończy.
-
 ### obsidian
 
 Kopie dokumentów w vaulcie Obsidiana.
@@ -141,8 +128,8 @@ przy projekcie bez kopii lub skrzynki. `unlink` skrzynki nie usuwa.
 Przenosi Twoje materiały ze skrzynki `SH/Skrzynka/NAZWA` do repo projektu.
 
 ```sh
-shctl skrzynka przyjmij strona-firmowa                          # do docs/02-design/zrodla
-shctl skrzynka przyjmij strona-firmowa --etap 00-intake/zrodla  # inne miejsce
+shctl skrzynka przyjmij strona-firmowa                                # do docs/00-intake/zrodla
+shctl skrzynka przyjmij strona-firmowa --etap 04-architektura/zrodla  # inne miejsce
 shctl skrzynka przyjmij strona-firmowa --dry-run                # tylko sprawdza pliki
 ```
 
@@ -171,25 +158,15 @@ Zmienia status etapu w `DoD.md` i w `status.md`.
 shctl stage start 04-architektura --projekt strona-firmowa
 shctl stage review 04-architektura --projekt strona-firmowa
 shctl stage done 04-architektura --projekt strona-firmowa
-shctl stage skip 01-brief --projekt strona-firmowa
-shctl stage skip 08-qa --notatka "biblioteka bez UI" --projekt strona-firmowa
 shctl stage escalate 04-architektura --projekt strona-firmowa
 shctl stage iter 04-architektura --projekt strona-firmowa
 ```
 
 `done` przechodzi tylko przy kompletnym `DoD.md`; pole bez zastosowania ma postać
-`- [-] ... (nie dotyczy: powód)`. `skip` etapu z trybu wymaga `--notatka` z uzasadnieniem. `iter` po
+`- [-] ... (nie dotyczy: powód)`. Pominięcie etapu to decyzja (`decision add`) i w `DoD.md` `status: pominiety` z polem `decyzja`;
+osobnej komendy nie ma. `iter` po
 nieudanym review etapu podbija iterację i wraca do pracy, a po trzeciej eskaluje. Status i iteracja
 etapu zmieniają się tylko na `main`, więc PR etapu nie ma z nimi konfliktu.
-
-### doc new
-
-Tworzy dokument z szablonu: specyfikację, architekturę, ADR, plan, raport zadania, raport QA,
-dokumentację wydania. Nie nadpisuje istniejącego.
-
-```sh
-shctl doc new 04-architektura adr --tytul "Dane osobowe w formularzu" --projekt strona-firmowa
-```
 
 ### decision add
 
@@ -220,22 +197,6 @@ shctl escalate close E-001 --odpowiedz "klucz testowy jest w .env.local" --proje
 ```
 
 **Kiedy samemu:** nie trzeba. Odpowiedz w czacie, orkiestrator zamknie eskalację i zrobi commit.
-
-### checkpoint
-
-Wysyła Ci push „Czeka na Twoją akceptację: PROJEKT / ETAP” z linkiem do PR (kliknięcie otwiera PR).
-Działa tylko, gdy review dało PASS dla bieżącego commita PR. Dla tego samego commita nie wysyła drugi
-raz.
-
-```sh
-shctl checkpoint 00-intake --projekt strona-firmowa         # specyfikacja
-shctl checkpoint 04-architektura --projekt strona-firmowa   # architektura i plan
-shctl checkpoint wydanie --projekt strona-firmowa           # odbiór
-shctl checkpoint "#20" --projekt strona-firmowa             # odbiór zadania S
-```
-
-**Kiedy samemu:** nie trzeba, wywołuje go orkiestrator. Odmowa (kod 4) znaczy, że PR nie ma jeszcze
-PASS albo nie istnieje.
 
 ## Zadania i review
 
@@ -268,21 +229,6 @@ bieżącego commita. `pr check` przy konflikcie z `main` mówi to wprost: CI wte
 
 **Kiedy samemu:** nie uruchamiaj ich równolegle z orkiestratorem. Wyjątek to `task ready`,
 `task resume-check` i `pr check` bez `--czekaj`, bo tylko czytają.
-
-## Sesja orkiestratora
-
-### sesja
-
-Zapisuje, która sesja orkiestratora prowadzi projekt (jedna sesja = jeden projekt). `start` zajmuje
-projekt i odmawia, gdy prowadzi go inna sesja aktywna w ostatnich 30 minutach; `--przejmij` przejmuje
-go mimo to. `stan` tylko czyta, `koniec` zwalnia projekt. Wywołuje je orkiestrator.
-
-```sh
-shctl sesja stan --projekt strona-firmowa
-shctl sesja start --projekt strona-firmowa --przejmij
-```
-
-**Kiedy samemu:** `sesja stan`, gdy chcesz sprawdzić, która sesja prowadzi projekt.
 
 ## Awaryjne
 
@@ -334,8 +280,8 @@ systemem. Zadania w toku dostają nowe profile dopiero po rebase'ie na `main`.
 ## Czego `shctl` nie ma
 
 Tych operacji nie ma jeszcze komendą: merge PR etapu, przypomnienie bezczynnemu workerowi, wpis
-drobnych uwag z QA do backlogu. Orkiestrator robi je ręcznie i zapisuje propozycje w
-`docs/propozycje.md`.
+drobnych uwag z QA do backlogu. Orkiestrator robi je ręcznie, a propozycje trafiają do
+zbiorczego PR miesiąca w `sh-system`.
 
 Zapowiedziane komendy:
 
