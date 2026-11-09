@@ -7,6 +7,7 @@
 - Szablon: `check-dod.sh` sprawdza karty (każde `### W-NN` ma kartę albo „(bez karty: powód)”, numeracja dwucyfrowa, obie części z sekcjami według rodzaju, Given/When/Then, część dla właściciela bez kodu, kodów HTTP i atrybutów, brak `[?]`, samotnego `?` i TODO). DoD `00-intake` z nowymi polami.
 - `sh-plan`: zadanie z funkcją wskazuje kartę i konkretne kryteria `W-N/Kn`; kryteria niesprawdzalne testem to zbiorcze pytanie do właściciela („Kryteria do potwierdzenia” w PR zadań) przed dispatchem `T1`.
 - `sh-worker`: niejasność UX lub reguły biznesowej to `shctl escalate --typ pytanie` (bez zmiany statusu, bez zwolnienia slotu, nie jest iteracją ani porażką w metrykach); worker kontynuuje części niezależne.
+- `/Users/Shared/sh/CLAUDE.md` (symlink z `install.sh` do `scripts/server/CLAUDE-sh.md`): sesje w `/Users/Shared/sh` (orkiestrator i builder) dostają zasadę jednej prostej komendy na wywołanie; komenda złożona (`&&`, `;`, potok, zmienna przed komendą) traci wyjątek sandboxa i nie ma tokenu GitHuba. `new-project-szablon.bats` w sandboxie Claude Code (`SANDBOX_RUNTIME`) się pomija („wymaga zapisu poza sandboxem Claude Code, sprawdza CI”).
 - Review i QA: każde zgłoszenie ma przyczynę `wymaganie | kod | test | design` (`templates/review.md`, `codex/sh-review.schema.json`, raport QA). `shctl task close` sumuje przyczyny review PR w tabeli „Przyczyny uwag” `docs/metryki.md`, wiersz QA przepisuje orkiestrator.
 
 ## 2026-11-09 (sandbox: git przez cd, e2e w CI)

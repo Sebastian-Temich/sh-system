@@ -206,6 +206,13 @@ globalny_hooks_path() {
     "$T/sh/.claude/settings.json" >/dev/null
 }
 
+@test "instrukcje sesji: symlink /Users/Shared/sh/CLAUDE.md do repo" {
+  install
+  [ "$status" -eq 0 ]
+  [ "$(readlink "$T/sh/CLAUDE.md")" = "$REPO/scripts/server/CLAUDE-sh.md" ]
+  grep -q 'Jedna prosta komenda na jedno wywołanie' "$T/sh/CLAUDE.md"
+}
+
 @test "plista obsidian-sync: kopia i zaladowanie" {
   wymaga_plutil
   rm "$T/agents/pl.iskt.softwarehouse.obsidian-sync.plist"
