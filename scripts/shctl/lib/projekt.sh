@@ -1,4 +1,4 @@
-# Funkcje projektu: katalog, frontmatter, etapy, sekcje status.md.
+# Funkcje projektu: katalog, frontmatter, etapy, widok docs/Projekt.md (dawniej docs/status.md).
 # shellcheck shell=bash
 
 # Etapy z DoD.md (tryb M). Tryb L z osobnymi etapami jest odłożony (proces-v1.md). Stan realizacji
@@ -41,10 +41,49 @@ znajdz_projekt() {
     if [ -n "$wspolny" ]; then PROJEKT="$(basename "$(dirname "$wspolny")")"; else PROJEKT="$(basename "$ROOT")"; fi
   fi
   KONFIG="$ROOT/docs/konfiguracja.md"
-  ST="$ROOT/docs/status.md"
+  ST="$(plik_projektu "$ROOT")"
   [ -f "$KONFIG" ] || die "$E_BRAK" "brak $KONFIG"
   wymagaj yq jq git
   ustal_etapy
+}
+
+# Widok projektu: docs/Projekt.md (SH-lite F5). Projekt przed pierwszą synchronizacją nowym
+# sync-status.sh ma jeszcze docs/status.md; wtedy shctl czyta i pisze stary plik.
+plik_projektu() {
+  if [ -f "$1/docs/Projekt.md" ] || [ ! -f "$1/docs/status.md" ]; then
+    printf '%s' "$1/docs/Projekt.md"
+  else
+    printf '%s' "$1/docs/status.md"
+  fi
+}
+
+# Historia projektu: docs/historia.md („Punkt przekazania”, „Dziennik etapów”, lista zadań). Projekt
+# z szablonem sprzed historii (sync-status.sh jej nie generuje) trzyma dziennik dalej w ST.
+plik_historii() {
+  local r="${1:-${ROOT_G:-$ROOT}}"
+  if [ -f "$r/docs/historia.md" ] || ! grep -qxF '## Dziennik etapów' "$(plik_projektu "$r")" 2>/dev/null; then
+    printf '%s' "$r/docs/historia.md"
+  else
+    plik_projektu "$r"
+  fi
+}
+
+# Odświeża docs/Projekt.md, docs/historia.md i 06-zadania/index.md przez scripts/sync-status.sh projektu po każdej zmianie
+# stanu (etap, eskalacja, zadanie). Na main głównej kopii; bez commita (robi go orkiestrator). Błąd
+# (np. brak sieci) to ostrzeżenie: stan w plikach DoD, eskalacjach i issue jest prawdziwy, a widok
+# dogoni go przy następnej zmianie.
+odswiez_projekt() {
+  local r="${ROOT_G:-$ROOT}" s slug
+  [ "$DRY" -eq 0 ] || return 0
+  s="$r/scripts/sync-status.sh"
+  [ -f "$s" ] || return 1
+  slug="${SLUG:-$(ROOT="$r" slug_repo)}"
+  if [ -n "$slug" ]; then
+    (cd "$r" && bash "$s" --repo "$slug" >/dev/null) || { uwaga "scripts/sync-status.sh zakończył się błędem"; return 1; }
+  else
+    (cd "$r" && bash "$s" >/dev/null) || { uwaga "scripts/sync-status.sh zakończył się błędem"; return 1; }
+  fi
+  ST="$(plik_projektu "$r")"
 }
 
 fm_get() { yq --front-matter=extract ".$2 // \"\"" "$1"; }
@@ -88,18 +127,18 @@ ustaw_sekcje() {
       print ""
     }
     $0 == naglowek { print; wstaw(); pomin = 1; bylo = 1; next }
-    pomin && /^## / { pomin = 0 }
+    pomin && (/^## / || /^<!-- [a-z-]+:start -->$/) { pomin = 0 }
     !pomin { print }
     END { if (!bylo) { print ""; print naglowek; wstaw() } }' "$plik" |
     awk 'NR == 1 { p = $0; next } { print p; p = $0 } END { if (p != "") print p }' >"$nowy"
   podmien_plik "$nowy" "$plik"
 }
 
-# Treść sekcji bez pustych linii na brzegach.
+# Treść sekcji bez pustych linii na brzegach (do następnego ## albo znacznika bloku generowanego).
 czytaj_sekcje() {
   awk -v naglowek="## $2" '
     $0 == naglowek { w = 1; next }
-    w && /^## / { exit }
+    w && (/^## / || /^<!-- [a-z-]+:(start|end) -->$/) { exit }
     w { print }' "$1" | sed '/./,$!d' | awk 'NF { for (; p > 0; p--) print ""; print; next } { p++ }'
 }
 
@@ -127,14 +166,17 @@ opis_etapu() {
   fi
 }
 
-odswiez_etap() { ustaw_sekcje "$ST" "Bieżący etap" "$(opis_etapu)"; }
+# Etap jest w widoku projektu („Gdzie jesteśmy”), który liczy sync-status.sh z DoD.md.
+odswiez_etap() { odswiez_projekt || true; }
 
-# Wpis do „Dziennik etapów”; ten sam wpis nie powtarza się.
+# Wpis do „Dziennik etapów” w docs/historia.md; ten sam wpis nie powtarza się, „(brak)” znika.
 dopisz_dziennik() {
-  local linia="$1" obecne
-  [ -z "$(czytaj_sekcje "$ST" "Dziennik etapów" | grep -xF -- "$linia" || true)" ] || return 0
-  obecne="$(czytaj_sekcje "$ST" "Dziennik etapów")"
-  ustaw_sekcje "$ST" "Dziennik etapów" "${obecne:+$obecne
+  local linia="$1" obecne h
+  h="$(plik_historii "$ROOT")"
+  [ -f "$h" ] || printf '# Historia projektu\n\n## Punkt przekazania\n\n(brak)\n\n## Dziennik etapów\n\n(brak)\n' >"$h"
+  obecne="$(czytaj_sekcje "$h" "Dziennik etapów" | grep -vxF '(brak)' || true)"
+  [ -z "$(printf '%s\n' "$obecne" | grep -xF -- "$linia" || true)" ] || return 0
+  ustaw_sekcje "$h" "Dziennik etapów" "${obecne:+$obecne
 }$linia"
 }
 

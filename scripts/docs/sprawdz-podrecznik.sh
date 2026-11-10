@@ -17,7 +17,7 @@ SHCTL="$REPO/scripts/shctl/shctl"
 [ -f "$SHCTL" ] || { echo "BŁĄD: brak $SHCTL" >&2; exit 2; }
 
 # Nazwy sh-* w podręczniku, które nie są skillami ani skryptami serwera.
-NIE_SKILLE=' sh-system sh-template-projekt sh-dryrun sh-test '
+NIE_SKILLE=' sh-system sh-template-projekt sh-dryrun sh-test sh-projekt sh-ochrona-galezi sh-imac '
 ETAP_B='etap(u|ie)? B'
 bledy=0
 

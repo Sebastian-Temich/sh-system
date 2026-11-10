@@ -176,3 +176,40 @@ pass() {
   grep -qxF '| review PR #20 (#12 Zadanie 12) | 0 | 1 | 0 | 1 | 1 |' docs/metryki.md
   grep -qxF '## Przyczyny uwag' docs/metryki.md
 }
+
+tryb_s() {
+  jq --argjson n 12 --arg l "$1" 'map(if .number == $n then .labels += ($l | split(",") | map({name:.})) else . end)' \
+    "$GH_ATRAPA/issues.json" >"$T/i.json" && mv "$T/i.json" "$GH_ATRAPA/issues.json"
+}
+
+@test "close: zlecenie S przy odbior_S reczny czeka na odbior wlasciciela (--odbior)" {
+  tryb_s "tryb:S"
+  pass
+  run --separate-stderr "$SHCTL" task close 12
+  [ "$status" -eq 4 ]
+  [[ "$stderr" == *"czeka na odbiór właściciela"*"--odbior"* ]] || false
+  ! grep -q '^pr merge' "$GH_ATRAPA/calls" || false
+  run --separate-stderr "$SHCTL" task close 12 --odbior
+  echo "$output $stderr"
+  [ "$status" -eq 0 ]
+  grep -q '^pr merge 20' "$GH_ATRAPA/calls"
+}
+
+@test "close: auto_bez_zmian_widocznych merguje S z widoczne:nie i powiadamia, widoczne nadal czeka" {
+  printf 'odbior_S: auto_bez_zmian_widocznych\n' >"$T/k" && sed -i.bak "2r $T/k" docs/konfiguracja.md
+  git commit -qam odbior && git push -q origin main
+  tryb_s "tryb:S"
+  pass
+  run --separate-stderr "$SHCTL" task close 12
+  [ "$status" -eq 4 ]
+  tryb_s "widoczne:nie"
+  run --separate-stderr "$SHCTL" task close 12
+  echo "$output $stderr"
+  [ "$status" -eq 0 ]
+  grep -q '^default Zmergowano zlecenie S: demo' "$T/notified"
+}
+
+@test "close: --odbior tylko z task close" {
+  run --separate-stderr "$SHCTL" task iter 12 --odbior
+  [ "$status" -eq 2 ]
+}

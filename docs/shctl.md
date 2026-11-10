@@ -73,14 +73,20 @@ Plik `~/.config/sh/config` jest poza repo. shctl czyta z niego linię
 ## new-project
 
 ```sh
-shctl new-project NAZWA [--tryb S|M] [--public] [--opis "..."]
+shctl new-project NAZWA --opis "krótki opis repo" [--zlecenie "..."] [--tryb S|M] [--prywatny]
 ```
 
-Kolejno: repo `SH_GH_OWNER/NAZWA` z szablonu (domyślnie prywatne), klon do `/Users/Shared/sh/projekty/NAZWA`,
-usuwanie gałęzi po merge'u (`gh repo edit --delete-branch-on-merge`), `setup-labels.sh`,
+Kolejno (SH-lite F5): repo `SH_GH_OWNER/NAZWA` jako zwykłe repo, bez „generated from” (`gh repo create`
+bez `--template`), domyślnie publiczne; pliki szablonu `SH_TEMPLATE` (płytki klon, bez historii) w
+`/Users/Shared/sh/projekty/NAZWA` jako pierwszy commit „Projekt NAZWA z sh-template-projekt@SHA”, z
+nazwą i opisem w `README.md`; opis, temat `sh-projekt` i usuwanie gałęzi po merge'u jednym
+`gh repo edit` (`lib/repo.sh`), `setup-labels.sh`,
 frontmatter `konfiguracja.md` (`tryb_procesu`, `etap_wdrozenia: A`, `data`,
 `blok_portow`), blok portów w `porty.md` (zwalnia się ręcznie), `supabase/config.toml`, jeśli
-istnieje, `pominiety` dla wszystkich etapów w trybie S, `status.md`, opis w `docs/00-intake/zrodlo.md`, `check-dod.sh`, commit i push na main. Na
+istnieje, `pominiety` dla wszystkich etapów w trybie S, widok `docs/Projekt.md` (`sync-status.sh`), zlecenie w
+`docs/00-intake/zrodlo.md`, `check-dod.sh`, commit, `gitleaks git` (sekret: kod 4, bez pushu) i push
+na main, ruleset `sh-ochrona-galezi` (zakaz usuwania i force push na `main` i `production`; w repo
+prywatnym bez GitHub Pro tylko ostrzeżenie). Na
 końcu zakłada lekki klon `docs/` w `SH_OBSIDIAN_DIR/NAZWA` (sekcja „obsidian”) i skrzynkę na
 materiały `SH_SKRZYNKA_DIR/NAZWA` (sekcja „skrzynka”). Klon aktualizuje serwer
 (`obsidian-sync.sh`, `docs/serwer.md`, „Synchronizacja Obsidiana”); w Obsidianie nic nie trzeba włączać.
@@ -88,14 +94,17 @@ materiały `SH_SKRZYNKA_DIR/NAZWA` (sekcja „skrzynka”). Klon aktualizuje ser
 | Argument | Znaczenie |
 |---|---|
 | `--tryb` | Domyślnie M. S działa z ostrzeżeniem, bo proces zaczyna nowy projekt od M. L daje kod 2 (tryb odłożony) |
-| `--public` | Repo publiczne |
-| `--opis` | Trafia do `zrodlo.md` i, ucięty, do opisu repo |
+| `--opis` | Wymagany: opis repo na GitHubie, do 350 znaków (dłuższy: kod 2) |
+| `--zlecenie` | Treść zlecenia, trafia do `docs/00-intake/zrodlo.md` |
+| `--prywatny` | Repo prywatne, tylko na wyraźne polecenie właściciela: zmienna repo `SH_RUNS_ON` = `["self-hosted","sh-imac"]`, więc CI czeka na runner serwera (`serwer.md`, „Runner dla repo prywatnych”) |
+| `--public` | Przestarzałe: publiczne jest domyślne (ostrzeżenie) |
 
-Odmawia (kod 4), gdy repo nie powstało z szablonu, katalog jest klonem innego repo albo `--tryb`
+Odmawia (kod 4), gdy repo istnieje i nie jest projektem SH (bez tematu `sh-projekt`, nie z szablonu i
+niepuste), katalog jest klonem innego repo, `gitleaks` znajdzie sekret albo `--tryb`
 różni się od trybu istniejącego projektu. Powtórka commituje tylko pliki, które sama zmienia.
 
 ```sh
-shctl new-project sklep --opis "Sklep z kawą" --json
+shctl new-project sklep --opis "Sklep z kawą: zamówienia online i płatność kartą" --zlecenie "Klienci zamawiają kawę online i płacą kartą" --json
 ```
 
 ```json
@@ -122,8 +131,8 @@ Jedna komenda etapu z akcjami; `iter` nie przyjmuje `--notatka`. `ETAP` to nazwa
 projektu: `2` to `00-intake`, `04-plan`, `06-zadania`, `08-qa`, `wydanie`; brak pola (wersja 1,
 projekty sprzed migracji) to `04-architektura` i `05-plan` zamiast `04-plan`. Etap spoza wersji
 projektu to kod 2. Mapowanie etapów trybu M:
-`proces-v1.md`, „Definition of Done”. Komenda zmienia `status` w `DoD.md`, sekcję „Bieżący etap” i
-„Dziennik etapów” w `status.md`.
+`proces-v1.md`, „Definition of Done”. Komenda zmienia `status` w `DoD.md`, odświeża `Projekt.md` (`sync-status.sh`) i dopisuje wpis do
+„Dziennika etapów” w `docs/historia.md` (projekt ze szablonem sprzed historii: w `Projekt.md`).
 
 | Akcja | Dozwolone z | Wynik |
 |---|---|---|
@@ -186,6 +195,18 @@ shctl decision add --co "Postgres zamiast SQLite" --dlaczego "potrzebne RLS" --c
   "wiersz":"| 2026-11-01 | orkiestrator | Postgres zamiast SQLite | potrzebne RLS. Cofnięcie: migracja danych |","dodano":true}}
 ```
 
+## repo opis
+
+```sh
+shctl repo opis [--opis "..."] [--topics "a,b"] [--website https://…] [--dry-run] [--json]
+```
+
+Opis (do 350 znaków), tematy (zawsze z `sh-projekt`) i strona repo projektu przez `gh repo edit`.
+Orkiestrator wywołuje ją na checkpointach specyfikacji, planu i odbioru: najpierw `--dry-run`, który
+wypisuje dokładną komendę `gh repo edit …` do pokazania właścicielowi, potem po jego zgodzie bez
+`--dry-run`. JSON: `repo`, `komenda`, `opis`, `tematy`, `strona`. `gh repo edit` poza shctl jest w
+procesie zabronione.
+
 ## escalate
 
 ```sh
@@ -195,7 +216,8 @@ shctl escalate close E-NNN --odpowiedz "..."
 ```
 
 Otwarcie: tworzy `docs/07-realizacja/escalations/E-NNN.md`, ustawia etykietę `status:escalated` na
-issue albo status `escalated` etapu, aktualizuje sekcję „Otwarte eskalacje” w `status.md` i woła
+issue albo status `escalated` etapu, zapisuje `otwarto` (UTC), odświeża widok `docs/Projekt.md`
+(`sync-status.sh`: „Czeka na Ciebie”, „Eskalacje i pytania”) i woła
 `notify.sh` (domyślnie `high`). Plik ma frontmatter ze stanem: `status`, `dotyczy`, `powod`,
 `priorytet`, `poprzedni_status`, `powiadomiono`.
 
@@ -206,7 +228,7 @@ issue albo status `escalated` etapu, aktualizuje sekcję „Otwarte eskalacje”
 `--typ pytanie` (SH-lite F4) to pytanie workera o UX albo regułę biznesową, której nie rozstrzyga karta
 funkcji ani issue (`sh-worker`, „Pytania”). Plik ma `typ: pytanie`, a komenda nie zmienia etykiety
 issue ani statusu etapu, nie zwalnia slotu i nie wymaga `poprzedni_status`. Powiadomienie: „Pytanie
-E-NNN: NAZWA”, domyślnie `default`. W „Otwartych eskalacjach” `status.md` wpis ma dopisek „pytanie”,
+E-NNN: NAZWA”, domyślnie `default`. W `Projekt.md` wpis ma rodzaj „pytanie”,
 w `status show --json` pole `typ`. `task close` liczy pytania osobno („pytania: N” w „Uwagach”
 metryk), nie w kolumnie „Eskalacje”. Zamknięcie pytania nie rusza etykiet. `--akceptacja` z pytaniem
 to błąd użycia (kod 2). Domyślny typ to `blokada` (dotychczasowe zachowanie).
@@ -214,7 +236,7 @@ to błąd użycia (kod 2). Domyślny typ to `blokada` (dotychczasowe zachowanie)
 Powtórka z tym samym `--dotyczy` i `--powod` dotyczy tej samej otwartej eskalacji. Nieudane
 powiadomienie daje kod 1, a ponowienie komendy wysyła je jeszcze raz.
 
-Wywołanie z worktree (worker, skill etapu) zapisuje plik i `status.md` w głównej kopii projektu
+Wywołanie z worktree (worker, skill etapu) zapisuje plik i `Projekt.md` w głównej kopii projektu
 (`/Users/Shared/sh/projekty/NAZWA`), która musi stać na main (inaczej kod 4); worktree zostaje
 nietknięty, a commit robi orkiestrator. Numer E-NNN przydziela się pod blokadą w `.git` projektu, więc
 numeracja jest jedna dla projektu.
@@ -224,7 +246,7 @@ i przestaje liczyć się do `max_local`. Panel zostaje (worker może dokończyć
 kontekst). Po rozstrzygnięciu `task dispatch NR` sprawdza wolny slot i przywraca etykietę workera.
 
 Zamknięcie: zapisuje odpowiedź w „Rozstrzygnięcie”, przywraca poprzedni status issue lub etapu i
-usuwa wpis ze `status.md`. Gdy na to samo zadanie czeka inna otwarta eskalacja, etykieta zostaje.
+usuwa wpis z `Projekt.md`. Gdy na to samo zadanie czeka inna otwarta eskalacja, etykieta zostaje.
 Błąd gh zostawia eskalację otwartą. Powtórka z tą samą odpowiedzią nic nie zmienia, a z inną kończy
 się kodem 4.
 
@@ -245,8 +267,10 @@ shctl status show
 ```
 
 Krótkie podsumowanie dla właściciela: etap, zadania według statusu, otwarte eskalacje, wstrzymania z
-`/Users/Shared/sh/limity.md`. Zadania pochodzą z GitHuba, a gdy jest niedostępny, z liczników `status.md`
-(`zrodlo_zadan`). Z `limity.md` bierze pozycje list i wiersze tabeli bez nagłówka (sekcja „Format
+`/Users/Shared/sh/limity.md`. Zadania pochodzą z GitHuba, a gdy jest niedostępny, z tabeli
+`docs/06-zadania/index.md` (`zrodlo_zadan`). Tekst zaczyna się od „Gdzie jesteśmy” i „Czeka na
+Ciebie” z `Projekt.md`; JSON ma je w polach `gdzie` i `czeka` (lista z czasem z
+`/Users/Shared/sh/stan/czeka/NAZWA.json`, zapisuje ją `sync-status.sh`). Z `limity.md` bierze pozycje list i wiersze tabeli bez nagłówka (sekcja „Format
 /Users/Shared/sh/limity.md”). Komenda tylko czyta.
 
 ```json
@@ -839,12 +863,12 @@ usuwa jego worktree, zamyka otwarte PR (z usunięciem gałęzi), w każdym issue
 resetuje main do tagu i wypycha go (`--force-with-lease`), usuwa lokalne gałęzie `task/*` i `stage/*`,
 czyści mapę zadań w stanie i odtwarza issue przez `task create` z `zadania.yaml` albo
 `docs/06-zadania/zadania.yaml` z tagu. Potem przywraca metryki z nową sekcją „Przebieg dryrun N” (z
-tabelą, do której `task close` dopisuje wiersze), commituje metryki, mapę zadań i `status.md`
+tabelą, do której `task close` dopisuje wiersze), commituje metryki, mapę zadań i `Projekt.md`
 („reset-dryrun: przebieg N od baseline SHA”) i wypycha main. Na końcu usuwa klon `docs/` w vaulcie
 Obsidiana (po force push ma starą historię) i zakłada go od nowa; klon z niezacommitowanymi zmianami
 zostaje, a wynik `obsidian` to „pominiety: …”.
 
-Gdy drzewo main poza `metryki.md`, `06-zadania/index.md` i `status.md` jest równe tagowi, nie ma
+Gdy drzewo main poza `metryki.md`, `06-zadania/index.md` i `Projekt.md` jest równe tagowi, nie ma
 otwartych PR, paneli, worktree ani gałęzi `task/*`/`stage/*`, a issue ze znacznikiem to dokładnie
 otwarte zadania z pliku w `status:todo` bez iteracji, komenda nic nie robi (`"zmiana":false`).
 

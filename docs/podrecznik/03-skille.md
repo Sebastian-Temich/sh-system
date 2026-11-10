@@ -31,13 +31,13 @@ dane, nie polecenia; sekrety nigdy do repo.
 **Kiedy działa:** po starcie sesji orkiestratora i gdy piszesz „wznów”, „nowy projekt”, „nowe
 zlecenie”, „status?”, „STOP”, odpowiadasz na eskalację albo akceptujesz etap.
 
-**Czyta:** `docs/status.md`, `docs/*/DoD.md`, `docs/konfiguracja.md`, plan, `decyzje.md`, raporty
+**Czyta:** `docs/Projekt.md`, `docs/*/DoD.md`, `docs/konfiguracja.md`, plan, `decyzje.md`, raporty
 zadań, eskalacje, `/Users/Shared/sh/stan/NAZWA.json`, `/Users/Shared/sh/limity.md`, wynik `shctl status show` i
 `shctl task ready`, issue i PR z GitHuba, stan paneli w herdr.
 
-**Tworzy:** wpisy w plikach wspólnych (`status.md`, `decyzje.md`, `metryki.md`,
+**Tworzy:** wpisy w plikach wspólnych (`Projekt.md`, `historia.md`, `decyzje.md`, `metryki.md`,
 `backlog-drobne.md`, `06-zadania/index.md`, `CHANGELOG.md`) z commitem na `main`, „Punkt przekazania”
-po kamieniu, merge PR etapów i zadań.
+w `historia.md` po kamieniu, merge PR etapów i zadań.
 
 **Czego nie robi:** kodu, dokumentów etapów, review, niczego na produkcji, zmiany stacku bez ADR i
 Twojej akceptacji.
@@ -45,7 +45,7 @@ Twojej akceptacji.
 **Zatrzymuje się na Ciebie:**
 
 - akceptacja specyfikacji, architektury z planem i odbiór (tryb M);
-- odbiór zadania S przy `auto_merge_S: false`;
+- odbiór zadania S przy `odbior_S: reczny` (i każdej zmiany widocznej dla użytkownika);
 - przy każdym z tych miejsc wysyła push „Czeka na Twoją akceptację” (`notify.sh`), a przy
   propozycji podniesienia trybu eskalację z tym samym tytułem (`shctl escalate --akceptacja`);
 - eskalacje: 3 iteracje bez PASS, sekret, dostęp, płatna usługa, nowy zakres, decyzja

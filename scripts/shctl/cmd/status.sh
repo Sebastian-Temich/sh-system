@@ -1,4 +1,6 @@
-# shctl status show: podsumowanie dla właściciela. Tylko odczyt.
+# shctl status show: podsumowanie dla właściciela. Tylko odczyt. Tekst zaczyna się od „Gdzie jesteśmy”
+# i „Czeka na Ciebie” z docs/Projekt.md (sync-status.sh), JSON ma je w polach gdzie i czeka (lista z
+# czasem z stan/czeka/PROJEKT.json, zapisuje ją sync-status.sh).
 # shellcheck shell=bash
 
 zadania_z_github() {
@@ -21,25 +23,35 @@ zadania_z_github() {
          anulowane: (map(select(. == "anulowane")) | length)}'
 }
 
-zadania_ze_statusu() {
-  yq --front-matter=extract -o=json '{
-    "todo": .zadania_todo, "in_progress": .zadania_in_progress, "review": .zadania_review,
-    "blocked": .zadania_blocked, "escalated": .zadania_escalated, "done": .zadania_done,
-    "anulowane": .zadania_anulowane}' "$ST" | jq -c .
+# Bez GitHuba: liczniki z kolumny Status tabeli w docs/06-zadania/index.md (sync-status.sh).
+zadania_z_indeksu() {
+  local f="$ROOT/docs/06-zadania/index.md"
+  { [ -f "$f" ] && awk -F '|' '
+      $0 == "<!-- sync-status:start -->" { w = 1; next }
+      $0 == "<!-- sync-status:end -->" { w = 0 }
+      w && /^\| #[0-9]/ { s = $4; gsub(/^ +| +$/, "", s); print s }' "$f" || true; } |
+    jq -Rsc 'split("\n") | map(select(length > 0)) as $s
+      | {todo: ($s | map(select(. == "todo")) | length),
+         in_progress: ($s | map(select(. == "in-progress")) | length),
+         review: ($s | map(select(. == "review")) | length),
+         blocked: ($s | map(select(. == "blocked")) | length),
+         escalated: ($s | map(select(. == "escalated")) | length),
+         done: ($s | map(select(. == "done")) | length),
+         anulowane: ($s | map(select(. == "anulowane")) | length)}'
 }
 
 komenda_main() {
-  local zadania zrodlo=github esk etap wstrzym f
+  local zadania zrodlo=github esk etap wstrzym f gdzie czeka czeka_txt
   [ "${1:-}" != show ] || shift
   while [ $# -gt 0 ]; do opcja_wspolna "$@"; shift "$ZJEDZONE"; done
   znajdz_projekt
-  [ -f "$ST" ] || die "$E_BRAK" "brak docs/status.md"
+  [ -f "$ST" ] || die "$E_BRAK" "brak docs/Projekt.md (ani dawnego docs/status.md)"
 
   etap="$(opis_etapu)"
   zadania="$(zadania_z_github || true)"
   if [ -z "$zadania" ]; then
-    zrodlo=status.md
-    zadania="$(zadania_ze_statusu)"
+    zrodlo="06-zadania/index.md"
+    zadania="$(zadania_z_indeksu)"
   fi
 
   esk='[]'
@@ -57,7 +69,19 @@ komenda_main() {
     [ -n "$wstrzym" ] || wstrzym='[]'
   fi
 
+  gdzie="$(czytaj_sekcje "$ST" "Gdzie jesteśmy")"
+  czeka_txt="$(czytaj_sekcje "$ST" "Czeka na Ciebie")"
+  czeka="$(jq -c 'if type == "array" then . else [] end' "$STAN/czeka/$PROJEKT.json" 2>/dev/null || echo '[]')"
+  [ -n "$czeka" ] || czeka='[]'
   if [ "$JSON" -eq 0 ]; then
+    if [ -n "$gdzie" ]; then
+      echo "Gdzie jesteśmy"
+      printf '%s\n' "$gdzie"
+      echo
+      echo "Czeka na Ciebie"
+      printf '%s\n' "${czeka_txt:-Nic.}"
+      echo
+    fi
     echo "Projekt: $PROJEKT (tryb $(tryb), etap wdrożenia $(fm_get "$KONFIG" etap_wdrozenia))"
     echo "Etap:"
     printf '%s\n' "$etap" | sed 's/^/  /'
@@ -66,6 +90,6 @@ komenda_main() {
     jq -r 'if length == 0 then "Wstrzymania: brak" else "Wstrzymania:", (.[] | "  " + .) end' <<<"$wstrzym"
   fi
   wynik_json "$(jq -nc --arg p "$PROJEKT" --arg t "$(tryb)" --arg e "$etap" --arg z "$zrodlo" \
-    --argjson d "$zadania" --argjson s "$esk" --argjson w "$wstrzym" \
-    '{projekt:$p, tryb:$t, etap:$e, zadania:$d, zrodlo_zadan:$z, eskalacje:$s, wstrzymania:$w}')"
+    --argjson d "$zadania" --argjson s "$esk" --argjson w "$wstrzym" --arg g "$gdzie" --argjson c "$czeka" \
+    '{projekt:$p, tryb:$t, etap:$e, gdzie:$g, czeka:$c, zadania:$d, zrodlo_zadan:$z, eskalacje:$s, wstrzymania:$w}')"
 }

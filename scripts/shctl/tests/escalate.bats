@@ -6,7 +6,7 @@ setup() { wspolny_setup; projekt_demo; printf 'status:in-progress' >"$T/issue-et
 E1=docs/07-realizacja/escalations/E-001.md
 esk() { "$SHCTL" escalate --dotyczy "#7" --powod "brak klucza" --potrzebne "klucz API" "$@"; }
 
-@test "issue: plik, etykieta, status.md, powiadomienie" {
+@test "issue: plik, etykieta, odswiezenie Projekt.md, powiadomienie" {
   run esk --opcje "A;B"
   [ "$status" -eq 0 ]
   [ -f "$E1" ]
@@ -16,7 +16,8 @@ esk() { "$SHCTL" escalate --dotyczy "#7" --powod "brak klucza" --potrzebne "kluc
   grep -qx -- '- A' "$E1"
   grep -qx 'klucz API' "$E1"
   grep -q 'issue edit 7 --repo test-owner/demo --add-label status:escalated --remove-label status:in-progress' "$T/gh.calls"
-  grep -q 'E-001 (#7): brak klucza' docs/status.md
+  grep -q -- '--repo test-owner/demo' "$T/sync.calls"
+  [[ "$(fm "$E1" otwarto)" == 20*Z ]] || false
   grep -q '^high Eskalacja E-001: demo' "$T/notified"
 }
 
@@ -56,8 +57,7 @@ esk() { "$SHCTL" escalate --dotyczy "#7" --powod "brak klucza" --potrzebne "kluc
   [ "$(fm docs/04-plan/DoD.md status)" = in-progress ]
   [ "$(fm "$E1" status)" = zamknieta ]
   grep -qx 'wariant A' "$E1"
-  grep -q '^(brak)$' docs/status.md
-  ! grep -q 'E-001' docs/status.md || false
+  [ "$(wc -l <"$T/sync.calls" | tr -d ' ')" -ge 2 ]
 }
 
 @test "close issue przywraca poprzedni status" {
@@ -130,7 +130,7 @@ esk() { "$SHCTL" escalate --dotyczy "#7" --powod "brak klucza" --potrzebne "kluc
   [ "$(fm "$E1" typ)" = pytanie ]
   [ "$(jq -r .wynik.typ <<<"$output")" = pytanie ]
   ! grep -q 'issue edit 7' "$T/gh.calls" || false
-  grep -q 'E-001 (#7, pytanie): brak klucza' docs/status.md
+  grep -q -- '--repo test-owner/demo' "$T/sync.calls"
   grep -q '^default Pytanie E-001: demo' "$T/notified"
   run --separate-stderr "$SHCTL" escalate close E-001 --odpowiedz "tak"
   [ "$status" -eq 0 ]

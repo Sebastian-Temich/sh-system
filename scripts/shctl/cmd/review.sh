@@ -263,6 +263,8 @@ review_run() {
   fi
 
   werdykt="$(jq -r .werdykt <<<"$wynik")"
+  # PASS może oznaczać „Czeka na Ciebie” (akceptacja etapu, odbiór zlecenia S).
+  [ "$ponownie" = true ] || odswiez_projekt || true
   info "PR #$prn: $werdykt ($(jq -r '.zgloszenia | length' <<<"$wynik") zgłoszeń)"
   wynik_json "$(jq -c --argjson p "$prn" --arg n "$nr" --arg e "$etap" --arg h "$head" --argjson r "$ponownie" '
     {pr:$p, nr:(if $n == "" then null else ($n | tonumber) end), etap:(if $e == "" then null else $e end),

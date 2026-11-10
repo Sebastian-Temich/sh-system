@@ -21,11 +21,12 @@ pomoc() {
   cat <<'TXT'
 Użycie: shctl KOMENDA [argumenty] [--dry-run] [--json] [--projekt NAZWA]
 
-  new-project NAZWA [--tryb S|M] [--public] [--opis "..."]
+  new-project NAZWA --opis "krótki opis repo" [--zlecenie "..."] [--tryb S|M] [--prywatny]
+  repo opis [--opis "..."] [--topics "a,b"] [--website URL]
   stage start|review|done|escalate ETAP [--notatka "..."]
   stage iter ETAP
   decision add --co "..." --dlaczego "..." --cofniecie "..." [--rola ROLA]
-  escalate --dotyczy "#NR|ETAP" --powod "..." --potrzebne "..." [--opcje "A;B"] [--priorytet high] [--akceptacja]
+  escalate --dotyczy "#NR|ETAP" --powod "..." --potrzebne "..." [--opcje "A;B"] [--priorytet high] [--akceptacja] [--typ blokada|pytanie]
   escalate close E-NNN --odpowiedz "..."
   status show
   stop-all
@@ -36,7 +37,7 @@ Użycie: shctl KOMENDA [argumenty] [--dry-run] [--json] [--projekt NAZWA]
   task ready [--czekaj] [--timeout SEKUNDY]
   task dispatch NR
   task iter NR
-  task close NR [--anuluj [--powod "..."]]   (task cancel NR: alias do następnej wersji)
+  task close NR [--odbior] [--anuluj [--powod "..."]]   (task cancel NR: alias do następnej wersji)
   task resume-check NR [--testy "..."] [--bez-testow]
   task wait NR [--timeout SEKUNDY]
   pr check PR [--czekaj] [--timeout SEKUNDY]
@@ -56,7 +57,7 @@ shift
 case "$KOMENDA" in
   -h | --help | help) pomoc; exit 0 ;;
   new-project | stage | decision | escalate | status | stop-all | obsidian | doctor) ;;
-  task | review | reset-dryrun | skrzynka | pr | template | sprzataj) ;;
+  task | review | reset-dryrun | skrzynka | pr | template | sprzataj | repo) ;;
   *) echo "BŁĄD: nieznana komenda: $KOMENDA (shctl --help)" >&2; exit "$E_UZYCIE" ;;
 esac
 

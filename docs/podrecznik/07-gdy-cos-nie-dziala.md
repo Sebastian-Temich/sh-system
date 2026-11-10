@@ -187,7 +187,7 @@ Zamknięte zostają panele workerów, reviewerów i orkiestratora. Kopie robocze
 zostają na dysku, a stan trafia do `/Users/Shared/sh/stan/NAZWA.json`. Przychodzi push „STOP”.
 
 **Wznowienie:** nic nie wznawia się samo. Uruchom orkiestratora (`/Users/Shared/sh/bin/sh-start.sh` albo
-`claude` w panelu) i napisz „wznów”. Orkiestrator odtwarza stan ze `status.md` i
+`claude` w panelu) i napisz „wznów”. Orkiestrator odtwarza stan z `Projekt.md` i
 `/Users/Shared/sh/stan/NAZWA.json`.
 
 ## Brak miejsca na dysku

@@ -689,6 +689,13 @@ ustawia `install.sh`, a `shctl doctor` sprawdza kontrolą `logowanie git`. `shct
 robi fetch, pull, clone i ls-remote przez `git_gh` (`scripts/shctl/lib/common.sh`) z tym samym
 helperem i dopisuje do PATH brakujące katalogi narzędzi.
 
+**Wszystkie projekty.** Po pullach skrypt zapisuje `SH/Wszystkie projekty.md` (rodzic
+`SH_OBSIDIAN_DIR`): jedna tabela z frontmattera `docs/Projekt.md` każdego klonu (projekt, etap,
+postęp „Etapy X/Y · Zadania A/B”, ile czeka na właściciela, eskalacje i pytania, następny krok, link
+do `Projekt.md`). Kolejność: najpierw projekty, w których coś czeka na właściciela, potem w toku,
+potem zakończone. Czysty Markdown, bez Dataview; plik zmienia się tylko przy zmianie treści. `Projekt.md` w projekcie generuje
+`scripts/sync-status.sh` przy każdej zmianie stanu w shctl (SH-lite F5).
+
 Sprawdzenie: `launchctl kickstart -k gui/$(id -u)/pl.iskt.softwarehouse.obsidian-sync`, potem
 `tail /Users/Shared/sh/logs/obsidian-sync.log` i `shctl doctor` (wiersz „Obsidian”: klony czyste i
 zgodne z origin).
@@ -706,6 +713,36 @@ zgodne z origin).
   Po poleceniu „materiały w skrzynce” orkiestrator wywołuje `shctl skrzynka przyjmij NAZWA`, które
   kopiuje je przez PR do `docs/00-intake/zrodla/`, po zielonym CI merguje PR i opróżnia skrzynkę.
   Synchronizacja skrzynki nie dotyka.
+
+## Przypomnienia o czekaniu na właściciela
+
+LaunchAgent `pl.iskt.softwarehouse.przypomnienia` co 15 minut uruchamia
+`/Users/Shared/sh/bin/przypomnienia.sh`. Skrypt czyta `/Users/Shared/sh/stan/czeka/NAZWA.json`
+(pozycje „Czeka na Ciebie” z czasem, od którego czekają, i tekstem do wpisania; zapisuje je
+`scripts/sync-status.sh` projektu) i wysyła jedno powiadomienie ntfy na projekt, gdy coś czeka dłużej
+niż 4 h, tylko w godzinach 8–22 czasu lokalnego. Ta sama pozycja wraca najwcześniej 4 h po
+poprzednim przypomnieniu, nie co przebieg. Lista nieczytelna w danym przebiegu nie kasuje stanu, więc
+nie powoduje przedwczesnej powtórki. Retro
+iskt-www: 10,8 h czekania na właściciela w zleceniu M i 57 h w zleceniu S.
+
+| Rzecz | Miejsce |
+|---|---|
+| Stan | `/Users/Shared/sh/stan/przypomnienia.json` (ostatnie przypomnienie każdej pozycji) |
+| Log | `/Users/Shared/sh/logs/przypomnienia.log` |
+| Wyłączenie | `touch /Users/Shared/sh/stan/przypomnienia.off` |
+| Próg | `SH_PRZYPOMNIENIE_PROG` w sekundach (domyślnie 14400) |
+
+## Runner dla repo prywatnych
+
+Projekty są domyślnie publiczne (minuty GitHub Actions bez limitu). Repo prywatne powstaje tylko na
+wyraźne polecenie właściciela (`shctl new-project --prywatny`) i dostaje zmienną repo
+`SH_RUNS_ON = ["self-hosted","sh-imac"]`; workflowy szablonu (`ci.yml`, `szablon.yml`, `staging.yml`)
+biorą `runs-on` z tej zmiennej, a bez niej `ubuntu-24.04`. Do zrobienia przez właściciela przed
+pierwszym repo prywatnym: zarejestrować na tym Macu runner GitHub Actions z etykietą `sh-imac`
+(Settings → Actions → Runners → New self-hosted runner w repo, konto bez uprawnień administratora) i
+sprawdzić joby szablonu na macOS: kroki zakładają Linuksa (`apt-get`, `sha256sum`, `timeout`,
+`playwright install --with-deps`). Do tego czasu CI repo prywatnego czeka w kolejce. Ruleset
+`sh-ochrona-galezi` w repo prywatnym wymaga GitHub Pro; na planie Free `new-project` tylko ostrzega.
 
 ## Strażnik orkiestratora
 

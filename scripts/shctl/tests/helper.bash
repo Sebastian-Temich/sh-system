@@ -10,7 +10,7 @@ wspolny_setup() {
   T="$BATS_TEST_TMPDIR/ze spacja"
   mkdir -p "$T"
   export SH_DIR="$T/sh" SH_NOTIFY_CMD="$T/mock/notify" SH_GH_OWNER=test-owner
-  export SH_OBSIDIAN_DIR="$T/Obsidian Vault/SH/Projekty"
+  export SH_OBSIDIAN_DIR="$T/Obsidian Vault/SH/Projekty" SYNC_LOG="$T/sync.calls"
   # Testy nie dziedziczą sesji Claude Code ani panelu herdr, które je uruchamiają.
   unset SH_CONFIG HERDR_PANE_ID CLAUDE_CODE_SESSION_ID CLAUDE_PID
   export GIT_CONFIG_NOSYSTEM=1 GIT_CONFIG_GLOBAL="$T/gitconfig" HOME="$T/home"
@@ -40,9 +40,15 @@ MOCK
 echo "\$*" >>"$T/gh.calls"
 case "\$1 \$2" in
   "repo view")
-    if [ -f "$T/repo-istnieje" ]; then cat "$T/repo-istnieje"; echo; exit 0; fi
+    if [ -f "$T/repo-istnieje" ]; then
+      case "\$*" in
+        *"--jq .isEmpty"*) jq -r '.isEmpty // false' "$T/repo-istnieje" 2>/dev/null || echo false ;;
+        *) cat "$T/repo-istnieje"; echo ;;
+      esac
+      exit 0
+    fi
     echo "GraphQL: Could not resolve to a Repository" >&2; exit 1 ;;
-  "repo create") printf 'sh-template-projekt' >"$T/repo-istnieje" ;;
+  "repo create") printf '{"isEmpty":true,"repositoryTopics":[],"templateRepository":null}' >"$T/repo-istnieje" ;;
   "repo clone") git clone -q "https://github.com/\$3.git" "\$4" ;;
   "issue view") cat "$T/issue-etykieta" 2>/dev/null; echo ;;
   "issue edit") [ ! -f "$T/gh-fail" ] ;;
@@ -52,7 +58,12 @@ case "\$1 \$2" in
   "api repos/"*) ;;
 esac
 MOCK
-  chmod +x "$T/mock/notify" "$T/mock/lsof" "$T/mock/gh"
+  cat >"$T/mock/gitleaks" <<MOCK
+#!/bin/sh
+echo "\$*" >>"$T/gitleaks.calls"
+[ ! -f "$T/gitleaks-sekret" ] || { echo "leaks found: 1"; exit 1; }
+MOCK
+  chmod +x "$T/mock/notify" "$T/mock/lsof" "$T/mock/gh" "$T/mock/gitleaks"
 }
 
 porty_md() {
@@ -91,7 +102,8 @@ szablon_projektu() {
     printf -- '---\netap: %s\nstatus: todo\niteracja: 0\n---\n\n# DoD\n\n## Dokumentacja\n\n- [ ] punkt\n' "$e" >"$d/docs/$e/DoD.md"
   done
   printf -- '---\nwersja_procesu: 2\netap_wdrozenia: A\ntryb_procesu: M\nmax_local: 1\n---\n\n# Konfiguracja\n\nTekst.\n' >"$d/docs/konfiguracja.md"
-  printf -- '---\nzadania_todo: 2\nzadania_in_progress: 1\nzadania_review: 0\nzadania_blocked: 0\nzadania_escalated: 0\nzadania_done: 3\nzadania_anulowane: 0\n---\n\n# Status projektu\n\n## Bieżący etap\n\n(brak)\n\n## Punkt przekazania\n\n(brak)\n' >"$d/docs/status.md"
+  printf -- '---\nprojekt: demo\ntryb: M\netap_opis: "Realizacja"\npostep_etapy: "3/5"\npostep_zadania: "3/6"\nczeka_na_ciebie: 1\neskalacje: 1\nnastepny_krok: "Twoja odpowiedź: E-001 (#2): klucz"\nostatnia_synchronizacja: brak\n---\n\n# demo\n\n## Gdzie jesteśmy\n\n- **Etap:** Realizacja\n\n## Czeka na Ciebie\n\n1. E-001 (#2): klucz\n\n## Zadania\n\nNic w toku.\n\n## Dokumenty\n\n- [Historia](historia.md)\n' >"$d/docs/Projekt.md"
+  printf '# Historia projektu\n\n## Punkt przekazania\n\n(brak)\n\n## Dziennik etapów\n\n(brak)\n\n<!-- historia:start -->\n## Wszystkie zadania zrobione (0)\n\nJeszcze nic.\n<!-- historia:end -->\n' >"$d/docs/historia.md"
   printf '# Decyzje projektu\n\n| Data | Źródło | Pytanie | Decyzja |\n|---|---|---|---|\n' >"$d/docs/decyzje.md"
   printf '# Zlecenie źródłowe\n\nTreść.\n' >"$d/docs/00-intake/zrodlo.md"
   printf '# ADR-NNN: TYTUŁ\n\nStatus: proponowana | zastąpiona przez ADR-NNN\nData: RRRR-MM-DD\n\n## Kontekst\n' >"$d/docs/_szablony/adr.md"
@@ -113,6 +125,8 @@ done
 exit "$rc"
 SH
   printf '#!/bin/sh\nfor a in x; do gh label create test --force; done\n' >"$d/scripts/setup-labels.sh"
+  # Atrapa widoku projektu: zapisuje wywołania (prawdziwy sync-status.sh testuje szablon).
+  printf '#!/usr/bin/env bash\necho "$*" >>"${SYNC_LOG:-/dev/null}"\n' >"$d/scripts/sync-status.sh"
   chmod +x "$d/scripts/"*.sh
   printf '# Projekt\n' >"$d/README.md"
   mkdir -p "$d/src"
@@ -128,6 +142,20 @@ projekt_demo() {
   git -C "$P" add -A
   git -C "$P" commit -qm start
   cd "$P"
+}
+
+# Nowy projekt (SH-lite F5): puste repo projektu na atrapie GitHuba i szablon pod adresem
+# https://github.com/test-owner/sh-template-projekt.git (insteadOf).
+szablon_nowy() {
+  local s="$T/szablon"
+  git init -q "$s"
+  szablon_projektu "$s"
+  printf '# NAZWA\n\nOPIS\n\nStatus: docs/Projekt.md\n' >"$s/README.md"
+  git -C "$s" add -A
+  git -C "$s" commit -qm start
+  git init -q --bare "$T/remote.git"
+  git config --global url."$T/remote.git".insteadOf https://github.com/test-owner/demo.git
+  git config --global url."$s".insteadOf https://github.com/test-owner/sh-template-projekt.git
 }
 
 szablon_remote() {

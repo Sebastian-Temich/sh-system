@@ -42,10 +42,10 @@ setup() { wspolny_setup; szablon_remote; V="$SH_OBSIDIAN_DIR/demo"; }
 
 @test "unlink odmawia przy niezacommitowanej zmianie" {
   "$SHCTL" obsidian link demo
-  echo x >>"$V/docs/status.md"
+  echo x >>"$V/docs/Projekt.md"
   run --separate-stderr "$SHCTL" obsidian unlink demo
   [ "$status" -eq 4 ]
-  [ -f "$V/docs/status.md" ]
+  [ -f "$V/docs/Projekt.md" ]
 }
 
 @test "unlink odmawia przy pliku nieskledzonym i niewypchnietym commicie" {
