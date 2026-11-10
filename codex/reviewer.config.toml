@@ -4,13 +4,13 @@
 # config.toml nie są już czytane.
 # Źródło: sh-system/codex/reviewer.config.toml; install.sh linkuje go do ~/.codex/reviewer.config.toml.
 #
-# Prompt: sh-system/codex/sh-review.md (generuje scripts/sync-codex.sh ze skilla sh-review), wynik
-# według sh-system/codex/sh-review.schema.json. shctl podaje prompt na stdin, a schemat przez
+# Prompt: shctl składa go przy każdym review ze skilla sh-review (jedno źródło dla Claude i Codexa),
+# wynik według sh-system/templates/review.schema.json. shctl podaje prompt na stdin, a schemat przez
 # --output-schema. Profil nie ustawia model_instructions_file, bo to zastąpiłoby instrukcje bazowe Codexa.
 #
-# Model i rozumowanie jak modele.reviewer w konfiguracja.md szablonu (decyzja właściciela z
-# 2026-11-02: najmocniejszy model Codexa, rozumowanie high). shctl i tak podaje -m i
-# model_reasoning_effort z konfiguracji projektu, więc projekt może je nadpisać.
+# Model i rozumowanie jak domyślne review.ryzyko w /Users/Shared/sh/konfiguracja.md (SH-lite F6,
+# decyzja właściciela z 2026-11-10: najmocniejszy model Codexa dla PR z ryzykiem). shctl zawsze
+# podaje -m i model_reasoning_effort z konfiguracji review, więc te wartości są tylko zapasowe.
 model = "gpt-6-astra"
 model_reasoning_effort = "high"
 # Tylko odczyt: reviewer niczego nie zapisuje, a testy uruchamia CI.

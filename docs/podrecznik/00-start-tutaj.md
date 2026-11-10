@@ -10,7 +10,7 @@ Zlecasz pracę zwykłym językiem, w czacie. Resztę robią agenci na serwerze (
 
 - **orkiestrator** (Claude Code) prowadzi projekt, rozmawia z Tobą i rozdziela pracę;
 - **workerzy** (Claude Code) piszą kod i testy, każdy w osobnej kopii repozytorium;
-- **reviewer** (Codex) sprawdza każdą zmianę, zanim trafi do głównej gałęzi;
+- **reviewer** (świeża sesja Claude, a przy zmianach ryzykownych Codex) sprawdza każdą zmianę, zanim trafi do głównej gałęzi;
 - **shctl** to program, który wykonuje mechanikę: zakłada zadania, kopie robocze, panele i wpisy.
 
 Ty akceptujesz pracę w kilku punktach kontrolnych i odpowiadasz na pytania, których agenci nie mogą

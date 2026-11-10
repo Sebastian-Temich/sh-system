@@ -1020,29 +1020,34 @@ Test przez `codex exec`, uruchomiony w `/Users/Shared/sh`: zapis w katalogu robo
 
 #### Profil reviewer
 
-`shctl review run` uruchamia `codex exec -p reviewer`. Profil to `~/.codex/reviewer.config.toml`,
+`shctl review run` przy silniku Codex (`review.ryzyko` domyślnie, `docs/shctl.md`, „review run”)
+uruchamia `codex exec -p reviewer`. Profil to `~/.codex/reviewer.config.toml`,
 symlink zakładany przez `install.sh` do `sh-system/codex/reviewer.config.toml`. Nakłada się na
 `config.toml`. Od Codex 0.134 profil to osobny plik `$CODEX_HOME/NAZWA.config.toml` z kluczami
 najwyższego poziomu: `-p` nie czyta już tabel `[profiles.NAZWA]` z `config.toml` (dokumentacja
 Codex, „Advanced configuration”, sekcja o profilach). Dlatego profilu nie ma w samym `config.toml`.
 
-Prompt reviewera to `sh-system/codex/sh-review.md`, generowany ze skilla `sh-review`, a schemat
-wyniku to `codex/sh-review.schema.json`. Oba są wskazane w nagłówku profilu. shctl podaje prompt na
+Prompt reviewera składa shctl przy każdym review ze skilla `sh-review` (jedno źródło dla Claude i
+Codexa, SH-lite F6), a schemat wyniku to `templates/review.schema.json`. Oba są wskazane w nagłówku
+profilu. shctl podaje prompt na
 stdin i schemat przez `--output-schema`. Profil nie ustawia `model_instructions_file`, bo ten klucz
 zastępuje instrukcje bazowe Codexa.
 
 | Klucz | Wartość | Po co |
 |---|---|---|
-| `model` | `gpt-6-astra` | Model reviewera z `konfiguracja.md` szablonu („GPT-6-Astra”) |
-| `model_reasoning_effort` | `high` | Jak `modele.reviewer.rozumowanie` w szablonie |
+| `model` | `gpt-6-astra` | Jak domyślne `review.ryzyko.model` (decyzje właściciela z 2026-11-02 i 2026-11-10) |
+| `model_reasoning_effort` | `high` | Jak domyślne `review.ryzyko.effort` |
 | `sandbox_mode` | `read-only` | Reviewer niczego nie zapisuje, testy uruchamia CI |
 | `approval_policy` | `never` | `codex exec` działa bez człowieka |
 
-shctl podaje też `-m` i `model_reasoning_effort` z `konfiguracja.md` projektu (wygrywają z profilem) i
+shctl podaje zawsze `-m` i `model_reasoning_effort` z konfiguracji review (wygrywają z profilem) i
 zawsze `-s read-only`. Test z 2026-11-02 po zmianie na `gpt-6-astra`: nagłówek
 `codex exec -p reviewer` pokazał `model: gpt-6-astra`, `sandbox: read-only`, `approval: never`,
 `reasoning effort: high`, a `touch` w katalogu roboczym dał „Operation not permitted”. Profil nie blokuje odczytu poza katalogiem roboczym (znane
-ograniczenie wyżej). Zmiana modelu: plik w repo i PR, tak jak `konfiguracja.md` szablonu.
+ograniczenie wyżej). Zmiana modelu: `review` w `/Users/Shared/sh/konfiguracja.md`; profil to tylko wartość zapasowa.
+
+Reviewer Claude (`review.zwykle` domyślnie) nie ma profilu na serwerze: shctl uruchamia `claude -p`
+z `.claude/roles/reviewer/settings.json` z `main` projektu (szablon `sh-template-projekt`).
 
 Test całości z 2026-11-02: repo `sh-test-20261102-2232`, issue #1 z kryteriami (suma rat równa
 kwocie, 0 rat to błąd) i PR #2 z `lib/raty.sh`, który gubi resztę i dzieli przez zero.

@@ -185,14 +185,6 @@ review_dla_heada() {
 
 model_workera() { konf modele.worker opus; }
 
-# Model Codex: nazwa z konfiguracja.md („GPT-6.1 Terra”) jako identyfikator („gpt-6.1-terra”).
-model_reviewera() {
-  local m
-  m="$(konf modele.reviewer.model domyslny)"
-  case "$m" in domyslny | "") return 0 ;; esac
-  printf '%s' "$m" | LC_ALL=C tr 'A-Z' 'a-z' | LC_ALL=C sed -E 's/[[:space:]]+/-/g'
-}
-
 # --- Bramki dispatchu -------------------------------------------------------------------------
 
 # Wpisy z /Users/Shared/sh/limity.md: pozycje list i wiersze tabeli bez nagłówka; „brak” nie jest wstrzymaniem.
@@ -202,9 +194,16 @@ wstrzymania() {
     grep -viE '^(- |\| )[*_(]*(brak|nic|none)[*_)]*[ |]*$' || true
 }
 
-# Wstrzymanie Codexa blokuje review; każde inne wstrzymanie blokuje workerów Claude.
+# Wstrzymanie Codexa blokuje review Codexem; każde inne wstrzymanie blokuje Claude (workerów i
+# reviewera Claude).
 wstrzymany_codex() { wstrzymania | grep -qi codex; }
 wstrzymany_claude() { wstrzymania | grep -vi codex | grep -q . || wstrzymania | grep -qi claude; }
+wstrzymany_silnik() { case "$1" in codex) wstrzymany_codex ;; *) wstrzymany_claude ;; esac; }
+# Wiersz limity.md dla silnika (pierwszy pasujący) albo pusto.
+wstrzymanie_silnika() {
+  if [ "$1" = codex ]; then wstrzymania | grep -i codex | head -1
+  else wstrzymania | grep -vi codex | head -1; fi
+}
 
 wolne_gb() {
   df -Pk "$1" 2>/dev/null | awk 'NR == 2 { printf "%d", $4 / 1048576 }'

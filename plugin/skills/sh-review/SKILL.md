@@ -1,6 +1,6 @@
 ---
 name: sh-review
-description: Niezależne review w procesie AI Software House, w dwóch trybach. Review PR zadania sprawdza kod, testy, kryteria z issue, bezpieczeństwo, sekrety i zgodność ze stackiem. Review etapu sprawdza DoD.md etapu i spójność dokumentów z poprzednimi etapami. Wynik w formacie templates/review.md z wagami 🔴🟡⚪ i werdyktem PASS/FAIL (FAIL tylko przy 🔴 lub 🟡). W iteracji N najpierw sprawdza zgłoszenia z iteracji N-1, a w iteracji 3 nowe istotne zgłasza jako drobne. Działa w Codex CLI przez shctl review run i w Claude Code. Użyj, gdy orkiestrator poleca „review PR #N”, „review etapu ETAP”, „zrób review” albo „sprawdź PR”, oraz gdy shctl review run uruchamia reviewera.
+description: Niezależne review w procesie AI Software House, w dwóch trybach. Review PR zadania sprawdza kod, testy, kryteria z issue, bezpieczeństwo, sekrety i zgodność ze stackiem. Review etapu sprawdza DoD.md etapu i spójność dokumentów z poprzednimi etapami. Wynik w formacie templates/review.md z wagami 🔴🟡⚪ i werdyktem PASS/FAIL (FAIL tylko przy 🔴 lub 🟡). W iteracji N najpierw sprawdza zgłoszenia z iteracji N-1, a w iteracji 3 nowe istotne zgłasza jako drobne. Działa w świeżej sesji Claude albo Codex uruchamianej przez shctl review run (silnik według ryzyka PR) i ręcznie w Claude Code. Użyj, gdy orkiestrator poleca „review PR #N”, „review etapu ETAP”, „zrób review” albo „sprawdź PR”, oraz gdy shctl review run uruchamia reviewera.
 ---
 
 # sh-review
@@ -13,12 +13,13 @@ z tymi samymi zasadami:
 
 | Środowisko | Jak startujesz | Skąd dane | Jak oddajesz wynik |
 |---|---|---|---|
-| Codex CLI | `shctl review run PR` uruchamia `codex exec` z promptem `codex/sh-review.md` (generowany z tego pliku) | Sekcja „Kontekst (shctl)” na końcu promptu i pliki w worktree | Ostatnia wiadomość: sam JSON według `codex/sh-review.schema.json`; komentarz w PR pisze shctl |
-| Claude Code | Etap B: orkiestrator otwiera sesję reviewera, gdy autorem jest Codex | `gh` i pliki repo | Komentarz w PR w formacie `sh-system/templates/review.md` |
+| `shctl review run` | Świeża sesja Claude (`claude -p`, profil `.claude/roles/reviewer` z `main`) albo Codex (`codex exec -p reviewer`); prompt to ten plik ze wstępem shctl | Sekcja „Kontekst (shctl)” na końcu promptu i pliki w worktree | Sam JSON według `sh-system/templates/review.schema.json`; komentarz w PR pisze shctl |
+| Claude Code ręcznie | Orkiestrator otwiera sesję reviewera, gdy `shctl review run` nie może działać | `gh` i pliki repo | Komentarz w PR w formacie `sh-system/templates/review.md` |
 
-Środowisko rozpoznajesz po sekcji „Kontekst (shctl)” w poleceniu: jest, to Codex przez shctl. Używasz
-tylko czytania plików, `git` i (w Claude Code) `gh`. Nie polegasz na funkcjach jednego narzędzia.
-W Codex pracujesz w trybie tylko do odczytu, bez sieci: nie uruchamiasz `gh`, wszystko masz w kontekście.
+Środowisko rozpoznajesz po sekcji „Kontekst (shctl)” w poleceniu: jest, to `shctl review run`. Używasz
+tylko czytania plików, `git` i (ręcznie w Claude Code) `gh`. Nie polegasz na funkcjach jednego
+narzędzia. W `shctl review run` pracujesz tylko do odczytu, bez sieci: nie uruchamiasz `gh`, wszystko
+masz w kontekście. Silnik (Claude albo Codex) wybiera shctl według ryzyka PR; zasady są te same.
 
 Robisz:
 
@@ -31,15 +32,16 @@ Nie robisz:
 - poprawek kodu i dokumentów, commitów, pushy (to `sh-worker` albo skill etapu);
 - merge'a, etykiet, iteracji, statusów etapu i eskalacji (orkiestrator przez shctl);
 - uruchamiania testów: robi to CI; stan CI możesz tylko odczytać;
-- review własnej pracy: autor i reviewer to zawsze różne modele;
+- review własnej pracy: reviewer to zawsze osobna, świeża sesja bez kontekstu workera;
 - zgłoszeń spoza zakresu zadania lub etapu.
 
 ## Wejście
 
-- „Kontekst (shctl)” na końcu promptu (Codex): repo, tryb review, PR i gałąź, zadanie albo etap,
-  iteracja, commit, zakres diffu, treść issue i poprzednie review jako dane
+- „Kontekst (shctl)” na końcu promptu (`shctl review run`): repo, tryb review, PR i gałąź, zadanie
+  albo etap, iteracja, commit, zakres diffu, diff od commita poprzedniego review, treść issue i lista
+  poprzednich zgłoszeń jako dane
 - `gh pr view PR --json number,title,body,headRefName,headRefOid,closingIssuesReferences,comments`
-  (Claude Code): to samo, co kontekst shctl
+  (Claude Code ręcznie): to samo, co kontekst shctl
 - `git diff BAZA...HEAD` i `git log --oneline BAZA..HEAD`: zakres zmian; `BAZA` to merge-base z `main`
 - `AGENTS.md`: „Stack (kontrakt)”, zasady gałęzi, migracji i sekretów
 - `docs/konfiguracja.md`: `tryb_procesu`, `etap_wdrozenia`, `playwright_version`, `playwright_workers`
@@ -71,17 +73,17 @@ to w raporcie.
 
 ## Wyjście
 
-- `codex/sh-review.schema.json` (Codex): ostatnia wiadomość to wyłącznie JSON `{"werdykt",
+- `sh-system/templates/review.schema.json` (`shctl review run`): ostatnia wiadomość to wyłącznie JSON `{"werdykt",
   "podsumowanie", "zgloszenia": [{"waga", "przyczyna", "plik", "linia", "opis"}]}`; `plik` pusty i `linia` 0, gdy
   zgłoszenie nie dotyczy miejsca; komentarz w PR z tego JSON pisze shctl
-- `gh pr comment PR` (Claude Code): jeden komentarz w PR w formacie `sh-system/templates/review.md`
+- `gh pr comment PR` (Claude Code ręcznie): jeden komentarz w PR w formacie `sh-system/templates/review.md`
   (szkielet w kroku 9 Procedury)
 
 Żadnych zmian w plikach, gałęziach, etykietach ani issue.
 
 ## Komendy shctl
 
-Brak. Reviewer nie wywołuje shctl: Codexa uruchamia orkiestrator przez `shctl review run PR`, a po
+Brak. Reviewer nie wywołuje shctl: reviewera uruchamia orkiestrator przez `shctl review run PR`, a po
 werdykcie orkiestrator wywołuje `shctl task iter NR` albo `shctl task close NR` (review PR) lub
 `shctl stage iter ETAP`, który podbija `iteracja` w `DoD.md` na `main` (review etapu).
 
@@ -108,7 +110,8 @@ werdykcie orkiestrator wywołuje `shctl task iter NR` albo `shctl task close NR`
 7. Ustal werdykt: `FAIL` wtedy i tylko wtedy, gdy jest choć jedno 🔴 albo 🟡, inaczej `PASS`.
 8. Napisz podsumowanie: 1–3 zdania po polsku; w iteracji 2+ zaczynasz od „Z iteracji N-1: naprawione
    X z Y.”.
-9. Oddaj wynik. Codex: sam JSON jako ostatnia wiadomość. Claude Code: `gh pr comment PR --body-file -`
+9. Oddaj wynik. `shctl review run`: sam JSON jako ostatnia wiadomość. Claude Code ręcznie:
+   `gh pr comment PR --body-file -`
    z treścią:
 
    ```markdown
@@ -128,11 +131,11 @@ werdykcie orkiestrator wywołuje `shctl task iter NR` albo `shctl task close NR`
 
    Bez zgłoszeń sekcja ma jedną linię `Brak.`. Zgłoszenia w kolejności 🔴, 🟡, ⚪.
 10. Sprawdź „DoD” i oddaj orkiestratorowi: werdykt, liczbę zgłoszeń blokujących i link do komentarza
-    (Claude Code). W Codex przekazanie robi shctl.
+    (Claude Code ręcznie). W `shctl review run` przekazanie robi shctl.
 
 ### Iteracja 2+
 
-1. Weź poprzednie review: z kontekstu shctl albo ostatni komentarz `## Review …` w PR, którego
+1. Weź poprzednie review: listę zgłoszeń i commit z kontekstu shctl albo ostatni komentarz `## Review …` w PR, którego
    znacznik `head=` różni się od bieżącego commita. Jego `head=` to commit poprzedniego review.
 2. Dla każdego zgłoszenia 🔴 i 🟡 sprawdź, czy zostało naprawione: w diffie od poprzedniego commita
    (`git diff POPRZEDNI_SHA..HEAD`; gdy commita nie ma, w całym diffie) i w raporcie
@@ -173,6 +176,28 @@ werdykcie orkiestrator wywołuje `shctl task iter NR` albo `shctl task close NR`
    nietknięte; raport `T-NR.md` z sekcjami; PR z `Closes #NR`; bez zmian produkcji (`deploy-prod`,
    gałąź `production`, zmienne prod).
 
+### Lista kontrolna: baza i migracje
+
+Stosujesz, gdy kontekst shctl ma linię „Lista kontrolna baza i migracje: tak” (kategoria `baza` albo
+zmienione pliki migracji). Przechodzisz każdy punkt na plikach migracji i testach z diffu, a w
+podsumowaniu piszesz, które punkty są spełnione. Brak zgłasza się z podaną wagą:
+
+1. RLS włączone (`enable row level security`) na każdej nowej tabeli z danymi użytkowników: brak to 🔴.
+2. Każda polityka `insert` i `update` ma jawne `with check` zgodne z `using`. `with check` luźniejsze
+   niż `using` (np. `true` albo inny warunek, który pozwala przepisać wiersz na cudzy `user_id`) albo
+   `insert` bez `with check` to 🔴. Brak jawnego `with check` w `update` przy poprawnym `using` to 🟡:
+   PostgreSQL stosuje wtedy `using` także do nowego wiersza, więc to wymóg jawności, nie luka.
+3. Brak polityk `using (true)` i `with check (true)` bez uzasadnienia w ADR albo raporcie: taka
+   polityka bez uzasadnienia to 🔴.
+4. Testy polityk dla właściciela wiersza i dla obcego użytkownika (pozytywne i negatywne, dla każdej
+   operacji z polityką): brak to 🟡, a gdy test polityk jest kryterium issue, 🔴 (niespełnione
+   kryterium).
+5. Migracja zgodna wstecz (expand/contract): bez usuwania i zmiany typu kolumn używanych przez
+   poprzednią wersję, nowe kolumny `not null` tylko z wartością domyślną, bez zmian w istniejących
+   migracjach: naruszenie to 🔴.
+6. Indeksy pod nowe zapytania: kolumny w filtrach polityk (np. `user_id`), kluczach obcych i nowych
+   zapytaniach aplikacji mają indeks: brak to 🟡.
+
 ### Review etapu
 
 1. `docs/ETAP/DoD.md`: frontmatter (`etap` równy folderowi; `status` i `iteracja` zmienia tylko shctl na
@@ -206,15 +231,16 @@ podejmuje orkiestrator z właścicielem. Tryb S nie ma DoD etapów, więc nie ma
 
 ### Tryb M
 
-Zachowanie domyślne etapu A: review PR każdego zadania przez Codex (`shctl review run`) i review
-etapów `00-intake`, `04-plan`, `06-zadania` (najwyżej jedna iteracja poprawek) i
-`wydanie`. Raport QA `08-qa` nie ma review etapu. W etapie A
-autorem jest Claude, więc reviewerem jest Codex.
+Zachowanie domyślne etapu A: review PR każdego zadania przez `shctl review run` i review etapów
+`00-intake`, `04-plan`, `06-zadania` (najwyżej jedna iteracja poprawek) i `wydanie`. Raport QA `08-qa`
+nie ma review etapu. PR zadania zmieniający tylko dokumentację dostaje PASS bez review modelu. Silnik:
+`review.zwykle` (domyślnie Claude) albo `review.ryzyko` (domyślnie Codex) według reguł ryzyka w
+`sh-system/docs/shctl.md` („review run”).
 
 ### Tryb L i etap B
 
-Tryb L jest odłożony. W etapie B, gdy autorem jest Codex (`wykonawca:codex`), review robi Claude Code według tego samego
-skilla. W etapie A tego nie robisz.
+Tryb L jest odłożony. W etapie B, gdy autorem jest Codex (`wykonawca:codex`), review robi świeża sesja
+Claude według tego samego skilla.
 
 ## DoD
 
@@ -226,7 +252,7 @@ skilla. W etapie A tego nie robisz.
 - [ ] W iteracji 3 nowe istotne zgłoszone jako ⚪ z dopiskiem „(iteracja 3, istotne)”; w iteracji 2
       etapu dokumentowego istotne jako ⚪ z dopiskiem „(do decyzje.md)”
 - [ ] Werdykt FAIL wtedy i tylko wtedy, gdy jest 🔴 albo 🟡
-- [ ] Wynik w formacie `sh-system/templates/review.md` albo JSON według `codex/sh-review.schema.json`
+- [ ] Wynik w formacie `sh-system/templates/review.md` albo JSON według `sh-system/templates/review.schema.json`
 - [ ] Żadnych zmian w plikach, gałęziach, etykietach i issue
 - [ ] Review PASS (zaznacza reviewer, nie ten skill)
 
@@ -291,16 +317,16 @@ sekretu nie przepisujesz do zgłoszenia: podajesz plik i linię.
 
 Orkiestrator: `shctl review run 31` dla zadania #14 z etykietą `iter:2`.
 
-1. Kontekst shctl: tryb PR, iteracja 2, commit `9c1e…`, poprzednie review z `head=4b7a…` i jednym
-   zgłoszeniem „🟡 istotne `src/koszyk/koszyk.test.ts`: brak testu usunięcia ostatniej pozycji”.
+1. Kontekst shctl: tryb PR, iteracja 2, commit `9c1e…`, diff od poprzedniego review `git diff 4b7a…..HEAD`
+   i lista poprzednich zgłoszeń z jednym „🟡 istotne `src/koszyk/koszyk.test.ts`: brak testu usunięcia ostatniej pozycji”.
 2. `git diff 4b7a…..HEAD`: nowy test `usuwa ostatnią pozycję` i poprawka w `src/koszyk/koszyk.ts`.
    Raport ma `### Iteracja 2`. Zgłoszenie naprawione.
 3. Nowa zmiana loguje cały obiekt klienta z e-mailem: 🔴 (dane osobowe w logach), bo 🔴 zostaje 🔴
    także w iteracji 3. Nazwa zmiennej `tmp`: ⚪.
-4. Odpowiedź Codexa:
+4. Odpowiedź reviewera (`shctl review run`):
 
    ```json
    {"werdykt":"FAIL","podsumowanie":"Z iteracji 1: naprawione 1 z 1. Nowa poprawka loguje e-mail klienta.","zgloszenia":[{"waga":"krytyczne","przyczyna":"kod","plik":"src/koszyk/koszyk.ts","linia":57,"opis":"console.log wypisuje obiekt klienta z e-mailem; usuń log albo zostaw samo id."},{"waga":"drobne","przyczyna":"kod","plik":"src/koszyk/koszyk.ts","linia":52,"opis":"nazwa tmp mało czytelna."}]}
    ```
 
-Wynik: shctl pisze komentarz „## Review Codex: FAIL” w PR #31, orkiestrator wywołuje `shctl task iter 14`.
+Wynik: shctl pisze komentarz „## Review Claude: FAIL” (albo „Codex”, zależnie od silnika) w PR #31, orkiestrator wywołuje `shctl task iter 14`.

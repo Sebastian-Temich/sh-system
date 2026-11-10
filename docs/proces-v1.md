@@ -34,7 +34,7 @@ Software house, w którym agenci AI realizują projekty od pomysłu do odbioru.
 | Rola | Zadanie |
 |---|---|
 | Claude Code | Główny wykonawca |
-| Codex CLI | Niezależny reviewer, a od etapu B także drugi wykonawca |
+| Codex CLI | Reviewer PR z ryzykiem (`review.ryzyko`), a od etapu B także drugi wykonawca |
 | Właściciel | Akceptuje pracę w checkpointach i rozwiązuje eskalacje |
 
 Pracujemy na subskrypcjach (Claude Max, ChatGPT), a koszty i czas mierzymy poglądowo.
@@ -49,6 +49,8 @@ Plik `docs/konfiguracja.md` projektu ma pole `etap_wdrozenia`: A albo B. W etapi
 
 - dostępne są tylko tryby S i M;
 - wszystkie zadania mają `runner:local` i `wykonawca:claude`, Codex robi wyłącznie review;
+- review robi świeża sesja bez kontekstu workera: Claude dla zwykłych PR, Codex dla PR z ryzykiem
+  (SH-lite F6, `shctl.md`, „review run”);
 - nie ma workerów w chmurze, Lovable ani GitHub Projects;
 - strażnik orkiestratora tylko podnosi orkiestratora, gdy padnie; limity wpisuje do `limity.md`
   właściciel albo orkiestrator, a wznowienie wywołuje właściciel („wznów”);
@@ -296,12 +298,14 @@ migracje zgodne wstecz.
 
 ## Review, QA, pętla poprawek
 
-- **Review PR** robi zawsze inny model niż autor (w etapie A: autor Claude, reviewer Codex).
+- **Review PR** robi zawsze osobna, świeża sesja bez kontekstu autora. Silnik według ryzyka PR
+  (`review.zwykle`, domyślnie Claude; `review.ryzyko`, domyślnie Codex); PR zadania z samą
+  dokumentacją nie dostaje review modelu.
   Sprawdza kod, testy, kryteria z issue, bezpieczeństwo i sekrety. `shctl review run` tworzy dla
   niego osobny, czysty worktree `../wt/review-NR` bez plików env. Reviewer pracuje tylko na kodzie i
   diffie, a testy uruchamia CI.
 - **Review etapu:** dokumenty etapu powstają na gałęzi `stage/ETAP` i przechodzą przez PR. Review
-  robi Codex (`sh-review`, tryb etapu), akceptację w checkpointach daje właściciel, potem następuje
+  robi reviewer (`sh-review`, tryb etapu, silnik według ryzyka), akceptację w checkpointach daje właściciel, potem następuje
   merge.
 - **QA zbiorcze** po kamieniu milowym (testy E2E, integracja, zgodność z wymaganiami). Błędy stają
   się nowymi issue.
@@ -336,13 +340,14 @@ Etykiety `wykonawca:claude` / `wykonawca:codex`.
 | Claude | Funkcje w wielu plikach, UI, integracje, migracje, niejednoznaczność |
 | Codex | Zadania odizolowane, logika, endpointy według kontraktu, testy, refaktory, bugfixy |
 
-Wykonawca jest stały (nie przepinamy go z powodu limitów). Reviewer to zawsze drugi model. W etapie
+Wykonawca jest stały (nie przepinamy go z powodu limitów). Reviewer to zawsze osobna, świeża sesja. W etapie
 A wszystkie zadania mają `wykonawca:claude`.
 
 ## Modele
 
-W rolach kodowych najmocniejszy dostępny Opus. Model Codex do review wybiera właściciel; aktualny
-wybór jest w docs/konfiguracja.md. Ustawienia per rola w `docs/konfiguracja.md`.
+W rolach kodowych najmocniejszy dostępny Opus. Silnik, model i effort review wybiera właściciel w
+`/Users/Shared/sh/konfiguracja.md` (`review.zwykle`, `review.ryzyko`, `review.gdy_limit`); projekt może
+je nadpisać w `docs/konfiguracja.md`. Ustawienia ról Claude w `docs/konfiguracja.md` (`modele`).
 
 ## Limity subskrypcji
 
@@ -357,7 +362,8 @@ Wznowienie zawsze z weryfikacją: dla każdego przerwanego zadania orkiestrator 
 worktree, wynik testów i aktualność zadania, po czym decyduje: kontynuuj, rebase i kontynuuj albo
 iteracja od nowa. Decyzja trafia do raportu, a „iteracja od nowa” nie podbija licznika iteracji.
 
-**Limit Codexa:** gotowe PR czekają w `status:review`, a Claude bierze kolejne zadania. Dispatch
+**Limit silnika review:** według `review.gdy_limit`: `czekaj` (gotowe PR czekają w `status:review`,
+a Claude bierze kolejne zadania) albo `drugi_silnik` (review robi drugi silnik). Dispatch
 staje, gdy na review czeka `max_review_queue` PR (domyślnie 3, w `konfiguracja.md`).
 
 ## Autonomia, decyzje, eskalacje
@@ -480,7 +486,7 @@ polecenia.
 | Waga | `sev:krytyczne`, `sev:istotne`, `sev:drobne` |
 
 `status:blocked` oznacza, że zadanie czeka na coś zewnętrznego, co nie jest eskalacją (limit,
-zablokowana zależność, brak miejsca na dysku). PR czekający na review przy limicie Codexa zostaje w
+zablokowana zależność, brak miejsca na dysku). PR czekający na review przy limicie silnika zostaje w
 `status:review`. Zadanie `done` to zamknięte issue bez etykiety statusu.
 
 Kamienie milowe jako GitHub Milestones.

@@ -10,7 +10,7 @@ Wróć do: [[00-start-tutaj]]
 | herdr | „Okno z panelami”, w którym żyją agenci | Workspace `sh` na serwerze |
 | Orkiestrator | Claude Code w panelu `orkiestrator`, połączony przez Remote Control | Rozmawiasz z nim z telefonu i laptopa |
 | Worker | Claude Code realizujący jedno zadanie | Panel `worker:PROJEKT:NR`, kopia robocza `/Users/Shared/sh/wt/PROJEKT/NR` |
-| Reviewer | Codex sprawdzający zmianę, tylko do odczytu | Panel `review:PROJEKT:NR`, zamykany po review |
+| Reviewer | Świeża sesja Claude (zwykłe PR) albo Codex (PR z ryzykiem), tylko do odczytu | Panel `review:PROJEKT:NR`, zamykany po review |
 | shctl | Program z mechaniką procesu | `/Users/Shared/sh/bin/shctl` |
 | GitHub | Źródło prawdy: kod, zadania (issue), zmiany (PR), dokumenty | Konto Sebastian-Temich, jedno repo na projekt |
 | Obsidian | Podgląd dokumentów do czytania | Vault `~/Documents/Obsidian Vault`, folder `SH/` |
@@ -40,7 +40,7 @@ Orkiestrator ── sh-intake ──► specyfikacja (M) albo jedno zadanie (S)
         ▼
 ┌─ pętla realizacji, dla każdego zadania ───────────────────────┐
 │ shctl task dispatch → worker: kod i testy → PR → CI           │
-│ → review Codexa → PASS: merge i zamknięcie                    │
+│ → review (Claude/Codex) → PASS: merge i zamknięcie            │
 │                 → FAIL: poprawki (maks. 3 iteracje)           │
 └───────────────────────────────────────────────────────────────┘
         ▼
@@ -68,7 +68,7 @@ orkiestrator proponuje, Ty decydujesz.
 ### Etapy trybu S
 
 1. **Zlecenie:** jedno issue z celem i kryteriami akceptacji.
-2. **Realizacja:** worker, CI, review Codexa, maks. 3 iteracje.
+2. **Realizacja:** worker, CI, review (Claude albo Codex według ryzyka), maks. 3 iteracje.
 3. **Odbiór:** sprawdzasz i akceptujesz, potem merge, wpis w `CHANGELOG.md`.
 
 Ustawienie `odbior_S` w `docs/konfiguracja.md` projektu domyślnie ma `reczny`, więc odbiór robisz
@@ -86,7 +86,7 @@ powiadomienie. Gdy coś czeka na Ciebie dłużej niż 4 h, serwer przypomina pus
 | 4 | QA po kamieniu | `docs/08-qa/raport-MN.md`, zadania z błędami | Nie |
 | 5 | Odbiór i dokumentacja | `docs/wydanie/` | **Twój odbiór** |
 
-Każdy dokument etapu przechodzi review Codexa, zanim go zobaczysz do akceptacji.
+Każdy dokument etapu przechodzi review modelu, zanim go zobaczysz do akceptacji.
 
 **Akceptacja planu to zgoda na realizację.** Orkiestrator zapisuje ją w `docs/decyzje.md`: kto,
 na co (kamienie), zakres, do kiedy i jak ją cofnąć. Kolejne kamienie startują już bez pytania, o

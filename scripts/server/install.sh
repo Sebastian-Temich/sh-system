@@ -5,7 +5,7 @@
 # /Users/Shared/sh/bin, Brewfile do /Users/Shared/sh/Brewfile, codex/reviewer.config.toml do $CODEX_HOME (~/.codex) i
 # orkiestrator-settings.json do /Users/Shared/sh/.claude/settings.json, CLAUDE-sh.md do /Users/Shared/sh/CLAUDE.md. Zwykly plik zastepuje tylko, gdy jest identyczny
 # z repo. Roznica to blad: nowsze zmiany trzeba najpierw przeniesc do repo.
-# Konfiguracja Maca (max_local): kopia scripts/server/konfiguracja-sh.md do /Users/Shared/sh/konfiguracja.md, gdy jej brak.
+# Konfiguracja Maca (max_local, review): kopia scripts/server/konfiguracja-sh.md do /Users/Shared/sh/konfiguracja.md, gdy jej brak.
 # Plisty: scripts/server/*.plist kopiuje do ~/Library/LaunchAgents tylko przy roznicy
 # i przeladowuje agenta. Niezaladowanego agenta laduje zawsze, takze bez zmiany plisty.
 # Agent z RunAtLoad wystartuje wtedy ponownie. Nieudany bootstrap to kod bledu, komenda

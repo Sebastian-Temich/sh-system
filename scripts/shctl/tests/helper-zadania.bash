@@ -23,8 +23,9 @@ projekt_z_remote() {
   local s="$T/szablon"
   git init -q "$s"
   szablon_projektu "$s"
-  mkdir -p "$s/.claude/roles/worker" "$s/docs/06-zadania"
+  mkdir -p "$s/.claude/roles/worker" "$s/.claude/roles/reviewer" "$s/docs/06-zadania"
   echo '{}' >"$s/.claude/roles/worker/settings.json"
+  echo '{"permissions":{"defaultMode":"dontAsk"}}' >"$s/.claude/roles/reviewer/settings.json"
   printf '.env*\n!.env.example\n' >"$s/.gitignore"
   printf 'KLUCZ=\n' >"$s/.env.example"
   printf '# Zadania\n\n<!-- sync-status:start -->\n| Zadanie | Tytuł |\n|---|---|\n<!-- sync-status:end -->\n' >"$s/docs/06-zadania/index.md"
@@ -94,8 +95,10 @@ panel() {
 }
 etykiety_paneli() { jq -r '[.[].label // ""] | join(" ")' "$HERDR_ATRAPA/panele.json" 2>/dev/null; }
 
+# Wynik reviewera dla obu atrap (codex i claude): wynik_codex WERDYKT ZGLOSZENIA_JSON
 wynik_codex() {
   jq -n --arg w "$1" --argjson z "$2" '{werdykt:$w, podsumowanie:"Podsumowanie review.", zgloszenia:$z}' >"$CODEX_ATRAPA/wynik.json"
+  cp "$CODEX_ATRAPA/wynik.json" "$CLAUDE_ATRAPA/wynik.json"
 }
 
 # Praca workera: commit w worktree, push gałęzi, PR w atrapie (z refs/pull/N/head). pr_workera NR PR [CI]

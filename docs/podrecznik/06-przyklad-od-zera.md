@@ -64,7 +64,7 @@ szablonami. Specyfikacji jeszcze nie ma: powstaje na gałęzi
 
 ## 2. Specyfikacja i pierwszy checkpoint
 
-Intake pisze `docs/00-intake/specyfikacja.md` i otwiera PR. Codex robi review etapu. Przy FAIL
+Intake pisze `docs/00-intake/specyfikacja.md` i otwiera PR. Reviewer robi review etapu. Przy FAIL
 intake poprawia i review się powtarza (maks. 3 razy, potem eskalacja).
 
 **Orkiestrator (po PASS):**
@@ -135,7 +135,7 @@ bez pytania, jeśli mieszczą się w tej zgodzie.
 ## 4. Zadania
 
 `sh-plan` pisze `docs/06-zadania/zadania.yaml` (jedna strona albo funkcja to jedno zadanie, z
-kategorią, stackiem i kryterium podpięcia do routingu), Codex robi review, orkiestrator merguje.
+kategorią, stackiem i kryterium podpięcia do routingu), reviewer robi review, orkiestrator merguje.
 Potem `shctl task create` zakłada issue na GitHubie.
 
 **Orkiestrator:**

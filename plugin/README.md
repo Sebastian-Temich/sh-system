@@ -30,8 +30,8 @@ Sprawdzenie (2026-11-02, Claude Code 2.1.316): `claude plugin validate .` i `cla
 1. Skopiuj katalog podobnego skilla do `skills/sh-ROLA/`.
 2. Wypełnij według `skills/_kontrakt.md`.
 3. Uruchom `scripts/plugin/sprawdz-skille.sh` (działa też w CI).
-4. Skill z promptem Codexa (dziś `sh-review`) po każdej zmianie: `scripts/sync-codex.sh`, a wynik
-   `codex/sh-review.md` commituj razem ze skillem. CI sprawdza zgodność (`sync-codex.sh --check`).
+4. `sh-review` jest też promptem `shctl review run` dla Claude i Codexa: shctl czyta skill przy każdym
+   review (bez generowanej kopii), więc zmiana skilla działa od razu po `git pull`.
    Skill pisz bez funkcji jednego narzędzia: czytanie plików, `git`, `gh`.
 
 `_kontrakt.md` nie jest skillem, bo nie leży w osobnym katalogu (Claude Code ładuje tylko
