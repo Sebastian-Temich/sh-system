@@ -223,6 +223,11 @@ nadaje shctl.
   (`W-NN/Kn: Given …`), a nie „zgodnie z kartą”; stany ekranu z karty, które zadanie implementuje;
   obszar ryzyka z minimalnymi dowodami z ADR. Bez „działa poprawnie”. Kryterium niesprawdzalne testem
   nie trafia do zadania bez odpowiedzi właściciela z „Kryteriów do potwierdzenia”.
+- **Kryteria sprawdzalne dopiero po merge'u** (wynik na stagingu, Lighthouse na stagingu, `curl` na
+  adres stagingu, krok w panelu usługi po wdrożeniu) nie trafiają do zadania workera: worker nie ma
+  stagingu przed merge'em, a podgląd PR bywa za ochroną (iskt-www T-22, T-23, T-29). W zadaniu zostaje
+  wersja przed merge'em (build lokalny, test, job `e2e`), a wersję po merge'u przypisujesz do QA
+  kamienia: scenariusz w planie z dopiskiem „(QA po merge'u)”, który `sh-qa` sprawdza w `qa-staging`.
 - **Pliki:** pełna lista ścieżek i katalogów zadania. `package.json` i lockfile nie są wspólnym plikiem.
 - **Testy:** jedna komenda zawężona do zadania, do ok. 30 min.
 - **Baza:** `db_migracja: true` dla migracji, resetu, seedu i zmiany `supabase/config.toml`; kryterium
@@ -236,7 +241,8 @@ komend w `AGENTS.md` sprawdzona; lint, typy i testy jednostkowe z co najmniej je
 w wersji `playwright_version` (dokładnej), `workers: playwright_workers`, chromium i webkit, smoke strony
 startowej; `ci.yml` z prawdziwymi komendami, joby `gitleaks`, `check-dod` i `e2e` zostają; Supabase
 local z portami `blok_portow` (także `shadow_port` i `inspector_port`), `supabase db reset` przechodzi;
-Sentry z DSN ze zmiennej; konfiguracja preview deploy; `.env.example` z nazwami zmiennych; punkt
+Sentry z DSN ze zmiennej; konfiguracja preview deploy; `.env.example` z nazwami zmiennych;
+`pnpm-workspace.yaml` z `allowBuilds` dla pakietów z natywnymi binarkami stacku (plik w `pliki`); punkt
 wejścia aplikacji (layout, nawigacja), do którego podpinają się kolejne zadania; sekcja „Uruchomienie”
 w `README.md` ze sprawdzonymi komendami; CI zielone. Zadanie dokumentacji wydania uzupełnia
 „Środowiska” w `README.md` (adresy podglądu, stagingu, produkcji).
@@ -286,6 +292,7 @@ dokumentację architektoniczną wydania. W etapie A tego nie robisz.
 - [ ] Każde zadanie z funkcją wskazuje kartę `W-NN` i konkretne kryteria `W-NN/Kn`; każde kryterium karty
   ma jedno zadanie
 - [ ] Kryteria niesprawdzalne testem są w „Kryteriach do potwierdzenia” PR zadań (albo „brak”)
+- [ ] Żadne zadanie workera nie ma kryterium sprawdzalnego dopiero po merge'u; takie są scenariuszami QA
 - [ ] Każde zadanie ma kategorię i stack, cel z „Poza zakresem”, 2–6 sprawdzalnych kryteriów, pliki,
   testy, kamień i typ
 - [ ] Wspólne pliki mają zależność; migracje mają `db_migracja: true`

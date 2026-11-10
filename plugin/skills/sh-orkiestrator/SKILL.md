@@ -108,6 +108,7 @@ shctl review run PR --json --projekt NAZWA
 shctl task iter NR --json --projekt NAZWA
 shctl task close NR --json --projekt NAZWA
 shctl task close NR --odbior --json --projekt NAZWA
+shctl task iter NR --odbior "kryterium z odbioru" --json --projekt NAZWA
 shctl task close NR --anuluj --powod "..." --json --projekt NAZWA
 shctl task resume-check NR --json --projekt NAZWA
 shctl decision add --co "..." --dlaczego "..." --cofniecie "..." --rola ROLA --projekt NAZWA
@@ -190,6 +191,16 @@ shctl stop-all
   użytkownika czeka na odbiór właściciela; bez `--odbior` kod 4. Flagę dodajesz dopiero po jego
   „odbieram #NR” (zapis `shctl decision add --rola wlasciciel`). Przy `odbior_S: auto_bez_zmian_widocznych`
   zlecenie z etykietą `widoczne:nie` zamyka się po PASS i zielonym CI, a shctl powiadamia właściciela.
+- `task iter NR --odbior "kryterium"`: zmiana zgłoszona przez właściciela przy odbiorze („poprawki #NR:
+  …”) po PASS. Dopisuje kryterium do issue (sekcja „Kryteria z odbioru”), wysyła workerowi polecenie i
+  ustawia `status:in-progress` bez podbicia licznika iteracji. `task close` odmawia, dopóki w PR nie ma
+  nowego commita; potem zwykłe `pr check` i `review run`. Nie przekazujesz takiej zmiany przez
+  `herdr agent prompt`.
+- `task dispatch`: pole `main_ci.stan: czerwone` znaczy, że CI na `main` jest czerwone. Dispatch idzie
+  dalej, a worker dostaje ostrzeżenie, żeby nie diagnozował cudzego błędu; naprawę `main` zlecasz
+  osobno (zlecenie S albo eskalacja), gdy czerwone CI nie jest skutkiem zadania w toku.
+- Raport `T-NR.md` nie potrzebuje numeru PR od workera: `task close` wpisuje linię `PR: #N` na `main`
+  (zmiana do Twojego commita razem z plikami wspólnymi).
 - Widok `docs/Projekt.md` odświeża shctl przy każdej zmianie stanu; commitujesz go z innymi plikami
   wspólnymi (pierwsza synchronizacja w starym projekcie usuwa `docs/status.md`: to też do commita).
   Przypomnienie ntfy o tym, co czeka na właściciela dłużej niż 4 h (8–22), wysyła serwer sam
@@ -342,7 +353,8 @@ QA) to nowa pozycja listy, nie eskalacja.
 6. PASS: `shctl task close NR`, commit i push, potem krok 2. Zlecenie S, które czeka na odbiór
    (`task close` kod 4 „czeka na odbiór właściciela”): powiadomienie „Czeka na Twoją akceptację”
    (`notify.sh`), właściciel odpisuje „odbieram #NR” albo „poprawki #NR: …”; po odbiorze
-   `shctl decision add --rola wlasciciel` i `shctl task close NR --odbior`.
+   `shctl decision add --rola wlasciciel` i `shctl task close NR --odbior`. Przy „poprawki #NR: …”:
+   `shctl task iter NR --odbior "…"` dla każdej zmiany, potem krok 3 (nowy commit, CI, review, odbiór).
 7. FAIL: `shctl task iter NR`. Zadania niezależne trwają, także przy eskalacji.
 
 ### Kamień milowy

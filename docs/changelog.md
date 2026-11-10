@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-11-10 (SH-lite F8b: propozycje z #54)
+
+- `shctl task close` wpisuje linię `PR: #N` w raporcie `T-NR.md` na `main` (pole `raport_pr`); worker nie robi drugiego commita z numerem PR. Szablon raportu ma `PR: (wpisuje shctl task close)`.
+- `shctl task create`: „Zakres” każdego issue wymienia raport `docs/07-realizacja/T-NR.md`.
+- `shctl task dispatch` sprawdza CI na `main` (ostatni bieg każdego workflow): czerwone to ostrzeżenie na stderr i w poleceniu workera, pole `main_ci`; nie blokuje dispatchu.
+- `shctl task iter NR --odbior "kryterium"`: zmiana przy odbiorze po PASS. Kryterium w sekcji „Kryteria z odbioru” issue, `status:in-progress`, polecenie dla workera, licznik iteracji bez zmian; `task close` odmawia do nowego commita w PR. Polecenie zwykłej iteracji nie wspomina już „review Codexa”.
+- `sh-worker`: skan sekretów `gitleaks git --staged` po `git add` (i `--log-opts=origin/main..HEAD` przy wznowieniu), nigdy `gitleaks dir` (fałszywe alarmy dla `.env.local` i `dist/`).
+- `sh-plan`: kryteria sprawdzalne dopiero po merge'u (staging, Lighthouse na stagingu) są scenariuszami QA, nie kryteriami zadania workera; szkielet ma `pnpm-workspace.yaml` z `allowBuilds`.
+- `sh-tdd-testy`: znaki niewidoczne jako escape, `\s` w regexach (sh-dryrun T-28, T-36).
+- `sh-orkiestrator`: „poprawki #NR: …” przez `task iter --odbior`, ostrzeżenie `main_ci`, numer PR w raporcie.
+- Szablon (sh-template-projekt): `fnm list|current|exec` w profilu workera, `pnpm-workspace.yaml` z `allowBuilds`.
+
 ## 2026-11-10 (SH-lite F8: dokumentacja v2)
 
 - `docs/proces.md` (wersja 2) zastępuje `proces-v1.md`: lista zmian względem v1, tryby S i M, etapy `00-intake` (karty funkcji, lista startowa, pytania paczkami), `04-plan`, `06-zadania`, realizacja, `08-qa`, `wydanie` (wydanie produkcyjne odłożone do B2), checkpointy i autoryzacja, DoD, review i silniki, eskalacje i pytania, kategorie i skille techniczne, sandbox (co lokalnie, co w CI), repo publiczne domyślnie. Odwołania w skillach, skryptach i pluginie wskazują `proces.md`.

@@ -209,7 +209,73 @@ tryb_s() {
   grep -q '^default Zmergowano zlecenie S: demo' "$T/notified"
 }
 
-@test "close: --odbior tylko z task close" {
+@test "close: --odbior tylko z task close albo task iter (z kryterium)" {
+  run --separate-stderr "$SHCTL" task ready --odbior
+  [ "$status" -eq 2 ]
   run --separate-stderr "$SHCTL" task iter 12 --odbior
   [ "$status" -eq 2 ]
+  [[ "$stderr" == *"wymaga treści kryterium"* ]] || false
+}
+
+@test "close: numer PR w raporcie T-NR.md wpisuje shctl (bez drugiego commita workera)" {
+  pass
+  run --separate-stderr "$SHCTL" task close 12 --json
+  echo "$output $stderr"
+  [ "$status" -eq 0 ]
+  [ "$(jq -r .wynik.raport_pr <<<"$output")" = true ]
+  [ "$(sed -n 3p docs/07-realizacja/T-12.md)" = "PR: #20" ]
+  [ "$(grep -c '^PR:' docs/07-realizacja/T-12.md)" -eq 1 ]
+  run --separate-stderr "$SHCTL" task close 12 --json
+  [ "$status" -eq 0 ]
+  [ "$(jq -r .wynik.raport_pr <<<"$output")" = false ]
+  [ "$(grep -c '^PR:' docs/07-realizacja/T-12.md)" -eq 1 ]
+}
+
+@test "close: linia PR z szablonu raportu zastapiona numerem" {
+  wt="$SH_DIR/wt/demo/12"
+  printf '# Raport T-12: zadanie\n\nIssue: #12\nPR: (wpisuje shctl task close)\n\n## Co zrobiono\n\nKod.\n' >"$wt/docs/07-realizacja/T-12.md"
+  git -C "$wt" commit -qam raport
+  git -C "$wt" push -q origin HEAD "HEAD:refs/pull/20/head" --force
+  jq --arg s "$(git -C "$wt" rev-parse HEAD)" 'map(if .number == 20 then .headRefOid = $s else . end)' "$GH_ATRAPA/prs.json" >"$T/x" && mv "$T/x" "$GH_ATRAPA/prs.json"
+  pass
+  run --separate-stderr "$SHCTL" task close 12
+  [ "$status" -eq 0 ]
+  [ "$(sed -n 3,4p docs/07-realizacja/T-12.md | tr '\n' '|')" = "Issue: #12|PR: #20|" ]
+}
+
+@test "iter --odbior: kryterium w issue, polecenie bez zmiany iteracji, close czeka na nowy commit i review" {
+  tryb_s "tryb:S"
+  pass
+  run --separate-stderr "$SHCTL" task iter 12 --odbior "Przycisk CTA widoczny na telefonie" --json
+  echo "$output $stderr"
+  [ "$status" -eq 0 ]
+  [ "$(jq -r '.wynik.dodano_do_issue, .wynik.wyslano, .wynik.iteracja' <<<"$output" | tr '\n' ' ')" = "true true 1 " ]
+  body="$(jq -r '.[] | select(.number == 12) | .body' "$GH_ATRAPA/issues.json")"
+  grep -qx '## Kryteria z odbioru' <<<"$body"
+  grep -q '^- \[ \] Przycisk CTA widoczny na telefonie (odbiór 20' <<<"$body"
+  [ "$(etykiety 12)" = "iter:1,runner:local,status:in-progress,tryb:S,wykonawca:claude" ]
+  grep -q 'Zmiana z odbioru właściciela w zadaniu #12 (PR #20): Przycisk CTA' "$HERDR_ATRAPA/run"
+  # Powtórka: bez drugiego wpisu i drugiego polecenia.
+  run --separate-stderr "$SHCTL" task iter 12 --odbior "Przycisk CTA widoczny na telefonie" --json
+  [ "$status" -eq 0 ]
+  [ "$(jq -r '.wynik.zmiana' <<<"$output")" = false ]
+  [ "$(grep -c 'Zmiana z odbioru' "$HERDR_ATRAPA/run")" -eq 1 ]
+  [ "$(jq -r '.[] | select(.number == 12) | .body' "$GH_ATRAPA/issues.json" | grep -c 'Przycisk CTA')" -eq 1 ]
+  # Stary PASS nie wystarcza do zamknięcia.
+  run --separate-stderr "$SHCTL" task close 12 --odbior
+  [ "$status" -eq 4 ]
+  [[ "$stderr" == *"zmiana z odbioru"*"czeka na nowy commit"* ]] || false
+  ! grep -q '^pr merge' "$GH_ATRAPA/calls" || false
+  # Nowy commit workera i nowe PASS: odbiór zamyka zlecenie.
+  wt="$SH_DIR/wt/demo/12"
+  echo cta >>"$wt/src/praca-12.txt"
+  git -C "$wt" commit -qam "#12: CTA"
+  git -C "$wt" push -q origin HEAD "HEAD:refs/pull/20/head" --force
+  jq --arg s "$(git -C "$wt" rev-parse HEAD)" 'map(if .number == 20 then .headRefOid = $s else . end)' "$GH_ATRAPA/prs.json" >"$T/x" && mv "$T/x" "$GH_ATRAPA/prs.json"
+  pass
+  run --separate-stderr "$SHCTL" task close 12 --odbior
+  echo "$output $stderr"
+  [ "$status" -eq 0 ]
+  grep -q '^pr merge 20' "$GH_ATRAPA/calls"
+  grep -qE '^\| #12 Zadanie 12 \| S \| [^|]* \| 1 \| 1 \|' docs/metryki.md
 }

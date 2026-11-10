@@ -19,7 +19,7 @@ if [ "$k1" = api ]; then set -- "$k2" "$@"; k2=""; fi
 [ ! -f "$D/fail-$k1-$k2" ] || { echo "atrapa: wymuszony błąd $k1 $k2" >&2; exit 1; }
 
 repo="" state="" label="" jqe="" title="" body="" body_file="" milestone="" reason="" comment="" head="" base=""
-match="" metoda=GET poz=()
+match="" metoda=GET poz=() branch=""
 add=() rem=() pola=()
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -38,6 +38,7 @@ while [ $# -gt 0 ]; do
     --comment) comment="$2"; shift 2 ;;
     --head) head="$2"; shift 2 ;;
     --base) base="$2"; shift 2 ;;
+    --branch) branch="$2"; shift 2 ;;
     --match-head-commit) match="$2"; shift 2 ;;
     -X) metoda="$2"; shift 2 ;;
     -f) pola+=("$2"); shift 2 ;;
@@ -157,6 +158,10 @@ case "$k1 $k2" in
     else
       jq -c --arg r "$r" 'map(select(.repo == $r) | {title})' "$D/milestones.json"
     fi
+    ;;
+  "run list")
+    # $GH_ATRAPA/runs.json: biegi workflow (workflowName, status, conclusion, createdAt, headBranch).
+    jq -c --arg b "${branch:-}" 'map(select($b == "" or (.headBranch // "main") == $b))' "$D/runs.json" 2>/dev/null || echo '[]'
     ;;
   "label create" | "repo view" | "repo edit") ;;
   *) echo "atrapa gh: nieobsługiwane: $k1 $k2" >&2; exit 2 ;;

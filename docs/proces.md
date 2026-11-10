@@ -98,9 +98,9 @@ kryterium podpięcia do punktu wejścia lub routingu, plikami designu, kategori�
 szkielet (wykonywany sam), ostatnie zadanie to dokumentacja wydania. Issue i milestone'y zakłada
 `shctl task create` po merge'u. Ponad 15 zadań to eskalacja.
 
-**Realizacja.** `task ready` → `task dispatch` (worktree, panel, skille) → worker: kod, testy, raport,
-PR „Closes #NR” → `pr check --czekaj` → `review run` → PASS: `task close` (merge, pliki wspólne) albo
-FAIL: `task iter`. Najwyżej 3 iteracje, licznik podbija tylko FAIL review; po 3. FAIL eskalacja.
+**Realizacja.** `task ready` → `task dispatch` (worktree, panel, skille; ostrzeżenie przy czerwonym CI
+na `main`) → worker: kod, testy, raport (numer PR wpisuje `task close`), PR „Closes #NR” →
+`pr check --czekaj` → `review run` → PASS: `task close` (merge, pliki wspólne) albo FAIL: `task iter`. Najwyżej 3 iteracje, licznik podbija tylko FAIL review; po 3. FAIL eskalacja.
 Czerwone CI naprawia worker najwyżej 2 razy, potem orkiestrator: przyczyna w zadaniu → review, poza
 zadaniem → eskalacja. Merge zawsze wymaga zielonego CI i PASS dla bieżącego commita.
 
@@ -125,8 +125,9 @@ backup, rollback, runbook) jest odłożone do B2.
   ma otwartej eskalacji, a zakres mieści się w autoryzacji. Nowy zakres, płatna usługa, dostęp albo
   podniesienie trybu to nowa decyzja przez eskalację.
 - **Odbiór S:** `odbior_S: reczny` (domyślnie): właściciel pisze „odbieram #NR”, orkiestrator
-  `task close --odbior`. `auto_bez_zmian_widocznych`: zlecenie z `widoczne:nie` zamyka się po PASS i
-  zielonym CI z powiadomieniem.
+  `task close --odbior`. Zmiana przy odbiorze („poprawki #NR: …”) to `task iter NR --odbior "…"`:
+  kryterium w issue, nowy commit i review, bez podbicia licznika iteracji.
+  `auto_bez_zmian_widocznych`: zlecenie z `widoczne:nie` zamyka się po PASS i zielonym CI z powiadomieniem.
 - Przed pierwszym dispatchem projektu `shctl doctor`; stan `blad` wstrzymuje realizację.
 
 ## Definition of Done

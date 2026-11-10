@@ -50,6 +50,10 @@ tresc() { jq -r --argjson n "$1" '.[] | select(.number == $n) | .body' "$GH_ATRA
   tresc "$t3" | grep -qx "#$t2, #40"
   tresc "$t1" | grep -qx -- '- \[x\] Zadanie zawiera migrację lub reset bazy (etykieta db:migracja, realizacja pojedynczo)'
   tresc "$t1" | grep -qx '<!-- shctl:id=T1 -->'
+  # Raport zawsze w zakresie (sh-dryrun T-41, T-43), także w zadaniu bez listy plików.
+  for n in "$t1" "$t2" "$t3"; do
+    tresc "$n" | grep -qx 'Zawsze też: raport `docs/07-realizacja/T-NR.md`, gdzie NR to numer tego issue.'
+  done
   [ "$(jq -r '.[] | select(.title == "M1 Szkielet") | .title' "$GH_ATRAPA/milestones.json")" = "M1 Szkielet" ]
   [ "$(jq -r '.wynik.milestone_utworzone | join(",")' <<<"$output")" = "M1 Szkielet" ]
   [ "$(jq -r --argjson n "$t2" '.[] | select(.number == $n) | .milestone.title' "$GH_ATRAPA/issues.json")" = "M1 Szkielet" ]
