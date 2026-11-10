@@ -1,0 +1,22 @@
+Użycie: shctl escalate --dotyczy "#NR|ETAP" --powod "..." --potrzebne "..." [--opcje "A;B"]
+                       [--priorytet high] [--akceptacja] [--typ blokada|pytanie]
+        shctl escalate close E-NNN --odpowiedz "..."
+
+Otwarcie: docs/07-realizacja/escalations/E-NNN.md (frontmatter ze stanem), etykieta
+status:escalated na issue albo status escalated etapu, odświeżony docs/Projekt.md („Czeka na
+Ciebie”) i notify.sh (domyślnie high). Numeracja E-NNN jest jedna dla projektu. Wywołanie z
+worktree zapisuje plik w głównej kopii projektu (musi stać na main); commit robi orkiestrator.
+Eskalacja zadania zwalnia slot: panel worker:NAZWA:NR dostaje etykietę eskalacja:NAZWA:NR.
+
+  --akceptacja       decyzja do akceptacji właściciela (np. podniesienie trybu); powiadomienie
+                     „Czeka na Twoją akceptację: NAZWA / podniesienie trybu”
+  --typ pytanie      pytanie workera o UX albo regułę biznesową spoza karty funkcji i issue: bez
+                     zmiany etykiet i statusu, bez zwolnienia slotu, powiadomienie default;
+                     z --akceptacja: kod 2
+
+Powtórka z tym samym --dotyczy i --powod dotyczy tej samej otwartej eskalacji. Nieudane
+powiadomienie: kod 1, ponowienie wysyła je jeszcze raz.
+
+close: odpowiedź w sekcji „Rozstrzygnięcie”, poprzedni status issue lub etapu, wpis znika z
+Projekt.md. Powtórka z tą samą odpowiedzią nic nie zmienia, z inną: kod 4.
+Wynik JSON: id, typ, dotyczy, plik, katalog, z_worktree, nowa, slot_zwolniony, panel.

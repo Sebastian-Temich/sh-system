@@ -1,0 +1,15 @@
+Użycie: shctl template update [--baseline] [--force]
+
+Aktualizuje w projekcie pliki zarządzane przez szablon (scripts/, .github/workflows/,
+.claude/roles/, AGENTS.md, docs/_szablony/) z main sh-template-projekt.
+
+  plik równy bieżącemu szablonowi              nic
+  plik równy którejś wersji z historii         aktualizacja
+  plik zmieniony w projekcie                   pominiety, z --force nadpisany
+  brak pliku w projekcie                       nowy
+  plik usunięty z szablonu                     zostaje
+
+Klon projektu musi stać na czystym main zgodnym z origin (inaczej kod 4). Zmiany trafiają do
+commita „szablon: pliki z SH_TEMPLATE SHA” na main i push. --baseline (projekt wzorcowy): to samo
+na najnowszym baseline i nowy tag baseline-RRRRMMDD bez force. Zadania w toku dostają nowe pliki po
+merge'u main do swojej gałęzi. --dry-run tylko porównuje.

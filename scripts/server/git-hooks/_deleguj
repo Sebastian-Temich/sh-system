@@ -1,7 +1,7 @@
 #!/bin/sh
 # Globalny core.hooksPath wyłącza hooki projektu, więc każdy typ hooka trafia tutaj i wywołuje hook
 # projektu: z core.hooksPath zapisanego w repo albo z .git/hooks (wspólny katalog worktree).
-# Celowo nie wywołuje hooków śledzonych w repo, np. .githooks/ (proces-v1.md, „Znane ograniczenia”).
+# Celowo nie wywołuje hooków śledzonych w repo, np. .githooks/ (proces.md, „Znane ograniczenia”).
 # Pliki w tym katalogu to symlinki do _deleguj. Nie ma tu push-to-checkout ani proc-receive, bo sama
 # obecność tych hooków zmienia zachowanie gita, ani fsmonitor-watchman, bo wskazuje go konfiguracja.
 tutaj=$(cd "$(dirname "$0")" && pwd -P)

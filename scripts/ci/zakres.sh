@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# scripts/ci/zakres.sh - zakres testów w GitHub Actions (oszczędność minut, docs/serwer.md, „CI”).
+# scripts/ci/zakres.sh - zakres testów w GitHub Actions (oszczędność minut, docs/serwer.md, „CI i minuty GitHub Actions”).
 #
 # Wejście (zmienne środowiska, ustawia workflow):
 #   ZDARZENIE      github.event_name

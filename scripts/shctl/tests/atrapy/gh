@@ -123,7 +123,7 @@ case "$k1 $k2" in
     pr="$(jq -c --arg r "$repo" --argjson n "$n" '.[] | select(.repo == $r and .number == $n)' "$D/prs.json")"
     [ "$(jq -r .state <<<"$pr")" = OPEN ] || { echo "PR nie jest otwarty" >&2; exit 1; }
     [ -z "$match" ] || [ "$(jq -r .headRefOid <<<"$pr")" = "$match" ] || { echo "Head branch was modified" >&2; exit 1; }
-    tmp="$(mktemp -d)"
+    tmp="$(mktemp -d "${TMPDIR:-/tmp}/atrapa-gh.XXXXXX")"
     git clone -q "https://github.com/$repo.git" "$tmp/k"
     git -C "$tmp/k" merge -q --squash "origin/$(jq -r .headRefName <<<"$pr")" >/dev/null
     git -C "$tmp/k" commit -qm "$(jq -r .title <<<"$pr") (#$n)"

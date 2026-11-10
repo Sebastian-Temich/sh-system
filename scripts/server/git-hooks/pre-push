@@ -1,6 +1,6 @@
 #!/bin/sh
 # Odrzuca push na gałąź production: Vercel wdraża ją produkcyjnie z pominięciem review
-# (proces-v1.md, „Znane ograniczenia”). Potem wywołuje hook pre-push projektu.
+# (proces.md, „Znane ograniczenia”). Potem wywołuje hook pre-push projektu.
 tutaj=$(cd "$(dirname "$0")" && pwd -P)
 wejscie=$(cat)
 

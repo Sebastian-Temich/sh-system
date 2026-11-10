@@ -1,0 +1,13 @@
+Użycie: shctl doctor [--test-notify]
+
+Zdrowie serwera. Kontrole: katalog SH (/Users/Shared/sh, uprawnienia 700, bez segmentu z kropką),
+narzędzia, logowania gh, codex i claude, logowanie git do GitHuba (helper z install.sh), Docker,
+serwer herdr, orkiestrator (claude remote-control w panelu orkiestrator, ta sama kontrola co
+sh-start.sh i strażnik) i /Users/Shared/sh/bin w jego PATH, notify.sh i temat ntfy, globalny
+core.hooksPath, lokalny core.hooksPath w projektach, wolne miejsce, porty.md, klony Obsidiana
+(czyste i zgodne z origin) oraz repo testowe z /Users/Shared/sh/stan/do-usuniecia.md.
+
+Stany: ok, uwaga, blad; tylko blad daje kod 1. Jedyny zapis: zdejmuje z listy do usunięcia repo,
+których już nie ma (przy --dry-run tylko wskazuje). --test-notify wysyła prawdziwe powiadomienie.
+Orkiestrator uruchamia doctor przed pierwszym task dispatch projektu: blad wstrzymuje dispatch.
+Wynik JSON: bledy, kontrole (nazwa, stan, szczegoly).

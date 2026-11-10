@@ -1,0 +1,9 @@
+Użycie: shctl sprzataj
+
+Usuwa worktree w /Users/Shared/sh/wt-system/ i /Users/Shared/sh/wt/ oraz lokalne gałęzie repo w
+/Users/Shared/sh i /Users/Shared/sh/projekty wyłącznie wtedy, gdy PR gałęzi ma stan MERGED albo
+CLOSED. Nigdy z --force. Zostają (pole pominiete z powodem): gałąź bez PR albo z otwartym PR,
+worktree z niezacommitowanymi zmianami, gałąź z commitami spoza head PR, gałąź wybrana w worktree;
+main i gałąź bieżąca bez wpisu. Gałęzie usuwa skrypt przez git branch -D (po squash merge -d
+odmawia); agent nie usuwa gałęzi sam. Gałąź bez PR usuwa właściciel.
+Wynik JSON: worktree, galezie, pominiete.

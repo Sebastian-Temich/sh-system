@@ -1,7 +1,7 @@
 # Funkcje projektu: katalog, frontmatter, etapy, widok docs/Projekt.md (dawniej docs/status.md).
 # shellcheck shell=bash
 
-# Etapy z DoD.md (tryb M). Tryb L z osobnymi etapami jest odłożony (proces-v1.md). Stan realizacji
+# Etapy z DoD.md (tryb M). Tryb L z osobnymi etapami jest odłożony (proces.md). Stan realizacji
 # jest w issue, więc 07-realizacja nie ma DoD (katalog zostaje na raporty i eskalacje).
 # Zestaw zależy od wersja_procesu w docs/konfiguracja.md projektu: 2 (SH-lite F3a) ma jeden etap
 # 04-plan, a brak pola (wersja 1, projekty sprzed migracji) osobne 04-architektura i 05-plan.
@@ -106,7 +106,7 @@ sprawdz_etap() {
   [ -f "$ROOT/docs/$1/DoD.md" ] || die "$E_BRAK" "brak docs/$1/DoD.md"
 }
 
-# Pliki wspólne aktualizuje orkiestrator na main (proces-v1.md, „Pliki wspólne i konflikty”).
+# Pliki wspólne aktualizuje orkiestrator na main (proces.md, „Zasady stałe”).
 ostrzez_gdy_nie_main() {
   local g
   g="$(git -C "$ROOT" symbolic-ref --short -q HEAD 2>/dev/null || true)"

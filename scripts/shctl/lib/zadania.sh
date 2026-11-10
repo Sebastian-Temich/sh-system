@@ -1,5 +1,5 @@
 # Funkcje zadań: konfiguracja, bramki dispatchu, panele herdr, stan /Users/Shared/sh/stan/NAZWA.json, worktree.
-# Wspólne dla task, review i reset-dryrun (proces-v1.md, „Review, QA, pętla poprawek”, „Limity”).
+# Wspólne dla task, review i reset-dryrun (proces.md, „Review i silniki”, „Limity, stop, wznowienie”).
 # shellcheck shell=bash
 
 ROOT_G=""

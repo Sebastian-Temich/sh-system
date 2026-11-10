@@ -1,0 +1,29 @@
+Użycie: shctl review run PR [--timeout SEKUNDY]
+
+Niezależne review w świeżej sesji (skill sh-review), jedno naraz dla PR. PR z Closes #NR albo
+gałęzi task/NR- to review zadania; PR z gałęzi stage/ETAP to review etapu (DoD.md etapu, iteracja
+z DoD.md na main). stage/08-qa: kod 4 (raport QA bez review, merge po zielonym CI).
+
+Silnik według ryzyka PR (/Users/Shared/sh/konfiguracja.md, klucz review; projekt nadpisuje pole po
+polu w docs/konfiguracja.md):
+  review.zwykle     claude, opus, medium        PR bez ryzyka
+  review.ryzyko     codex, gpt-6-astra, high    PR z ryzykiem
+  review.gdy_limit  czekaj | drugi_silnik       limit silnika: PR czeka w status:review albo
+                                                review robi drugi silnik
+  review.prog_linii 400                         większy diff to ryzyko
+Ryzyko: kategoria baza albo bezpieczenstwo, backend z autoryzacją w issue, pliki auth, migracji,
+sekretów, CI lub uprawnień, diff powyżej progu. PR zadania tylko z docs/** i *.md (bez AGENTS.md,
+CLAUDE.md, .claude/, .github/) dostaje „Review shctl: PASS” bez modelu.
+
+Kolejno: status:review na issue, ocena ryzyka i iteracji, czysty worktree
+/Users/Shared/sh/wt/NAZWA/review-NR bez plików env (.env* w PR: kod 4), panel review:NAZWA:NR,
+silnik tylko do odczytu (Codex: profil reviewer, -s read-only; Claude: claude -p z
+.claude/roles/reviewer/settings.json z main projektu), komentarz w PR z werdyktem, zgłoszeniami
+🔴🟡⚪ i metrykami, sprzątanie worktree i panelu. Prompt: skill sh-review, kontekst issue jako
+dane, w iteracji 2+ diff od poprzedniego review i poprzednie zgłoszenia, listy kontrolne skilli
+kategorii zadania (przy migracjach także sh-kat-baza).
+
+Werdykt liczy shctl: FAIL przy 🔴 albo 🟡, inaczej PASS; kod 0 przy obu. PASS dotyczy tylko
+commita: nowy push wymaga nowego review. Powtórka dla tego samego commita zwraca wynik z
+komentarza (ponownie: true). Limit silnika: push z godziną odnowienia. Metryki także w
+/Users/Shared/sh/stan/review/metryki.jsonl. --dry-run zwraca profile i gdy_limit.

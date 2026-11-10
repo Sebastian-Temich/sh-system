@@ -1,0 +1,13 @@
+Użycie: shctl stop-all [--projekt NAZWA]
+
+Awaryjny stop. Zamyka panele herdr agentów, zachowuje worktree, zapisuje stan w
+/Users/Shared/sh/stan/NAZWA.json (panele, etap, gałąź, HEAD, niezacommitowane pliki, worktree) i
+wysyła notify.sh high „STOP”. Niczego nie wznawia: po STOP właściciel uruchamia orkiestratora i
+pisze „wznów”.
+
+  bez --projekt    panele worker:, review:, qa:, eskalacja:, orkiestrator:NAZWA, wspólny
+                   orkiestrator i agenci z katalogiem w projektach
+  --projekt NAZWA  tylko panele tego projektu; wspólny orkiestrator zostaje
+
+Panele bez agenta (np. powloka) zostają. Panel, z którego działa shctl, zamyka się na końcu.
+--dry-run wypisuje kolejność (pole kolejnosc).

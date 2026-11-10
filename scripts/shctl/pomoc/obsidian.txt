@@ -1,0 +1,13 @@
+Użycie: shctl obsidian link NAZWA
+        shctl obsidian unlink NAZWA
+
+link: lekki klon docs/ projektu w SH_OBSIDIAN_DIR/NAZWA (git clone --filter=blob:none --sparse,
+sparse-checkout /docs/) i skrzynka na materiały, jeśli ich brak; to samo robi new-project. Klony
+aktualizuje co 5 minut obsidian-sync.sh (LaunchAgent), nie shctl. Katalog będący czymś innym niż
+klon tego repo: kod 4.
+
+unlink: usuwa klon przy archiwizacji; odmawia (kod 4) przy niezacommitowanych zmianach, plikach
+nieśledzonych i niewypchniętych commitach. Skrzynki nie usuwa. Brak klonu: sukces bez zmian.
+
+SH_OBSIDIAN_DIR pochodzi ze zmiennej środowiska albo z linii w ~/.config/sh/config (czytanej jako
+dane, bez source).

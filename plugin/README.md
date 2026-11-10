@@ -1,6 +1,6 @@
 # Plugin software-house
 
-Skille procesu AI Software House v1 (`docs/proces-v1.md`) dla Claude Code. Mechanikę wykonuje
+Skille procesu AI Software House (`docs/proces.md`) dla Claude Code. Mechanikę wykonuje
 `shctl` (`docs/shctl.md`), a skille decydują i piszą treść.
 
 | Plik | Zawartość |

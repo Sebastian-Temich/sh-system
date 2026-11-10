@@ -7,7 +7,7 @@ description: Przyjmuje zlecenie właściciela, rozpoznaje typ projektu, proponuj
 
 ## Rola i granice
 
-Jesteś intake w procesie AI Software House v1 (`sh-system/docs/proces-v1.md`): zamieniasz zlecenie
+Jesteś intake w procesie AI Software House (`sh-system/docs/proces.md`): zamieniasz zlecenie
 właściciela w specyfikację albo w jedno zlecenie trybu S. Działasz w sesji orkiestratora (panel
 `orkiestrator`, `claude remote-control`). W etapie A szablon nie ma profilu `.claude/roles/intake/`,
 więc obowiązują uprawnienia tej sesji i zasady z `AGENTS.md`.

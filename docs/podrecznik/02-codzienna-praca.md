@@ -1,201 +1,189 @@
 # Codzienna praca
 
-Wróć do: [[00-start-tutaj]]
+Wróć do: [[01-start]]
 
 ## Rozmowa z orkiestratorem
 
-Orkiestrator działa na serwerze w panelu herdr i jest połączony przez **Remote Control** jako sesja
-`sh-orkiestrator`. Startuje sam po zalogowaniu na serwerze ([[05-serwer-i-skrypty#sh-start.sh]]).
+Orkiestrator działa w panelu herdr na serwerze i jest połączony przez **Remote Control** jako sesja
+`sh-orkiestrator`. Startuje sam po zalogowaniu na serwerze.
 
 | Skąd | Jak |
 |---|---|
 | Telefon | Aplikacja Claude → zakładka Code → sesja `sh-orkiestrator` |
-| Laptop | Ta sama sesja na liście sesji Claude Code w przeglądarce (claude.ai/code) |
+| Laptop | Ta sama sesja na claude.ai/code |
 | Terminal serwera | `/Users/Shared/sh/bin/sh-start.sh` podłącza herdr; odłączenie: `ctrl+b`, potem `q` |
-| Laptop przez SSH | `ssh` na serwer, potem `/Users/Shared/sh/bin/sh-start.sh`; ścieżka jeszcze nietestowana |
 
-Każda sesja otwarta przez Remote Control startuje w trybie **Auto**: rutynowe działania idą bez
-pytania, a o zgodę orkiestrator prosi tylko przy ryzykownych (w czacie, bez pushu). Tryb
-ustawia `sh-start.sh`; zmiana tego ustawienia działa dopiero po ponownym starcie orkiestratora.
-
-To jedna rozmowa, niezależnie od urządzenia. **Jedna sesja prowadzi jeden projekt:** podaj jego
-nazwę w pierwszym poleceniu („wznów sh-dryrun”). Bez nazwy, przy kilku projektach, orkiestrator
-zapyta, który projekt prowadzi. Nie otwieraj dwóch sesji dla jednego projektu. Drugi projekt to
-osobna sesja Remote Control. „status?”
-bez nazwy nadal pokazuje wszystkie projekty.
-
-W panelu orkiestratora nie wpisuj `exit`. Zamyka sesję i trzeba ją uruchomić ponownie
-([[07-gdy-cos-nie-dziala#Orkiestrator nie odpowiada]]).
-
-## Polecenia w czacie
-
-Piszesz zwykłym językiem. Te sformułowania orkiestrator rozpoznaje wprost:
+Każda sesja z Remote Control startuje w trybie **Auto**: rutyna idzie bez pytania, o zgodę orkiestrator
+prosi w czacie tylko przy ryzykownych krokach. **Jedna sesja prowadzi jeden projekt:** podaj nazwę w
+pierwszym poleceniu („wznów sklep”). Drugi projekt to osobna sesja. W panelu orkiestratora nie
+wpisuj `exit`.
 
 | Piszesz | Co się dzieje |
 |---|---|
-| „status?” (albo „co się dzieje”, „co czeka na mnie”) | Krótki status każdego projektu z pracą, bez zmian w niczym |
-| „nowy projekt NAZWA: opis” | Zakłada repo z szablonu i uruchamia intake (tryb M) |
+| „status?” | „Gdzie jesteśmy” i „Czeka na Ciebie” każdego projektu, bez zmian |
+| „nowy projekt NAZWA: opis” | Repo z szablonu (publiczne), intake w trybie M |
 | „nowe zlecenie dla NAZWA: opis” | Intake: specyfikacja (M) albo jedno zadanie (S) |
-| „akceptuję specyfikację” / „akceptuję plan” | Zapis Twojej decyzji, merge, przejście do następnego etapu |
-| „odbieram” (przy odbiorze) | Zapis odbioru, merge, zamknięcie etapu wydania albo zadania S |
-| „materiały w skrzynce” (opcjonalnie „dla NAZWA”, „do 00-intake/zrodla”) | Pliki ze skrzynki trafiają przez PR do repo projektu |
-| Odpowiedź na eskalację, np. „E-002: opcja mock” | Zapis odpowiedzi, powrót do zadania |
-| „wznów” | Odtworzenie stanu z plików i GitHuba, dalsza praca; po limicie sprawdzenie przerwanych zadań |
-| „STOP” | Odpowiedź „Zatrzymuję wszystko” i natychmiastowe zatrzymanie wszystkich agentów |
+| odpowiedź na paczkę pytań | Odpowiedzi trafiają do kart funkcji |
+| „akceptuję specyfikację” / „akceptuję plan” | Zapis decyzji, merge, następny etap |
+| „odbieram” / „odbieram #NR” | Odbiór etapu `wydanie` albo zlecenia S |
+| „E-002: …” | Odpowiedź na eskalację albo pytanie workera |
+| „materiały w skrzynce dla NAZWA” | Pliki ze skrzynki trafiają do repo przez PR |
+| „wznów” | Odtworzenie stanu z plików i GitHuba, sprawdzenie przerwanych zadań |
+| „STOP” | Natychmiastowe zatrzymanie wszystkich agentów |
 
-### Jak wygląda status
+## Jak czytać stan projektu
+
+**`SH/Wszystkie projekty.md`** w Obsidianie to jedna tabela wszystkich projektów:
+
+| Kolumna | Znaczenie |
+|---|---|
+| Projekt | Nazwa repo |
+| Etap | Etap słownie, np. „Specyfikacja”, „Realizacja”, „Odbiór” |
+| Postęp | „Etapy X/Y · Zadania A/B” |
+| Czeka na Ciebie | Liczba rzeczy do zrobienia przez Ciebie |
+| Eskalacje | Otwarte eskalacje i pytania |
+| Następny krok | Co stanie się dalej albo co masz napisać |
+| Widok | Link do `docs/Projekt.md` |
+
+Kolejność: najpierw projekty, w których coś czeka na Ciebie, potem w toku, na końcu zakończone.
+Tabelę odświeża serwer co 5 minut.
+
+**`docs/Projekt.md`** to widok jednego projektu (to samo co „status?”), czysty Markdown, generowany
+przy każdej zmianie stanu. Nie edytuj go.
+
+| Sekcja | Co w niej jest |
+|---|---|
+| Gdzie jesteśmy | Etap, postęp, co się dzieje (worker, review, iteracja, czas), następny krok, szacowany czas |
+| Czeka na Ciebie | Każda pozycja z **dokładnym tekstem do wpisania w czacie**: eskalacje, pytania, braki listy startowej, akceptacja etapu, odbiór S. „Nic. Agenci pracują sami.” = nic nie robisz |
+| Zadania | W realizacji, gotowe do startu, zaplanowane, zrobione w bieżącym zleceniu, anulowane |
+| Eskalacje i pytania | Otwarte `E-NNN` z tym, czego potrzeba |
+| Dokumenty | Linki do specyfikacji, kart funkcji, planu, decyzji, raportów QA, historii |
+
+Inne pliki projektu: `historia.md` (punkt przekazania, dziennik etapów, wszystkie zadania),
+`decyzje.md` (wszystkie decyzje i Twoje zgody), `07-realizacja/T-NR.md` (raport workera),
+`08-qa/raport-MN.md` (wynik QA kamienia), `backlog-drobne.md` (drobne uwagi na później).
+
+Dokument czekający na akceptację jest w PR na GitHubie (gałąź `stage/…`); w Obsidianie pojawi się
+po merge'u.
+
+## Pytania intake i karty funkcji
+
+Po zleceniu intake wysyła **brief** (cel, zakres, lista funkcji, tryb) do zatwierdzenia i **listę
+startową**: konta, dostępy, domeny, klucze testowe i materiały, każda pozycja z instrukcją. Realizacja
+nie wystartuje, dopóki lista nie jest kompletna.
+
+Potem przychodzą **pytania tylko o luki w kartach funkcji**, paczkami po 5–7 (w trybie S najwyżej 3),
+od najważniejszych dla architektury. Każde ma numer, kartę, proponowaną odpowiedź i skutek:
 
 ```text
-sklep (M, 07-realizacja, kamień M2 4/6)
-Zrobione: 6 zadań, ostatnie #15 katalog
-W toku: #16 płatność (in-progress), #14 w review (PR #31), CI czerwone na PR #33
-Czeka na Ciebie: E-002 klucz testowy Stripe
-Eskalacje: 1 (E-002); wstrzymań brak
+Q1 W-03: zamówienie gościa bez konta? Propozycja: tak, e-mail wymagany; skutek: brak kont w M1.
 ```
 
-Najważniejsza linia to **„Czeka na Ciebie”**. Gdy jest pusta, nic nie musisz robić.
+Jak odpowiadać:
 
-### Akceptacje
+- krótko z numerem: „Q1 tak. Q2 nie, tylko PL. Q3 jak proponujesz.”;
+- „zdecyduj sam” (dla pytania albo całej paczki): propozycja staje się założeniem do potwierdzenia;
+- zmiana zakresu w odpowiedzi („Q4: dodaj też eksport CSV”) wraca do kart.
 
-Gdy praca czeka na Twoją akceptację, dostajesz push **„Czeka na Twoją akceptację: PROJEKT / ETAP”**.
-Kliknięcie otwiera PR na GitHubie. W czacie orkiestrator podaje szczegóły: tryb, ryzyka, otwarte
-pytania i zakres zgody.
+**Karta funkcji** (`docs/00-intake/funkcje/W-NN.md`) ma dwie części. Ty czytasz tylko górną, „Dla
+właściciela”: opis, przebieg krok po kroku, stany ekranu z tekstami, reguły, poza zakresem i „Do
+potwierdzenia” (założenia z proponowanymi odpowiedziami). Dolna część jest dla wykonawcy. W
+checkpoincie specyfikacji dostajesz części „Dla właściciela” i zbiorczą listę „Do potwierdzenia”:
+potwierdź albo popraw każde założenie.
+
+## Checkpointy
+
+Gdy praca czeka na akceptację, przychodzi push **„Czeka na Twoją akceptację: PROJEKT / ETAP”**.
+Kliknięcie otwiera PR. Push przychodzi dopiero po review PASS, a po poprawkach ponownie.
 
 | ETAP w tytule | Co akceptujesz |
 |---|---|
-| `00-intake` | Specyfikację |
-| `04-plan` | Plan (krótka architektura i kamienie), czyli zgodę na realizację |
-| `wydanie` | Odbiór na stagingu |
-| `#NR` | Odbiór zadania trybu S |
-| `podniesienie trybu` | Propozycję zmiany trybu, np. S na M (to eskalacja z numerem `E-NNN`) |
+| `00-intake` | Specyfikację z kartami funkcji i listą „Do potwierdzenia” |
+| `04-plan` | Plan, czyli zgodę na realizację (zapis w `decyzje.md`: na co, zakres, do kiedy, jak cofnąć) |
+| `wydanie` | Odbiór na stagingu według scenariuszy z planu |
+| `#NR` | Odbiór zlecenia S |
+| `podniesienie trybu` | Zmianę trybu, np. S na M (eskalacja z numerem `E-NNN`) |
 
-Push przychodzi dopiero po review z wynikiem PASS. Po poprawkach (nowy commit i nowe PASS)
-przychodzi ponownie.
+Możesz zaakceptować („akceptuję plan”), zaakceptować z poprawką („akceptuję, ale hosting Netlify”;
+zmiana wraca do review) albo poprosić o zmiany. Przy checkpoincie orkiestrator może zaproponować opis
+repo na GitHubie: pokazuje dokładną komendę i czeka na Twoją zgodę.
 
-Dokument do akceptacji jest w PR na GitHubie (gałąź `stage/…`). W Obsidianie pojawi się dopiero po
-merge'u, bo synchronizacja pobiera gałąź `main`.
+Kolejne kamienie po akceptacji planu startują same, jeśli mieszczą się w zgodzie. Nowy zakres, płatna
+usługa, dostęp albo podniesienie trybu przychodzi jako eskalacja.
 
-Możesz:
+## Odbiór zlecenia S
 
-- zaakceptować: „akceptuję specyfikację”, „akceptuję plan”;
-- zaakceptować z poprawką: „akceptuję, ale hosting Netlify zamiast Vercel”; zmiana wraca do review;
-- poprosić o zmiany: „w specyfikacji dodaj wersję angielską”; skill poprawia dokument, review
-  powtarza się.
+1. Push „Czeka na Twoją akceptację: PROJEKT / #NR” z linkiem do PR (review PASS, CI zielone).
+2. Sprawdzasz zmianę (opis PR, podgląd wdrożenia, jeśli jest).
+3. Piszesz „odbieram #NR”. Orkiestrator merguje, dopisuje `CHANGELOG.md` i zamyka issue.
+   Albo opisujesz, co poprawić: worker dostaje nowe polecenie.
 
-### Odpowiedź na eskalację
+Ustawienie `odbior_S` w `docs/konfiguracja.md` projektu ma domyślnie `reczny`. Przy
+`auto_bez_zmian_widocznych` zlecenie bez zmian widocznych dla użytkownika (etykieta `widoczne:nie`,
+np. aktualizacja zależności) zamyka się samo po PASS i zielonym CI, a Ty dostajesz powiadomienie.
 
-Przychodzi push „Eskalacja E-NNN: PROJEKT”. Treść jest w czacie (status) i w Obsidianie
-(`docs/07-realizacja/escalations/E-NNN.md`, po synchronizacji). Odpowiadasz w czacie, z numerem:
+## Eskalacje i pytania workerów
+
+**Eskalacja** („Eskalacja E-NNN: PROJEKT”) blokuje zadanie: 3 nieudane review, potrzebny sekret,
+dostęp albo płatna usługa, decyzja nieodwracalna, sprzeczne wymagania, ryzyko. Inne zadania trwają.
+**Pytanie** („Pytanie E-NNN: PROJEKT”) to wątpliwość workera o zachowanie dla użytkownika albo regułę
+biznesową; worker w tym czasie robi resztę zadania.
+
+Odpowiadasz w czacie z numerem:
 
 ```text
 E-003: zgoda na Resend, darmowy plan, do odbioru projektu
 ```
 
-Orkiestrator zapisuje odpowiedź w pliku eskalacji, przywraca poprzedni status zadania i działa
-dalej. Zgodę na dostęp, koszt albo zakres zapisuje też w `docs/decyzje.md`.
-
-**Sekretów nie wpisuj do czatu.** Klucz testowy wpisujesz sam do `.env.local` w repo projektu na
-serwerze (`/Users/Shared/sh/projekty/NAZWA/.env.local`), a w czacie piszesz tylko „klucz jest w .env.local”.
-
-## Skrzynka na materiały
-
-Każdy projekt ma w vaulcie folder **`SH/Skrzynka/NAZWA-PROJEKTU/`**. To zwykły folder, nie kopia
-repozytorium, więc możesz do niego zapisywać: przeciągnij pliki w Finderze albo w Obsidianie.
-
-Co tam wrzucać: eksport z Claude Design (ZIP, PNG, PDF, HTML), logo, zdjęcia, teksty, dokumenty od
-klienta.
-
-1. Wrzuć pliki (także w podfolderach albo jako ZIP).
-2. Napisz w czacie: „materiały w skrzynce dla NAZWA”. Pliki trafią do `docs/00-intake/zrodla/`.
-3. Orkiestrator jednym wywołaniem (`shctl skrzynka przyjmij`) otwiera PR z plikami, czeka na CI i po
-   zielonym merguje go sam: bez review modelu i bez Twojej akceptacji (Twoja decyzja w
-   [[decyzje-systemu]]).
-4. Po merge'u skrzynka jest pusta. Kopia jest w repo, a w Obsidianie w `docs/` projektu. Przy
-   czerwonym CI pliki zostają w skrzynce, a orkiestrator mówi, co poszło nie tak.
-
-**Nic nie jest uruchamiane ani rozpakowywane.** ZIP trafia do repo jako ZIP. Pomijane są pliki
-ukryte (nazwa od kropki), `__MACOSX` i skróty (dowiązania).
+Orkiestrator zamyka eskalację Twoją odpowiedzią i zapisuje zgodę w `decyzje.md`. **Sekretów nie
+wpisuj do czatu:** klucz testowy wpisujesz sam do `/Users/Shared/sh/projekty/NAZWA/.env.local`, a w
+czacie piszesz „klucz jest w .env.local”.
 
 ## Powiadomienia ntfy
 
-Wszystkie wysyła `notify.sh` przez ntfy.sh na Twój telefon.
+| Tytuł | Co robisz |
+|---|---|
+| Czeka na Twoją akceptację: PROJEKT / ETAP | Otwórz PR i odpowiedz w czacie |
+| Eskalacja E-NNN: PROJEKT | Odpowiedz w czacie z numerem |
+| Pytanie E-NNN: PROJEKT | Odpowiedz, gdy możesz; praca trwa |
+| Czeka na Ciebie od N h: PROJEKT | Przypomnienie: zajrzyj do „Czeka na Ciebie” w `Projekt.md` |
+| Limit Claude / Limit Codex | Nic do godziny odnowienia, potem „wznów” |
+| STOP | Gdy chcesz wrócić do pracy: „wznów” |
+| Brak miejsca | Zwolnij miejsce ([[03-gdy-cos-nie-dziala#Brak miejsca na dysku]]) |
+| Orkiestrator uruchomiony ponownie | Napisz „wznów” |
+| Orkiestrator nie wstał po restarcie | [[03-gdy-cos-nie-dziala#Orkiestrator nie odpowiada]] |
+| install.sh: agent niezaladowany | [[03-gdy-cos-nie-dziala#Co wykonujesz Ty]] |
 
-| Tytuł | Priorytet | Co znaczy | Co robisz |
-|---|---|---|---|
-| Czeka na Twoją akceptację: PROJEKT / ETAP | wysoki | Checkpoint po PASS review: specyfikacja, plan, odbiór, odbiór zadania S, podniesienie trybu | Otwórz PR (kliknięcie) i odpowiedz w czacie |
-| Eskalacja E-NNN: PROJEKT | wysoki | Agent potrzebuje Twojej decyzji | Odpowiedz w czacie |
-| STOP | wysoki | Zadziałał awaryjny stop | Gdy chcesz wrócić do pracy: „wznów” |
-| Brak miejsca | wysoki | Za mało miejsca na dysku, nowe zadania nie startują | Zwolnij miejsce ([[07-gdy-cos-nie-dziala#Brak miejsca na dysku]]) |
-| Orkiestrator uruchomiony ponownie | wysoki | Strażnik podniósł orkiestratora po awarii | Napisz „wznów” |
-| Orkiestrator nie wstał po restarcie | pilny | Strażnik nie zdołał go uruchomić | [[07-gdy-cos-nie-dziala#Orkiestrator nie odpowiada]] |
-| install.sh: agent niezaladowany | wysoki | Usługa serwera nie wystartowała po instalacji | [[05-serwer-i-skrypty#install.sh]] |
+**Przypomnienia:** gdy pozycja z „Czeka na Ciebie” czeka dłużej niż 4 godziny, serwer przypomina
+jednym pushem na projekt, tylko w godzinach 8–22. Ta sama pozycja wraca najwcześniej po kolejnych
+4 godzinach. Wyłączenie: `touch /Users/Shared/sh/stan/przypomnienia.off`. Ta sama eskalacja ani
+akceptacja dla tego samego commita nie przyjdzie drugi raz.
 
-Ta sama eskalacja ani ta sama akceptacja dla tego samego commita nie przyjdzie drugi raz. Pushy o
-limitach, „Claude czeka na zgodę” i „Obsidian: klon bez synchronizacji” już nie ma: limit i
-problemy zgłasza orkiestrator w czacie.
+## Skrzynka na materiały
+
+Folder **`SH/Skrzynka/NAZWA/`** w vaulcie to jedyne miejsce w `SH/`, do którego zapisujesz. Wrzuć tam
+eksport z Claude Design, logo, zdjęcia, teksty, dokumenty od klienta (także w podfolderach albo jako
+ZIP) i napisz „materiały w skrzynce dla NAZWA”. Pliki trafią przez PR do `docs/00-intake/zrodla/`;
+po zielonym CI orkiestrator merguje PR sam i opróżnia skrzynkę. Nic nie jest uruchamiane ani
+rozpakowywane. Pliki ukryte, `__MACOSX` i skróty są pomijane.
 
 ## Obsidian
 
-Obsidian na serwerze pokazuje dokumenty, nie kod. Vault `~/Documents/Obsidian Vault`:
-
 | Folder | Zawartość |
 |---|---|
-| `SH/Projekty/NAZWA/docs/` | Dokumenty projektu NAZWA |
-| `SH/sh-system/docs/` | Dokumenty systemu, w tym ten podręcznik |
-| `SH/Skrzynka/NAZWA/` | Twoja skrzynka na materiały projektu; jedyne miejsce w `SH/`, w którym zapisujesz |
+| `SH/Wszystkie projekty.md` | Tabela projektów |
+| `SH/Projekty/NAZWA/docs/` | Dokumenty projektu (tylko czytasz) |
+| `SH/sh-system/docs/` | Dokumenty systemu, w tym ten podręcznik (tylko czytasz) |
+| `SH/Skrzynka/NAZWA/` | Twoje materiały do projektu |
 
-Kopie aktualizuje serwer co 5 minut. Nowy dokument pojawia się najpóźniej 5 minut po merge'u.
-Jedyna wtyczka to **Dataview** (dashboardy projektów v1).
+Zapis w `SH/Projekty` albo `SH/sh-system` zatrzymuje synchronizację tej kopii i nie trafia do repo:
+poprawki zlecasz orkiestratorowi. Własne notatki trzymaj poza `SH/`.
 
-### Stan projektu
+## Rutyna
 
-Najświeższy stan daje „status?” w czacie: dwie sekcje, „Gdzie jesteśmy” i „Czeka na Ciebie” (z
-tekstem do wpisania). W Obsidianie: `SH/Wszystkie projekty.md` (jedna tabela: etap, postęp, co czeka,
-eskalacje) i w projekcie `docs/Projekt.md` (to samo co „status?” plus zadania według stanu,
-eskalacje, pytania i linki do specyfikacji, kart funkcji, planu, decyzji i raportów QA; czysty
-Markdown, bez Dataview) oraz `docs/decyzje.md`. Nowe projekty nie mają `_dashboard.md` (SH-lite F2); w projektach
-v1 plik zostaje do migracji.
-
-### Ważne dokumenty projektu
-
-| Plik | Po co zaglądać |
-|---|---|
-| `docs/Projekt.md` | Gdzie jesteśmy (etap, postęp „Etapy X/Y · Zadania A/B”), co czeka na Ciebie, zadania bieżącego zlecenia, eskalacje, dokumenty |
-| `docs/historia.md` | „Punkt przekazania”, dziennik etapów, wszystkie zadania wszystkich zleceń |
-| `docs/00-intake/specyfikacja.md` | Co budujemy: wymagania `W-NN` |
-| `docs/04-plan/plan.md` | Krótka architektura, kamienie, scenariusze odbioru, Twoje zadania ręczne |
-| `docs/decyzje.md` | Wszystkie decyzje, także Twoje zgody |
-| `docs/06-zadania/index.md` | Lista zadań i ich stan |
-| `docs/07-realizacja/T-NR.md` | Raport workera z zadania |
-| `docs/08-qa/raport-MN.md` | Wynik QA kamienia |
-| `docs/backlog-drobne.md` | Drobne uwagi odłożone na później |
-| `docs/metryki.md` | Czas, iteracje i eskalacje zadań |
-
-### Zasady
-
-- W `SH/Projekty` i `SH/sh-system` **tylko czytasz**. Zapis tam zatrzymuje synchronizację tej kopii
-  i nie trafia do repo.
-- Do `SH/Skrzynka/NAZWA` wrzucasz materiały. Synchronizacja jej nie dotyka.
-- Własne notatki trzymaj poza `SH/`, np. w nowym folderze w katalogu głównym vaulta.
-
-## Codzienna rutyna
-
-**Rano (5 minut):**
-
-1. „status?” w czacie.
-2. Odpowiedz na eskalacje z „Czeka na Ciebie”.
-3. Przejrzyj powiadomienia z nocy; jeśli praca stała przez limit, po odnowieniu napisz „wznów”.
-
-**W ciągu dnia:**
-
-- Reaguj na push o eskalacji. Praca niezależna i tak trwa, ale zablokowane zadanie czeka.
-- Push „Czeka na Twoją akceptację”: przeczytaj PR i zaakceptuj albo poproś o zmiany.
-- Nowe materiały od klienta: do skrzynki i „materiały w skrzynce”.
-- Po kamieniu orkiestrator proponuje restart sesji (`/clear` i „wznów”). Zgódź się: stan jest w
-  plikach, a świeża sesja pracuje lepiej.
-
-**Raz w tygodniu:**
-
-- „status?” dla każdego projektu: etapy, zadania, decyzje.
-- `docs/backlog-drobne.md`: czy coś warto zlecić jako tryb S.
-- Na serwerze `shctl doctor`: czy wszystko jest zdrowe ([[04-shctl#doctor]]).
+- **Rano:** `SH/Wszystkie projekty.md` albo „status?”; odpowiedz na wszystko z „Czeka na Ciebie”; po
+  nocnym limicie napisz „wznów”.
+- **W ciągu dnia:** reaguj na pushe akceptacji, eskalacji i pytań. Po kamieniu orkiestrator proponuje
+  restart sesji (`/clear` i „wznów”): zgódź się, stan jest w plikach.
+- **Raz w tygodniu:** `docs/backlog-drobne.md` (co zlecić jako tryb S), issue „Propozycje RRRR-MM” w
+  `sh-system` (propozycje agentów do Twojej decyzji), `shctl doctor` na serwerze.

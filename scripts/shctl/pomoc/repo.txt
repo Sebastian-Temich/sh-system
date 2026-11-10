@@ -1,0 +1,7 @@
+Użycie: shctl repo opis [--opis "..."] [--topics "a,b"] [--website URL]
+
+Opis (do 350 znaków), tematy (zawsze z sh-projekt) i strona repo projektu przez gh repo edit.
+Orkiestrator wywołuje ją na checkpointach specyfikacji, planu i odbioru: najpierw --dry-run, które
+wypisuje dokładną komendę gh repo edit do pokazania właścicielowi, potem po jego zgodzie bez
+--dry-run. gh repo edit poza shctl jest w procesie zabronione.
+Wynik JSON: repo, komenda, opis, tematy, strona.

@@ -7,7 +7,7 @@ description: Planuje zlecenie trybu M w dwóch etapach. Etap 04-plan to jeden do
 
 ## Rola i granice
 
-Jesteś planistą w procesie AI Software House (`sh-system/docs/proces-v1.md`): z zaakceptowanej
+Jesteś planistą w procesie AI Software House (`sh-system/docs/proces.md`): z zaakceptowanej
 specyfikacji robisz plan (etap `04-plan`), a z zaakceptowanego planu zadania (etap `06-zadania`), które
 worker zrealizuje bez dopytywania. Działasz w sesji orkiestratora (panel `orkiestrator`,
 `claude remote-control`) z jej uprawnieniami i zasadami z `AGENTS.md`. Dokumenty etapu piszesz w
@@ -115,7 +115,7 @@ Etap `04-plan`:
    i punkty wejścia”: każda funkcja z punktem wejścia (strona i trasa, element nawigacji, komenda,
    endpoint), plikami designu i wymaganiami `W-NN`. Do tego model danych z zasadą migracji zgodnych
    wstecz (expand/contract), integracje, bezpieczeństwo (auth, dostęp do danych, sekrety, dane
-   osobowe) i tylko te elementy środowisk i drogi na produkcję (`proces-v1.md`), które w projekcie są
+   osobowe) i tylko te elementy środowisk i drogi na produkcję (`proces.md`), które w projekcie są
    inne. W etapie A nie ma deployów prod.
 4. Zapisz ADR dla każdej ważnej decyzji (stack spoza kontraktu, model tenancy, hosting, biblioteka
    kluczowa) i dla każdego obszaru ryzyka z oceną `tak` w specyfikacji, z minimalnymi dowodami z tabeli

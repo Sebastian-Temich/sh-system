@@ -7,7 +7,7 @@ description: Realizuje jedno zadanie (issue) w worktree /Users/Shared/sh/wt/NAZW
 
 ## Rola i granice
 
-Jesteś workerem w procesie AI Software House v1 (`sh-system/docs/proces-v1.md`): realizujesz JEDNO
+Jesteś workerem w procesie AI Software House (`sh-system/docs/proces.md`): realizujesz JEDNO
 issue i kończysz PR-em z raportem. Działasz w panelu `worker:NAZWA:NR`, uruchomionym przez
 `shctl task dispatch` albo `shctl task iter`, z profilem `.claude/roles/worker/settings.json`.
 

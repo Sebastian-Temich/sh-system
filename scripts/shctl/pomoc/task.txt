@@ -1,0 +1,53 @@
+Użycie: shctl task create --plik zadania.yaml
+        shctl task ready [--czekaj] [--timeout SEKUNDY]
+        shctl task dispatch NR
+        shctl task wait NR [--timeout SEKUNDY]
+        shctl task iter NR
+        shctl task close NR [--odbior] [--anuluj [--powod "..."]]
+        shctl task resume-check NR [--testy "..."] [--bez-testow]
+
+Cykl zadania: create -> ready -> dispatch -> wait (PR z raportem) -> pr check --czekaj ->
+review run -> przy FAIL iter i znów review run -> close. Po przerwie: resume-check.
+Worktree /Users/Shared/sh/wt/NAZWA/NR, gałąź task/NR-slug, panel herdr worker:NAZWA:NR, stan w
+/Users/Shared/sh/stan/NAZWA.json. Etap A: runner:local, wykonawca:claude.
+
+create: issue z pliku YAML (lista albo klucz zadania). Pola: id, tytul, cel, kryteria (wymagane),
+  pliki, testy, zaleznosci (ID z pliku albo "#NR"), typ (feature|bug|qa|docs|cr), tryb (S|M),
+  db_migracja, milestone, waga (krytyczne|istotne|drobne; typ qa tylko krytyczne albo istotne),
+  kategoria (frontend|backend|baza|integracje|bezpieczenstwo|testy|ci|ai-dane|refaktoryzacja),
+  stack, skille, widoczne. Etykiety status:todo, runner:local, wykonawca:claude, typ:X i
+  opcjonalne. Znaczniki shctl:id i shctl:warstwy w treści, brakujące milestone'y, mapa w
+  docs/06-zadania/index.md. Błędne pole, zależność albo cykl: kod 2 przed jakąkolwiek zmianą.
+ready: tylko czyta. gotowe = kandydaci (status:todo, zależności zamknięte; najwyżej jedno zadanie
+  db:migracja naraz), gdy nie ma blokad: slot max_local (Mac i projekt), wolne miejsce poniżej
+  min_wolne_gb (15), kolejka review max_review_queue (3), limit Claude w limity.md, niekompletna
+  docs/00-intake/lista-startowa.md. --czekaj sprawdza blokady co 30 s do --timeout (1800 s).
+dispatch: te same bramki, potem worktree, kopia .env.local i env_files, zaufanie folderu w
+  ~/.claude.json, fnm install przy .nvmrc, lista skilli workera (warstwy niżej), karta herdr z
+  claude --settings .claude/roles/worker/settings.json i poleceniem „Zrealizuj issue #NR skillem
+  sh-worker”, etykiety status:in-progress i iter:1. Przy in-progress dokańcza brakujące kroki.
+wait: czeka na nową turę workera po poleceniu. Stany: gotowe (PR z Closes #NR i raportem
+  docs/07-realizacja/T-NR.md po poleceniu), idle, pracuje, bez_tury, blocked, brak_agenta,
+  brak_panelu. Domyślnie 600 s; pole nastepny_krok podpowiada dalszy krok.
+iter: tylko po FAIL review bieżącego commita. iter:N -> iter:N+1, status:in-progress, polecenie
+  dla workera: popraw tylko zgłoszenia 🔴 i 🟡. FAIL w iteracji 3 otwiera eskalację.
+close: w repo głównym na main. Merge (squash) tylko przy zielonym CI i PASS dla bieżącego commita;
+  zlecenie S wymaga --odbior (po „odbieram #NR”), chyba że ma widoczne:nie przy odbior_S:
+  auto_bez_zmian_widocznych. Potem: Decyzje z raportu do decyzje.md, Drobne uwagi i ⚪ z review
+  do backlog-drobne.md, wiersz metryk, „Niewydane” w CHANGELOG.md, Propozycje dla systemu jako
+  komentarz w issue miesiąca „Propozycje RRRR-MM” w sh-system; usuwa worktree, gałąź i panel.
+  Plików wspólnych nie commituje.
+close --anuluj: zamyka PR z gałęzią, panele, worktree i issue jako „not planned” z powodem.
+  Scalony PR: kod 4. Dawne task cancel NR działa jako alias z ostrzeżeniem.
+resume-check: stan po przerwie (status, iteracja, panel, gałąź, HEAD, niezacommitowane pliki,
+  commity za i przed origin/main, wynik testów z „Komendy testów” issue albo --testy).
+  Nie zmienia etykiet: przerwanie przez limit nie jest iteracją. Pole sugestia to podpowiedź.
+
+Warstwy skilli workera (plugin/warstwy-skilli.yaml): bazowe, kategoria (sh-kat-NAZWA), stack
+(sh-stack-NAZWA), skille z zadania, skille projektu (.claude/skills). Brakujący skill: ostrzeżenie
+i skille_brak. Skille techniczne (plugin/skills/techniczne) idą do polecenia jako ścieżki do
+przeczytania; przy sprzeczności wygrywa projekt, potem stack, kategoria, bazowe.
+
+Z docs/konfiguracja.md: max_local (tylko obniża limit z /Users/Shared/sh/konfiguracja.md),
+max_review_queue, min_wolne_gb, env_files, modele.worker (opus).
+limity.md: wpis ze słowem codex wstrzymuje review, każdy inny workerów Claude; „brak” to brak.

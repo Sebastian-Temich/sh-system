@@ -1,0 +1,21 @@
+Użycie: shctl stage start|review|done|escalate ETAP [--notatka "..."]
+        shctl stage iter ETAP
+
+Status etapu w docs/ETAP/DoD.md na main. ETAP to nazwa folderu: 00-intake, 04-plan, 06-zadania,
+08-qa, wydanie (wersja_procesu 2); projekty bez pola wersja_procesu mają 04-architektura i
+05-plan zamiast 04-plan. Każda zmiana odświeża docs/Projekt.md i dopisuje wpis do „Dziennika
+etapów” w docs/historia.md.
+
+  start      z todo, review, escalated, in-progress  -> in-progress
+  review     z in-progress, review                   -> review
+  done       z review, done                          -> done, tylko po zielonym check-dod.sh
+  escalate   z todo, in-progress, review, escalated  -> escalated (plik eskalacji: shctl escalate)
+
+Etap czekający na coś zewnętrznego: stage start ETAP --notatka "czeka na ...". Pominięcia nie ma
+w shctl: orkiestrator zapisuje decision add i ustawia w DoD.md status: pominiety z polem decyzja.
+
+stage iter ETAP: po FAIL review etapu podbija iteracja w DoD.md i ustawia in-progress (na main;
+gałąź stage/ETAP frontmattera nie zmienia). Wymaga otwartego PR z gałęzi stage/ETAP i FAIL dla jego
+bieżącego commita. Etapy 00-intake, 04-plan, 06-zadania: najwyżej jedna iteracja poprawek, FAIL w
+iteracji 2 otwiera eskalację. wydanie: eskalacja po FAIL w iteracji 3. 08-qa nie ma review: kod 4.
+Powtórka dla tego samego review nic nie zmienia.

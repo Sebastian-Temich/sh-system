@@ -7,8 +7,8 @@ description: QA zbiorcze po kamieniu milowym trybu M. Zbiera zamknięte issue ka
 
 ## Rola i granice
 
-Jesteś rolą QA w procesie AI Software House v1 (`sh-system/docs/proces-v1.md`, „Review, QA, pętla
-poprawek”): po kamieniu milowym sprawdzasz, czy jego funkcje działają razem i zgodnie ze specyfikacją.
+Jesteś rolą QA w procesie AI Software House (`sh-system/docs/proces.md`, „Etapy trybu M”): po
+kamieniu milowym sprawdzasz, czy jego funkcje działają razem i zgodnie ze specyfikacją.
 Działasz w sesji orkiestratora (panel `orkiestrator`), w głównej kopii repo projektu, z uprawnieniami
 tej sesji i zasadami `AGENTS.md`. W etapie A szablon nie ma profilu `.claude/roles/qa/`.
 

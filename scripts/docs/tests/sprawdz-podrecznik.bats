@@ -7,6 +7,7 @@ setup() {
   K="$BATS_TEST_TMPDIR/repo"
   mkdir -p "$K/docs" "$K/scripts"
   cp -R "$REPO/docs/podrecznik" "$K/docs/"
+  cp "$REPO"/docs/*.md "$K/docs/"
   cp -R "$REPO/plugin" "$K/"
   cp -R "$REPO/scripts/shctl" "$REPO/scripts/server" "$K/scripts/"
   P="$K/docs/podrecznik"
@@ -47,14 +48,14 @@ sprawdz() { run --separate-stderr bash "$REPO/scripts/docs/sprawdz-podrecznik.sh
 }
 
 @test "nieznany skill sh-" {
-  echo 'Skill `software-house:sh-wycena` liczy koszty.' >>"$P/03-skille.md"
+  echo 'Skill `software-house:sh-wycena` liczy koszty.' >>"$P/01-start.md"
   sprawdz
   [ "$status" -eq 1 ]
   [[ "$stderr" == *"nieznany skill „sh-wycena”"* ]] || false
 }
 
-@test "skrypty serwera i nazwy spoza skilli nie sa skillami, ale sa dozwolone" {
-  echo '`sh-start.sh`, `sh-watchdog`, repo `sh-system`, `sh-template-projekt`, `sh-test-RRRRMMDD`' >>"$P/05-serwer-i-skrypty.md"
+@test "skrypty serwera, skille techniczne i nazwy spoza skilli sa dozwolone" {
+  echo '`sh-start.sh`, `sh-watchdog`, repo `sh-system`, `sh-template-projekt`, `sh-test-RRRRMMDD`, `sh-kat-baza`' >>"$P/03-gdy-cos-nie-dziala.md"
   sprawdz
   echo "$stderr"
   [ "$status" -eq 0 ]
@@ -64,24 +65,27 @@ sprawdz() { run --separate-stderr bash "$REPO/scripts/docs/sprawdz-podrecznik.sh
   {
     echo '- `shctl upgrade`: etap B (jeszcze niedostępne)'
     echo 'Skill `sh-retro` pojawi się w etapie B.'
-  } >>"$P/04-shctl.md"
+  } >>"$P/03-gdy-cos-nie-dziala.md"
   sprawdz
   echo "$stderr"
   [ "$status" -eq 0 ]
 }
 
-@test "brak sekcji skilla w 03-skille.md" {
-  sed -i.bak '/^## sh-qa$/d' "$P/03-skille.md"
+@test "brak skilla roli w 01-start.md" {
+  sed -i.bak 's/`sh-qa`/QA/g' "$P/01-start.md"
   sprawdz
   [ "$status" -eq 1 ]
-  [[ "$stderr" == *"brak sekcji „## sh-qa”"* ]] || false
+  [[ "$stderr" == *"01-start.md: brak skilla „sh-qa”"* ]] || false
 }
 
-@test "brak komendy w 04-shctl.md" {
-  grep -v 'reset-dryrun' "$P/04-shctl.md" >"$P/04.tmp" && mv "$P/04.tmp" "$P/04-shctl.md"
+@test "martwy wikilink i brak naglowka" {
+  echo 'Zobacz [[proces-v1]] i [[01-start#Nie ma takiego]], a także [[proces]] i [[03-gdy-cos-nie-dziala#Logi]].' >>"$P/02-codzienna-praca.md"
   sprawdz
+  echo "$stderr"
   [ "$status" -eq 1 ]
-  [[ "$stderr" == *"04-shctl.md: brak komendy „shctl reset-dryrun”"* ]] || false
+  [[ "$stderr" == *"martwy link „[[proces-v1]]”"* ]] || false
+  [[ "$stderr" == *"brak nagłówka „Nie ma takiego”"* ]] || false
+  [[ "$stderr" == *"2 błąd"* ]] || false
 }
 
 @test "brak katalogu podrecznika to blad uzycia" {
