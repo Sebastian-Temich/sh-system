@@ -286,7 +286,8 @@ polecenie_silnika() {
     c="$c --disallowedTools Edit,Write,MultiEdit,NotebookEdit,WebFetch,WebSearch,Agent"
     [ -z "$m" ] || c="$c --model $(cytuj "$m")"
     [ -z "$e" ] || c="$c --effort $(cytuj "$e")"
-    c="$c --output-format json --json-schema \"\$(cat $(cytuj "$SCHEMAT_REVIEW"))\" < $(cytuj "$prompt") > $(cytuj "$dir/claude.json") 2> $(cytuj "$dir/silnik.log")"
+    # Claude Code odrzuca schemat z kluczem $schema (draft 2020-12, test sh-dryrun #62): podajemy kopię bez niego.
+    c="$c --output-format json --json-schema \"\$(cat $(cytuj "$dir/schemat-claude.json"))\" < $(cytuj "$prompt") > $(cytuj "$dir/claude.json") 2> $(cytuj "$dir/silnik.log")"
   fi
   printf 'bash -c %s; echo $? > %s; mv %s %s' "$(cytuj "$c")" "$(cytuj "$dir/rc.tmp")" "$(cytuj "$dir/rc.tmp")" "$(cytuj "$dir/rc")"
 }
@@ -367,6 +368,7 @@ uruchom_silnik() {
     wymagaj claude
     # Wywołanie w warunku (&&) wyłącza set -e, więc kod błędu przekazujemy jawnie.
     ust="$(ustawienia_reviewera "$dir")" || exit $?
+    jq -c 'del(."$schema")' "$SCHEMAT_REVIEW" >"$dir/schemat-claude.json" || die "$E_WYKONANIE" "nie można przygotować schematu dla Claude"
   else
     wymagaj codex
     [ -f "${CODEX_HOME:-$HOME/.codex}/reviewer.config.toml" ] ||

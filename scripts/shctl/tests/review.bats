@@ -232,6 +232,9 @@ nowy_commit() {
   [ ! -s "$CLAUDE_ATRAPA/env-w-katalogu" ]
   grep -q 'Tryb review: PR' "$CLAUDE_ATRAPA/prompt"
   jq -e '.permissions.defaultMode == "dontAsk"' "$SH_DIR/stan/review/demo-12/reviewer-settings.json"
+  # Claude Code odrzuca $schema draft 2020-12 w --json-schema.
+  jq -e 'has("$schema") | not' "$SH_DIR/stan/review/demo-12/schemat-claude.json"
+  [[ "$linia" == *'--json-schema {"title":"Wynik review shctl"'* ]] || false
   komentarze 20 | grep -q '^## Review Claude: FAIL'
   komentarze 20 | grep -q 'silnik claude, model opus (effort medium), iteracja 1\.'
   komentarze 20 | grep -q '^### Metryki$'
