@@ -323,22 +323,16 @@ polecenie_workera() {
   printf '%s %s' "$c" "$(cytuj "$prompt")"
 }
 
-# Warstwy skilli workera (plugin/warstwy-skilli.yaml): bazowe + kategoria + stack + skille z zadania
-# + skille projektu (.claude/skills w worktree, zawsze). Kategoria, stack i skille są w znaczniku
-# shctl:warstwy w treści issue (task create). Skill bez SKILL.md w pluginie, projekcie ani
-# ~/.claude/skills jest pomijany z ostrzeżeniem, a dispatch idzie dalej.
-WARSTWY_SKILLI="${SH_WARSTWY_SKILLI:-$SHCTL_DIR/../../plugin/warstwy-skilli.yaml}"
-SKILLE_PLUGINU="${SH_SKILLE_PLUGINU:-$SHCTL_DIR/../../plugin/skills}"
+# Warstwy skilli workera (plugin/warstwy-skilli.yaml, lib/zadania.sh): bazowe + kategoria + stack +
+# skille z zadania + skille projektu (.claude/skills w worktree, zawsze). Kategoria, stack i skille są
+# w znaczniku shctl:warstwy w treści issue (task create). Skill bez SKILL.md w pluginie (także
+# skills/techniczne/), projekcie ani ~/.claude/skills jest pomijany z ostrzeżeniem, a dispatch idzie dalej.
 SKILLE_W='{"skille":[],"brak":[]}'
-
-warstwy_issue() {
-  jq -c '(.body // "") | [capture("<!-- shctl:warstwy (?<d>[A-Za-z0-9+/=]+) -->")][0].d // empty | @base64d | fromjson' <<<"$1" 2>/dev/null |
-    grep . || echo '{}'
-}
 
 skill_istnieje() {
   local n="${2##*:}" d
-  for d in "$SKILLE_PLUGINU" "$1/.claude/skills" "$HOME/.claude/skills"; do
+  [ -z "$(plik_skilla_pluginu "$n")" ] || return 0
+  for d in "$1/.claude/skills" "$HOME/.claude/skills"; do
     [ ! -f "$d/$n/SKILL.md" ] || return 0
   done
   return 1
@@ -346,9 +340,9 @@ skill_istnieje() {
 
 # Ustawia SKILLE_W {skille, brak} dla issue (JSON) i worktree workera.
 skille_workera() {
-  local j="$1" kat="$2" w mapa='{}' lista n ok='[]' brak='[]' d
+  local j="$1" kat="$2" w mapa lista n ok='[]' brak='[]' d
   w="$(warstwy_issue "$j")"
-  [ ! -f "$WARSTWY_SKILLI" ] || mapa="$(yq -o=json '.' "$WARSTWY_SKILLI" 2>/dev/null || echo '{}')"
+  mapa="$(mapa_warstw)"
   lista="$(jq -c --argjson m "$mapa" '
     ($m.bazowe // [])
     + (if (.kategoria // "") != "" then ($m.kategoria[.kategoria] // ["sh-kat-" + .kategoria]) else [] end)
@@ -366,11 +360,22 @@ skille_workera() {
   SKILLE_W="$(jq -nc --argjson s "$ok" --argjson b "$brak" '{skille:$s, brak:$b}')"
 }
 
-# Dopisek do polecenia workera: skille do wczytania przed pracą.
+# Dopisek do polecenia workera: skille do wczytania przed pracą. Skille techniczne
+# (plugin/skills/techniczne/) worker czyta jako pliki, bo Claude Code ładuje z pluginu tylko
+# skills/NAZWA/SKILL.md; kolejność ważności przy sprzeczności: plugin/skills/_kontrakt.md.
 z_skillami() {
-  local s
-  s="$(jq -r '.skille | join(", ")' <<<"$SKILLE_W")"
-  if [ -n "$s" ]; then printf '%s Przed pracą wczytaj skille: %s.' "$1" "$s"; else printf '%s' "$1"; fi
+  local n p s='' t='' wynik="$1"
+  while IFS= read -r n; do
+    [ -n "$n" ] || continue
+    p="$(plik_skilla_pluginu "$n")"
+    case "$p" in
+      */techniczne/*) t="${t:+$t, }$(cd -P "$(dirname "$p")" && pwd -P)/SKILL.md" ;;
+      *) s="${s:+$s, }$n" ;;
+    esac
+  done < <(jq -r '.skille[]' <<<"$SKILLE_W")
+  [ -z "$s" ] || wynik="$wynik Przed pracą wczytaj skille: $s."
+  [ -z "$t" ] || wynik="$wynik Przeczytaj skille techniczne (przy sprzeczności wygrywa projekt, potem stack, kategoria, bazowe): $t."
+  printf '%s' "$wynik"
 }
 
 galaz_zadania() {

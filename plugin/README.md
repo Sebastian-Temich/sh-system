@@ -8,6 +8,8 @@ Skille procesu AI Software House v1 (`docs/proces-v1.md`) dla Claude Code. Mecha
 | `.claude-plugin/plugin.json` | Manifest pluginu |
 | `skills/_kontrakt.md` | Obowiązkowe sekcje każdego `SKILL.md` |
 | `skills/sh-*/SKILL.md` | Skille ról |
+| `skills/techniczne/sh-*/SKILL.md` | Skille techniczne workera i review (bazowe, kategorie, stacki) |
+| `warstwy-skilli.yaml` | Mapa warstw: które skille techniczne dostaje worker zadania |
 
 ## Instalacja lokalna
 
@@ -33,6 +35,10 @@ Sprawdzenie (2026-11-02, Claude Code 2.1.316): `claude plugin validate .` i `cla
 4. `sh-review` jest też promptem `shctl review run` dla Claude i Codexa: shctl czyta skill przy każdym
    review (bez generowanej kopii), więc zmiana skilla działa od razu po `git pull`.
    Skill pisz bez funkcji jednego narzędzia: czytanie plików, `git`, `gh`.
+
+Skill techniczny: kopia podobnego z `skills/techniczne/`, kontrakt w `_kontrakt.md` („Skille
+techniczne”: do 150 linii, lista kontrolna z wagami, sandbox, błędy z projektów), wpis w
+`warstwy-skilli.yaml`, gdy nazwa nie wynika z konwencji `sh-kat-KATEGORIA` albo `sh-stack-STACK`.
 
 `_kontrakt.md` nie jest skillem, bo nie leży w osobnym katalogu (Claude Code ładuje tylko
 `skills/NAZWA/SKILL.md`).

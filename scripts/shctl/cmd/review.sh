@@ -230,13 +230,40 @@ MD
     awk 'NF { t = 1 } t'
 }
 
+# Listy kontrolne review: skille warstwy kategorii zadania (te same co u workera, kategoria ze
+# znacznika shctl:warstwy albo linii „- kategoria:”), a przy zmienionych plikach migracji także
+# skille kategorii baza. Wynik: linie „NAZWA<TAB>PLIK<TAB>powód” bez powtórzeń, tylko skille z sekcją
+# „## Lista kontrolna”.
+listy_kontrolne() {
+  local j="$1" ocena="$2" kat n p
+  {
+    if [ -n "$j" ]; then
+      kat="$(jq -r '.kategoria // ""' <<<"$(warstwy_issue "$j")")"
+      [ -n "$kat" ] || kat="$(jq -r '.body // "" | capture("(?m)^- kategoria: (?<k>[a-z-]+)").k // ""' <<<"$j")"
+      skille_kategorii "$kat" | sed "s/\$/	kategoria $kat/"
+    fi
+    if jq -e '(.powody // []) | any(startswith("pliki migracje"))' <<<"${ocena:-null}" >/dev/null 2>&1; then
+      skille_kategorii baza | sed 's/$/	pliki migracji/'
+    fi
+  } | awk -F '\t' '!w[$1]++' | while IFS="$(printf '\t')" read -r n kat; do
+    p="$(plik_skilla_pluginu "$n")"
+    [ -n "$p" ] && [ -n "$(lista_kontrolna_skilla "$p")" ] || continue
+    printf '%s\t%s\t%s\n' "$n" "$p" "$kat"
+  done
+}
+
 # Treść promptu: wstęp i skill, potem kontekst PR. Issue i poprzednie review są danymi, w blokach tekstu.
 # zbuduj_prompt PR_JSON ISSUE_JSON|"" BAZA ETAP|"" ITERACJA POPRZEDNIE_JSON|"" POPRZEDNI_DOSTEPNY(0|1) OCENA_JSON
 zbuduj_prompt() {
-  local pr="$1" j="$2" baza="$3" etap="$4" iter="$5" poprz="$6" dost="$7" ocena="${8:-null}"
+  local pr="$1" j="$2" baza="$3" etap="$4" iter="$5" poprz="$6" dost="$7" ocena="${8:-null}" listy opis='' n p pw
+  listy="$(listy_kontrolne "$j" "$ocena")"
+  while IFS="$(printf '\t')" read -r n p pw; do
+    [ -n "$n" ] || continue
+    opis="${opis:+$opis, }$n ($pw)"
+  done <<<"$listy"
   tresc_promptu
   jq -nr --arg s "$SLUG" --arg b "$baza" --argjson pr "$pr" --arg e "$etap" --arg i "$iter" \
-    --argjson p "${poprz:-null}" --arg d "$dost" --argjson j "${j:-null}" --argjson o "$ocena" '
+    --argjson p "${poprz:-null}" --arg d "$dost" --argjson j "${j:-null}" --argjson o "$ocena" --arg lk "$opis" '
     def ikona: if . == "krytyczne" then "🔴" elif . == "istotne" then "🟡" else "⚪" end;
     "\n---\n\n## Kontekst (shctl)\n\n"
     + "- Repo: \($s)\n"
@@ -247,11 +274,10 @@ zbuduj_prompt() {
     + "- Iteracja: \($i)\n"
     + "- Commit PR: \($pr.headRefOid)\n"
     + "- Diff do oceny: `git diff \($b)...HEAD` (baza to merge-base z main)\n"
-    # Lista kontrolna bazy (skill sh-review): kategoria baza albo zmienione pliki migracji.
-    + ([($o // {}).powody // [] | .[] | select(startswith("kategoria baza") or startswith("pliki migracje"))] as $lk
-       | if ($lk | length) > 0
-         then "- Lista kontrolna baza i migracje: tak (\($lk | join("; "))). Przejdź każdy punkt sekcji „Lista kontrolna: baza i migracje” i podaj wynik w podsumowaniu\n"
-         else "" end)
+    # Listy kontrolne skilli technicznych (skill sh-review, „Listy kontrolne”): treść na końcu promptu.
+    + (if $lk != ""
+       then "- Listy kontrolne: \($lk). Przejdź każdy punkt sekcji „Listy kontrolne (skille techniczne)” na końcu promptu i podaj wynik w podsumowaniu\n"
+       else "" end)
     + (if $p == null then ""
        elif $d == "1" then "- Poprzednie review: commit \($p.head), werdykt \($p.werdykt)\n"
          + "- Diff od poprzedniego review: `git diff \($p.head)..HEAD` (nowe zgłoszenia tylko z tego zakresu, poza 🔴)\n"
@@ -267,6 +293,12 @@ zbuduj_prompt() {
               + (if (.plik // "") != "" then " `\(.plik)\(if (.linia // 0) > 0 then ":\(.linia)" else "" end)`" else "" end)
               + ": \(.opis | gsub("\n"; " "))"] | join("\n")) + "\n" end)
          + "````\n" end)'
+  [ -n "$opis" ] || return 0
+  printf '\n### Listy kontrolne (skille techniczne)\n\nTe same listy dostał worker. Waga przy punkcie to waga zgłoszenia, gdy punkt nie jest spełniony.\n'
+  while IFS="$(printf '\t')" read -r n p pw; do
+    [ -n "$n" ] || continue
+    printf '\n#### %s (%s)\n\n%s\n' "$n" "$pw" "$(lista_kontrolna_skilla "$p")"
+  done <<<"$listy"
 }
 
 # --- Silniki ----------------------------------------------------------------------------------

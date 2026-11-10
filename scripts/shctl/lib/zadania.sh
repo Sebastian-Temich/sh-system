@@ -7,6 +7,44 @@ SLUG=""
 WT=""
 MAKS_ITERACJI=3
 
+# --- Warstwy skilli (task dispatch, review run) ----------------------------------------------
+# Mapa warstw i skille pluginu, w tym techniczne (plugin/skills/techniczne/NAZWA/SKILL.md).
+WARSTWY_SKILLI="${SH_WARSTWY_SKILLI:-$SHCTL_DIR/../../plugin/warstwy-skilli.yaml}"
+SKILLE_PLUGINU="${SH_SKILLE_PLUGINU:-$SHCTL_DIR/../../plugin/skills}"
+
+# Mapa warstw jako JSON; {} gdy brak pliku albo błąd.
+mapa_warstw() {
+  if [ -f "$WARSTWY_SKILLI" ]; then yq -o=json '.' "$WARSTWY_SKILLI" 2>/dev/null || echo '{}'; else echo '{}'; fi
+}
+
+# Warstwy z treści issue (JSON issue): znacznik shctl:warstwy z task create; {} gdy brak.
+warstwy_issue() {
+  jq -c '(.body // "") | [capture("<!-- shctl:warstwy (?<d>[A-Za-z0-9+/=]+) -->")][0].d // empty | @base64d | fromjson' <<<"$1" 2>/dev/null |
+    grep . || echo '{}'
+}
+
+# Ścieżka SKILL.md skilla pluginu (skills/NAZWA albo skills/techniczne/NAZWA) albo pusto.
+plik_skilla_pluginu() {
+  local n="${1##*:}" d
+  for d in "$SKILLE_PLUGINU/$n" "$SKILLE_PLUGINU/techniczne/$n"; do
+    if [ -f "$d/SKILL.md" ]; then
+      printf '%s' "$d/SKILL.md"
+      return 0
+    fi
+  done
+}
+
+# Skille warstwy kategorii (lista nazw w liniach), jak u workera: mapa albo sh-kat-KATEGORIA.
+skille_kategorii() {
+  [ -n "$1" ] || return 0
+  jq -r --arg k "$1" '(.kategoria[$k] // ["sh-kat-" + $k])[]' <<<"$(mapa_warstw)"
+}
+
+# Sekcja „## Lista kontrolna” skilla (bez nagłówka) albo pusto.
+lista_kontrolna_skilla() {
+  awk '$0 == "## Lista kontrolna" { w = 1; next } w && /^## / { exit } w' "$1" | awk 'NF { t = 1 } t'
+}
+
 # Projekt, repo główne (także gdy shctl działa z worktree), slug GitHuba i katalog worktree /Users/Shared/sh/wt/NAZWA.
 zadania_init() {
   local wspolny

@@ -43,6 +43,8 @@ Nie robisz:
   moduły, punkty wejścia, model danych, testy
 - skille z polecenia startowego („Przed pracą wczytaj skille: …”): warstwy bazowe, kategorii, stacku
   i projektu, które składa `shctl task dispatch`
+- `sh-system/plugin/skills/techniczne/NAZWA/SKILL.md` z polecenia startowego („Przeczytaj skille
+  techniczne: …”): listy kontrolne bazowe, kategorii i stacku; te same listy dostaje review
 - pliki i katalogi z sekcji „Zakres” issue: kod, który zmieniasz
 - `gh pr view task/NR-slug --json number,url,headRefOid,comments`: w iteracji 2+ ostatni komentarz
   „Review …: FAIL” dla bieżącego commita; przy wznowieniu, czy PR istnieje
@@ -86,7 +88,9 @@ shctl escalate --dotyczy "#NR" --powod "..." --potrzebne "..." --opcje "A;B"
    „Iteracji 2+” (niżej). Gdy gałąź ma już commity albo PR istnieje, a review nie było, to wznowienie:
    przeczytaj raport i `git log origin/main..HEAD`, potem kontynuuj od brakującego kroku.
 3. Gdy polecenie startowe wymienia skille („Przed pracą wczytaj skille: …”), wczytaj każdy narzędziem
-   Skill przed pracą. Skilla, którego nie da się wczytać, nie szukasz: zapisujesz go w „Drobnych
+   Skill przed pracą, a skille techniczne („Przeczytaj skille techniczne: ŚCIEŻKI”) narzędziem Read.
+   Przy sprzeczności wygrywa projekt (`AGENTS.md`, `.claude/skills`), potem stack, kategoria,
+   bazowe. Skilla, którego nie da się wczytać, nie szukasz: zapisujesz go w „Drobnych
    uwagach” raportu i pracujesz dalej. Przeczytaj `AGENTS.md`, specyfikację, architekturę i pliki z
    „Zakresu”. Zapisz kryteria z issue jako listę do odhaczenia; kryterium podpięcia funkcji do punktu
    wejścia (trasa, nawigacja, eksport) sprawdzasz testem, który wchodzi od tego punktu.
@@ -244,6 +248,7 @@ lokalnego Supabase i `.env.local`. W etapie A tego nie robisz: zawsze Claude, lo
 - [ ] Niejasność UX lub reguły biznesowej jako `shctl escalate --typ pytanie`, nie zgadnięta decyzja
 - [ ] Lint, typy, testy i „Komenda testów” z issue zielone lokalnie; CI zielone na PR
 - [ ] Raport `docs/07-realizacja/T-NR.md` ma wszystkie sekcje „Raportu”
+- [ ] Punkty list kontrolnych skilli technicznych z polecenia startowego spełnione albo opisane w raporcie
 - [ ] Zmiany tylko w plikach z „Zakresu” issue albo z decyzją w raporcie
 - [ ] Brak sekretów w kodzie, docs, raporcie, PR i logach
 - [ ] Migracje zgodne wstecz, w nowych plikach, `supabase db reset` przechodzi (albo brak migracji)

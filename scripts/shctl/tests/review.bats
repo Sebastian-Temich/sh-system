@@ -231,7 +231,7 @@ nowy_commit() {
   [[ "$linia" == *"--model opus --effort medium --output-format json --json-schema"* ]] || false
   [ ! -s "$CLAUDE_ATRAPA/env-w-katalogu" ]
   grep -q 'Tryb review: PR' "$CLAUDE_ATRAPA/prompt"
-  ! grep -q '^- Lista kontrolna baza i migracje' "$CLAUDE_ATRAPA/prompt"
+  [ "$(grep -c -e '^- Listy kontrolne' -e '^### Listy kontrolne (skille' "$CLAUDE_ATRAPA/prompt" || true)" -eq 0 ]
   jq -e '.permissions.defaultMode == "dontAsk"' "$SH_DIR/stan/review/demo-12/reviewer-settings.json"
   # Claude Code odrzuca $schema draft 2020-12 w --json-schema.
   jq -e 'has("$schema") | not' "$SH_DIR/stan/review/demo-12/schemat-claude.json"
@@ -286,7 +286,8 @@ nowy_commit() {
   [[ "$(jq -r '.wynik.metryki.powody[0]' <<<"$output")" == "pliki migracje (supabase/migrations/20261110_init.sql)" ]] || false
   komentarze 20 | grep -q '^## Review Codex: PASS'
   komentarze 20 | grep -q 'Poziom ryzyko (pliki migracje'
-  grep -q '^- Lista kontrolna baza i migracje: tak (pliki migracje' "$CODEX_ATRAPA/prompt"
+  grep -q '^- Listy kontrolne: sh-kat-baza (pliki migracji)' "$CODEX_ATRAPA/prompt"
+  grep -q '^#### sh-kat-baza (pliki migracji)$' "$CODEX_ATRAPA/prompt"
   grep -q 'polityka `insert` i `update` ma jawne `with check` zgodne z `using`' "$CODEX_ATRAPA/prompt"
 }
 
@@ -307,6 +308,11 @@ nowy_commit() {
   ustaw_tresc $'### Warstwy skilli\n\n- kategoria: frontend\n'
   run --separate-stderr "$SHCTL" review run 20 --json
   [ "$(jq -r .wynik.metryki.poziom <<<"$output")" = zwykle ]
+  # Lista kontrolna tej samej kategorii co u workera, treść z plugin/skills/techniczne/.
+  grep -q '^- Listy kontrolne: sh-kat-frontend (kategoria frontend)' "$CLAUDE_ATRAPA/prompt"
+  grep -q '^#### sh-kat-frontend (kategoria frontend)$' "$CLAUDE_ATRAPA/prompt"
+  grep -q 'Formularz albo wysyła dane metodą z architektury' "$CLAUDE_ATRAPA/prompt"
+  [ "$(grep -c '^#### sh-kat-baza' "$CLAUDE_ATRAPA/prompt" || true)" -eq 0 ]
   nowy_commit src/b.txt
   ustaw_tresc $'Endpoint z autoryzacją ról.\n\n### Warstwy skilli\n\n- kategoria: backend\n'
   run --separate-stderr "$SHCTL" review run 20 --json
@@ -315,7 +321,24 @@ nowy_commit() {
   ustaw_tresc $'### Warstwy skilli\n\n- kategoria: baza\n'
   run --separate-stderr "$SHCTL" review run 20 --json
   [ "$(jq -r '.wynik.metryki.powody[0]' <<<"$output")" = "kategoria baza" ]
-  grep -q '^- Lista kontrolna baza i migracje: tak (kategoria baza)' "$CODEX_ATRAPA/prompt"
+  grep -q '^- Listy kontrolne: sh-kat-baza (kategoria baza)' "$CODEX_ATRAPA/prompt"
+  [ "$(grep -c '^#### sh-kat-baza' "$CODEX_ATRAPA/prompt")" -eq 1 ]
+}
+
+@test "review: kategoria ze znacznika warstw ma pierwszenstwo, kategoria bez skilla bez listy" {
+  ustaw_tresc() {
+    jq --arg b "$1" 'map(if .number == 12 then .body = $b else . end)' "$GH_ATRAPA/issues.json" >"$T/x" && mv "$T/x" "$GH_ATRAPA/issues.json"
+  }
+  w="$(jq -nc '{kategoria:"bezpieczenstwo"}' | base64 | tr -d '\n')"
+  ustaw_tresc "$(printf '### Warstwy skilli\n\n- kategoria: frontend\n\n<!-- shctl:warstwy %s -->\n' "$w")"
+  run --separate-stderr "$SHCTL" review run 20 --json
+  [ "$status" -eq 0 ]
+  grep -q '^#### sh-kat-bezpieczenstwo (kategoria bezpieczenstwo)$' "$CLAUDE_ATRAPA/prompt"
+  nowy_commit src/d.txt
+  ustaw_tresc $'### Warstwy skilli\n\n- kategoria: ci\n'
+  run --separate-stderr "$SHCTL" review run 20 --json
+  [ "$status" -eq 0 ]
+  [ "$(grep -c -e '^- Listy kontrolne' -e '^### Listy kontrolne (skille' "$CLAUDE_ATRAPA/prompt" || true)" -eq 0 ]
 }
 
 @test "review: diff powyzej progu linii to ryzyko" {

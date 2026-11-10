@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Sprawdza plugin software-house: manifest, marketplace i zgodność każdego SKILL.md z kontraktem
-# plugin/skills/_kontrakt.md. Kody: 0 zgodne, 1 niezgodności (lista na stderr), 2 błędne użycie.
+# plugin/skills/_kontrakt.md (skille ról i skille techniczne w plugin/skills/techniczne/). Kody: 0 zgodne, 1 niezgodności (lista na stderr), 2 błędne użycie.
 # Użycie: scripts/plugin/sprawdz-skille.sh [KATALOG_REPO]
 set -euo pipefail
 
@@ -121,8 +121,69 @@ for f in "$REPO"/plugin/skills/*/SKILL.md; do
 done
 [ "$ile" -gt 0 ] || blad "brak skilli w plugin/skills/*/SKILL.md"
 
+# --- skille techniczne (kontrakt: „Skille techniczne”) ------------------------------------------------
+SEKCJE_TECH='Zakres
+Lista kontrolna
+Weryfikacja: lokalnie i w CI
+Przykłady
+Błędy z naszych projektów'
+MAKS_LINII_TECH=150
+ile_tech=0
+for f in "$REPO"/plugin/skills/techniczne/*/SKILL.md; do
+  [ -e "$f" ] || continue
+  ile_tech=$((ile_tech + 1))
+  kat="$(basename "$(dirname "$f")")"
+  wz="plugin/skills/techniczne/$kat/SKILL.md"
+
+  [ "$(head -1 "$f")" = "---" ] || { blad "$wz: brak frontmattera"; continue; }
+  name="$(pole "$f" name)"
+  opis="$(pole "$f" description)"
+  [ "$name" = "$kat" ] || blad "$wz: name '$name' różne od nazwy katalogu '$kat'"
+  printf '%s' "$name" | grep -qE '^sh-[a-z0-9]+(-[a-z0-9]+)*$' || blad "$wz: name ma postać sh-NAZWA"
+  [ -n "$opis" ] || blad "$wz: brak description"
+  case "$opis" in *"<"* | *">"*) blad "$wz: description nie może zawierać < ani >" ;; esac
+  [ "${#opis}" -le 1536 ] || blad "$wz: description dłuższy niż 1536 znaków"
+  printf '%s' "$opis" | grep -q 'Użyj, gdy' || blad "$wz: description bez triggerów „Użyj, gdy …”"
+  [ ! -e "$REPO/plugin/skills/$kat" ] || blad "$wz: nazwa zajęta przez plugin/skills/$kat (skill roli)"
+
+  linie="$(wc -l <"$f" | tr -d ' ')"
+  [ "$linie" -le "$MAKS_LINII_TECH" ] || blad "$wz: $linie linii, limit $MAKS_LINII_TECH"
+
+  jest="$(grep '^## ' "$f" | sed 's/^## //')"
+  [ "$jest" = "$SEKCJE_TECH" ] || blad "$wz: sekcje ## inne niż w kontrakcie skilli technicznych: $(printf '%s' "$jest" | paste -sd '|' -)"
+
+  lk="$(sekcja "$f" "Lista kontrolna")"
+  grep -qE '^[0-9]+\. ' <<<"$lk" || blad "$wz: Lista kontrolna bez punktów numerowanych"
+  bez_wagi="$(grep -E '^[0-9]+\. ' <<<"$lk" | grep -vE '^[0-9]+\. (🔴|🟡|⚪) ' || true)"
+  [ -z "$bez_wagi" ] || blad "$wz: punkty Listy kontrolnej bez wagi 🔴🟡⚪ na początku: $(printf '%s' "$bez_wagi" | cut -c1-40 | paste -sd '|' -)"
+
+  wer="$(sekcja "$f" "Weryfikacja: lokalnie i w CI")"
+  grep -qF -- '--log-failed' <<<"$wer" || blad "$wz: Weryfikacja bez odczytu CI przez gh run view RUN --log-failed"
+  grep -qE '[^[:space:]]' <<<"$(sekcja "$f" "Przykłady")" || blad "$wz: pusta sekcja Przykłady"
+  grep -q '^- ' <<<"$(sekcja "$f" "Błędy z naszych projektów")" || blad "$wz: Błędy z naszych projektów bez listy przypadków"
+
+  # Bloki ```sh: jedna prosta komenda na linię (sandbox, CLAUDE.md).
+  zlozone="$(awk '/^```sh$/ { w = 1; next } /^```/ { w = 0 } w' "$f" | grep -E '&&|\|\||;|\||>|^[A-Z_]+=' || true)"
+  [ -z "$zlozone" ] || blad "$wz: blok sh z komendą złożoną (&&, ||, ;, |, >, zmienna przed komendą): $(printf '%s' "$zlozone" | head -1)"
+
+  # Skill zewnętrzny: adnotacja źródła i wersji.
+  if grep -q '<!-- źródło:' "$f"; then
+    grep -qE '^<!-- źródło: [^ ]+, wersja: [0-9a-f]{7,40}, skopiowano: [0-9]{4}-[0-9]{2}-[0-9]{2}, licencja: [^>]+ -->$' "$f" ||
+      blad "$wz: adnotacja źródła w złym formacie (źródło, wersja SHA, skopiowano RRRR-MM-DD, licencja)"
+  fi
+done
+
+# Bazowe z mapy warstw muszą istnieć, inaczej każdy dispatch kończy się ostrzeżeniem.
+WARSTWY="$REPO/plugin/warstwy-skilli.yaml"
+if [ -f "$WARSTWY" ] && command -v yq >/dev/null; then
+  for n in $(yq -r '.bazowe[]?' "$WARSTWY"); do
+    [ -f "$REPO/plugin/skills/techniczne/$n/SKILL.md" ] || [ -f "$REPO/plugin/skills/$n/SKILL.md" ] ||
+      blad "$WARSTWY: skill bazowy $n nie istnieje"
+  done
+fi
+
 if [ "$bledy" -gt 0 ]; then
   echo "sprawdz-skille: $bledy niezgodności" >&2
   exit 1
 fi
-echo "sprawdz-skille: $ile skill(i) zgodne z kontraktem"
+echo "sprawdz-skille: $ile skill(i) zgodne z kontraktem, $ile_tech skill(i) techniczne zgodne"
