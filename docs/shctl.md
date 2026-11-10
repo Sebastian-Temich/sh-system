@@ -789,7 +789,7 @@ treść issue jako dane. W iteracji 2+ także commit poprzedniego review, „Dif
 pełnym diffie) i lista poprzednich zgłoszeń z podsumowaniem; w pierwszej iteracji „Brak.”. Przy
 kategorii `baza` albo zmienionych plikach migracji kontekst ma linię „Lista kontrolna baza i migracje:
 tak (powody)”, która włącza sekcję skilla „Lista kontrolna: baza i migracje” (RLS na nowych tabelach,
-`with check` zgodne z `using`, bez `using (true)` bez uzasadnienia, testy polityk dla właściciela i
+jawne `with check` zgodne z `using`, bez `using (true)` bez uzasadnienia, testy polityk dla właściciela i
 obcego, zgodność wstecz, indeksy). Iteracja
 pochodzi z etykiety `iter:N` issue albo z pola `iteracja` w `docs/ETAP/DoD.md`. Profil Codexa
 `$CODEX_HOME/reviewer.config.toml` (źródło `codex/reviewer.config.toml`, `serwer.md`, „Codex”)

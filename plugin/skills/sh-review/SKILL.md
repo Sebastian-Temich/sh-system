@@ -183,8 +183,10 @@ zmienione pliki migracji). Przechodzisz każdy punkt na plikach migracji i testa
 podsumowaniu piszesz, które punkty są spełnione. Brak zgłasza się z podaną wagą:
 
 1. RLS włączone (`enable row level security`) na każdej nowej tabeli z danymi użytkowników: brak to 🔴.
-2. Każda polityka `insert` i `update` ma `with check` zgodne z `using` (dla `update` oba; bez
-   `with check` użytkownik może przepisać wiersz na cudzy `user_id`): brak albo niezgodność to 🔴.
+2. Każda polityka `insert` i `update` ma jawne `with check` zgodne z `using`. `with check` luźniejsze
+   niż `using` (np. `true` albo inny warunek, który pozwala przepisać wiersz na cudzy `user_id`) albo
+   `insert` bez `with check` to 🔴. Brak jawnego `with check` w `update` przy poprawnym `using` to 🟡:
+   PostgreSQL stosuje wtedy `using` także do nowego wiersza, więc to wymóg jawności, nie luka.
 3. Brak polityk `using (true)` i `with check (true)` bez uzasadnienia w ADR albo raporcie: taka
    polityka bez uzasadnienia to 🔴.
 4. Testy polityk dla właściciela wiersza i dla obcego użytkownika (pozytywne i negatywne, dla każdej
