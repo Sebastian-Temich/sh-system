@@ -287,7 +287,7 @@ nowy_commit() {
   komentarze 20 | grep -q '^## Review Codex: PASS'
   komentarze 20 | grep -q 'Poziom ryzyko (pliki migracje'
   grep -q '^- Lista kontrolna baza i migracje: tak (pliki migracje' "$CODEX_ATRAPA/prompt"
-  grep -q 'polityka `insert` i `update` ma `with check` zgodne z `using`' "$CODEX_ATRAPA/prompt"
+  grep -q 'polityka `insert` i `update` ma jawne `with check` zgodne z `using`' "$CODEX_ATRAPA/prompt"
 }
 
 @test "review: ryzyko z pliku auth, CI i sekretow" {
