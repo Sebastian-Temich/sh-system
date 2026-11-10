@@ -2,8 +2,9 @@
 # Pełny cykl zadania na prawdziwym GitHubie. Wyłącznie po wyraźnej zgodzie właściciela w danej
 # rozmowie (docs/serwer.md, „Praca nad systemem”). Uruchomienie:
 #   SHCTL_E2E=1 bats scripts/shctl/tests/task-e2e.bats
-# Prawdziwe: repo z szablonu, issue, milestone, PR, CI, merge i Codex (review). Atrapy: herdr (wykonuje
-# komendy od razu) i claude, a pracę workera wykonuje test. SHCTL_E2E_CODEX=atrapa zastępuje Codexa.
+# Prawdziwe: repo z szablonu, issue, milestone, PR, CI i merge. PR zmienia tylko dokumentację, więc
+# review run daje PASS bez modelu (SH-lite F6). Atrapy: herdr (wykonuje komendy od razu) i claude, a
+# pracę workera wykonuje test. SHCTL_E2E_CODEX=atrapa zostaje dla zgodności (Codex nie jest wołany).
 # Zakłada prywatne repo sh-test-RRRRMMDD-HHMM i przed utworzeniem dopisuje je do
 # /Users/Shared/sh/stan/do-usuniecia.md. Propozycje dla systemu są puste, więc test nie otwiera PR w sh-system.
 bats_require_minimum_version 1.5.0
@@ -102,7 +103,7 @@ YAML
   echo "$output $stderr"
   [ "$status" -eq 0 ]
   WERDYKT="$(jq -r .wynik.werdykt <<<"$output")"
-  gh pr view "$PR" --repo "$SLUG" --json comments --jq '.comments[].body' | grep -q "^## Review Codex: $WERDYKT"
+  gh pr view "$PR" --repo "$SLUG" --json comments --jq '.comments[].body' | grep -q "^## Review shctl: $WERDYKT"
   [ ! -e "$SH_DIR/wt/$NAZWA/review-$NR" ]
   if [ "$WERDYKT" != PASS ]; then
     run --separate-stderr "$SHCTL" task close "$NR" --projekt "$NAZWA"

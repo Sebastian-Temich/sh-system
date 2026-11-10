@@ -53,7 +53,8 @@ fail_review() { wynik_codex FAIL "$ZGL"; "$SHCTL" review run 30 >/dev/null; }
   pr_etapu 30
   wynik_codex PASS '[]'
   "$SHCTL" review run 30 >/dev/null
-  grep -q 'Iteracja: 2' "$CODEX_ATRAPA/prompt"
+  # Review etapu (same dokumenty, mały diff): poziom zwykle, domyślnie Claude.
+  grep -q 'Iteracja: 2' "$CLAUDE_ATRAPA/prompt"
   git merge -q --no-edit stage/wydanie
 }
 
