@@ -15,7 +15,7 @@ Użycie: shctl KOMENDA [argumenty] [--dry-run] [--json] [--projekt NAZWA]
   task create --plik zadania.yaml
   task ready [--czekaj] [--timeout SEKUNDY]
   task dispatch NR
-  task iter NR
+  task iter NR [--odbior "kryterium"]
   task close NR [--odbior] [--anuluj [--powod "..."]]   (task cancel NR: alias do następnej wersji)
   task resume-check NR [--testy "..."] [--bez-testow]
   task wait NR [--timeout SEKUNDY]

@@ -30,7 +30,7 @@ Użycie: shctl KOMENDA [argumenty] [--dry-run] [--json] [--projekt NAZWA]
   task create --plik zadania.yaml
   task ready [--czekaj] [--timeout SEKUNDY]
   task dispatch NR
-  task iter NR
+  task iter NR [--odbior "kryterium"]
   task close NR [--odbior] [--anuluj [--powod "..."]]   (task cancel NR: alias do następnej wersji)
   task resume-check NR [--testy "..."] [--bez-testow]
   task wait NR [--timeout SEKUNDY]
@@ -260,7 +260,7 @@ Użycie: shctl task create --plik zadania.yaml
         shctl task ready [--czekaj] [--timeout SEKUNDY]
         shctl task dispatch NR
         shctl task wait NR [--timeout SEKUNDY]
-        shctl task iter NR
+        shctl task iter NR [--odbior "kryterium"]
         shctl task close NR [--odbior] [--anuluj [--powod "..."]]
         shctl task resume-check NR [--testy "..."] [--bez-testow]
 
@@ -274,7 +274,7 @@ create: issue z pliku YAML (lista albo klucz zadania). Pola: id, tytul, cel, kry
   db_migracja, milestone, waga (krytyczne|istotne|drobne; typ qa tylko krytyczne albo istotne),
   kategoria (frontend|backend|baza|integracje|bezpieczenstwo|testy|ci|ai-dane|refaktoryzacja),
   stack, skille, widoczne. Etykiety status:todo, runner:local, wykonawca:claude, typ:X i
-  opcjonalne. Znaczniki shctl:id i shctl:warstwy w treści, brakujące milestone'y, mapa w
+  opcjonalne. „Zakres” zawsze wymienia też raport docs/07-realizacja/T-NR.md. Znaczniki shctl:id i shctl:warstwy w treści, brakujące milestone'y, mapa w
   docs/06-zadania/index.md. Błędne pole, zależność albo cykl: kod 2 przed jakąkolwiek zmianą.
 ready: tylko czyta. gotowe = kandydaci (status:todo, zależności zamknięte; najwyżej jedno zadanie
   db:migracja naraz), gdy nie ma blokad: slot max_local (Mac i projekt), wolne miejsce poniżej
@@ -284,16 +284,24 @@ dispatch: te same bramki, potem worktree, kopia .env.local i env_files, zaufanie
   ~/.claude.json, fnm install przy .nvmrc, lista skilli workera (warstwy niżej), karta herdr z
   claude --settings .claude/roles/worker/settings.json i poleceniem „Zrealizuj issue #NR skillem
   sh-worker”, etykiety status:in-progress i iter:1. Przy in-progress dokańcza brakujące kroki.
+  CI na main (ostatni bieg każdego workflow, gh run list): czerwone to ostrzeżenie na stderr i w
+  poleceniu workera (nie diagnozuje cudzego błędu), nie blokada. Pole main_ci: stan
+  (zielone|czerwone|brak|nieznane), czerwone (nazwy workflow).
 wait: czeka na nową turę workera po poleceniu. Stany: gotowe (PR z Closes #NR i raportem
   docs/07-realizacja/T-NR.md po poleceniu), idle, pracuje, bez_tury, blocked, brak_agenta,
   brak_panelu. Domyślnie 600 s; pole nastepny_krok podpowiada dalszy krok.
 iter: tylko po FAIL review bieżącego commita. iter:N -> iter:N+1, status:in-progress, polecenie
   dla workera: popraw tylko zgłoszenia 🔴 i 🟡. FAIL w iteracji 3 otwiera eskalację.
+iter --odbior "kryterium": zmiana zgłoszona przez właściciela przy odbiorze, także po PASS. Dopisuje
+  „- [ ] kryterium (odbiór DATA)” do sekcji „Kryteria z odbioru” w issue, ustawia status:in-progress
+  i wysyła workerowi polecenie; licznika iteracji nie zmienia. close odmawia (kod 4), dopóki w PR nie
+  ma nowego commita po tym poleceniu. Powtórka z tym samym kryterium niczego nie dubluje.
 close: w repo głównym na main. Merge (squash) tylko przy zielonym CI i PASS dla bieżącego commita;
   zlecenie S wymaga --odbior (po „odbieram #NR”), chyba że ma widoczne:nie przy odbior_S:
   auto_bez_zmian_widocznych. Potem: Decyzje z raportu do decyzje.md, Drobne uwagi i ⚪ z review
   do backlog-drobne.md, wiersz metryk, „Niewydane” w CHANGELOG.md, Propozycje dla systemu jako
-  komentarz w issue miesiąca „Propozycje RRRR-MM” w sh-system; usuwa worktree, gałąź i panel.
+  komentarz w issue miesiąca „Propozycje RRRR-MM” w sh-system, linia „PR: #N” w raporcie T-NR.md
+  (worker nie robi drugiego commita z numerem); usuwa worktree, gałąź i panel.
   Plików wspólnych nie commituje.
 close --anuluj: zamyka PR z gałęzią, panele, worktree i issue jako „not planned” z powodem.
   Scalony PR: kod 4. Dawne task cancel NR działa jako alias z ostrzeżeniem.

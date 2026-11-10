@@ -22,7 +22,10 @@ testów projektu (`AGENTS.md`, „Stack (kontrakt)”) mają pierwszeństwo.
 5. 🟡 Przypadki brzegowe z karty funkcji (`W-NN`): puste, za długie, błąd sieci, podwójne kliknięcie.
 6. 🟡 E2E w chromium i webkit, bez stałych `waitForTimeout`; czekasz na stan (`toBeVisible`, `waitForURL`).
 7. 🟡 Test regresji dla każdego naprawionego błędu, z numerem issue w nazwie albo komentarzu.
-8. ⚪ Dane testowe bez prawdziwych adresów e-mail, nazw klientów i kluczy.
+8. 🟡 Znaki niewidoczne (twarda spacja U+00A0, zero-width U+200B, miękki dywiz) zapisujesz w kodzie
+   i testach jako escape (`"\u00A0"`), nie wklejone; w wyrażeniach regularnych `\s` zamiast
+   `\u00A0`, chyba że kryterium wymaga dokładnie tego znaku.
+9. ⚪ Dane testowe bez prawdziwych adresów e-mail, nazw klientów i kluczy.
 
 ## Weryfikacja: lokalnie i w CI
 
@@ -56,3 +59,6 @@ Nazwa testu: `kontakt: pusty e-mail daje 400 z błędem pola` zamiast `walidacja
   wysłałby GET na `/` z danymi w URL. Wniosek: punkt 4 i test, że submit nie wysyła danych.
 - **iskt-www QA M1, brak CSP.** Test QA-M1-2 z `test.fail` utrwalił znany brak nagłówka CSP i
   wskazywał issue #23; po poprawce `test.fail` zniknął. Wniosek: `test.fail` tylko z issue (punkt 3).
+- **sh-dryrun T-28 i T-36, znak U+00A0.** Narzędzie Write zapisało wpisaną dosłownie twardą spację
+  jako zwykłą, więc test padał z „expected … to deeply equal …” przy identycznym wyglądzie; w drugim
+  zadaniu Edit zamienił `\u00A0` w regexie na sam znak, a eslint go zablokował. Wniosek: punkt 8.

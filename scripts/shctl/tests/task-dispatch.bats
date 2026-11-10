@@ -188,3 +188,41 @@ WT() { echo "$SH_DIR/wt/demo/$1"; }
   [ "$(jq -r '.wynik.skille | length' <<<"$output")" -eq 0 ]
   grep -q "Zrealizuj issue #12 skillem sh-worker.$" "$CLAUDE_ATRAPA/calls"
 }
+
+@test "dispatch: czerwone CI na main to ostrzezenie w poleceniu workera, nie blokada" {
+  issue 12 "Zadanie" "status:todo"
+  cat >"$GH_ATRAPA/runs.json" <<'JSON'
+[{"workflowName":"CI","status":"completed","conclusion":"success","createdAt":"2026-11-01T08:00:00Z"},
+ {"workflowName":"CI","status":"completed","conclusion":"failure","createdAt":"2026-11-01T09:00:00Z"},
+ {"workflowName":"Staging","status":"completed","conclusion":"success","createdAt":"2026-11-01T09:30:00Z"},
+ {"workflowName":"Inna","status":"completed","conclusion":"failure","createdAt":"2026-11-01T09:00:00Z","headBranch":"task/3-x"}]
+JSON
+  run --separate-stderr "$SHCTL" task dispatch 12 --json
+  echo "$output $stderr"
+  [ "$status" -eq 0 ]
+  [ "$(jq -r '.wynik.main_ci.stan' <<<"$output")" = czerwone ]
+  [ "$(jq -r '.wynik.main_ci.czerwone | join(",")' <<<"$output")" = CI ]
+  [[ "$stderr" == *"CI na main jest czerwone (CI)"* ]] || false
+  grep -q "skillem sh-worker. Uwaga: CI na main jest czerwone (CI). Nie diagnozuj" "$CLAUDE_ATRAPA/calls"
+}
+
+@test "dispatch: naprawione CI na main (ostatni bieg zielony) bez ostrzezenia" {
+  issue 12 "Zadanie" "status:todo"
+  cat >"$GH_ATRAPA/runs.json" <<'JSON'
+[{"workflowName":"CI","status":"completed","conclusion":"failure","createdAt":"2026-11-01T08:00:00Z"},
+ {"workflowName":"CI","status":"completed","conclusion":"success","createdAt":"2026-11-01T09:00:00Z"},
+ {"workflowName":"CI","status":"in_progress","conclusion":"","createdAt":"2026-11-01T10:00:00Z"}]
+JSON
+  run --separate-stderr "$SHCTL" task dispatch 12 --json
+  [ "$status" -eq 0 ]
+  [ "$(jq -r '.wynik.main_ci.stan' <<<"$output")" = zielone ]
+  ! grep -q "CI na main" "$CLAUDE_ATRAPA/calls" || false
+}
+
+@test "dispatch: blad gh run list nie przerywa dispatchu" {
+  issue 12 "Zadanie" "status:todo"
+  touch "$GH_ATRAPA/fail-run-list"
+  run --separate-stderr "$SHCTL" task dispatch 12 --json
+  [ "$status" -eq 0 ]
+  [ "$(jq -r '.wynik.main_ci.stan' <<<"$output")" = nieznane ]
+}

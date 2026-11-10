@@ -97,7 +97,8 @@ def zal: [(.zaleznosci // [])[] | if startswith("#") then . elif $mapa[.] then "
 "### Cel\n\n\(.cel | sub("\\s+$"; ""))\n\n"
 + "### Kryteria akceptacji\n\n" + ([.kryteria[] | "- [ ] \(.)"] | join("\n")) + "\n\n"
 + "### Zakres\n\n" + (if ((.pliki // []) | length) > 0 then "Pliki:\n\n" + ([.pliki[] | "- `\(.)`"] | join("\n"))
-    else "Obszar opisany w celu." end) + "\n\n"
+    else "Obszar opisany w celu." end)
++ "\n\nZawsze też: raport `docs/07-realizacja/T-NR.md`, gdzie NR to numer tego issue.\n\n"
 + "### Komenda testów\n\n" + (if (.testy // "") != "" then "```sh\n\(.testy)\n```" else "brak" end) + "\n\n"
 + "### Typ\n\n\(.typ // "feature")\n\n"
 + "### Zależności\n\n" + (zal | if length == 0 then "brak" else join(", ") end) + "\n\n"
@@ -315,6 +316,20 @@ task_ready() {
 # task dispatch NR
 # =========================================================================================
 
+# CI na main (iskt-www T-10): ostatni bieg każdego workflow na gałęzi main. Czerwony to ostrzeżenie dla
+# workera (nie diagnozuje cudzego błędu), nie blokada. Błąd gh: "nieznane" bez przerywania dispatchu.
+# Wypisuje JSON {stan: zielone|czerwone|brak|nieznane, czerwone: [nazwy workflow]}.
+ci_main() {
+  local runs
+  runs="$(gh run list --repo "$SLUG" --branch main --limit 20 --json workflowName,status,conclusion,createdAt 2>/dev/null)" ||
+    { echo '{"stan":"nieznane","czerwone":[]}'; return 0; }
+  jq -c '
+    (map(select(.status == "completed")) | group_by(.workflowName) | map(max_by(.createdAt))) as $ost
+    | [$ost[] | select(.conclusion | IN("failure", "timed_out", "startup_failure")) | .workflowName] as $cz
+    | {stan: (if ($ost | length) == 0 then "brak" elif ($cz | length) > 0 then "czerwone" else "zielone" end),
+       czerwone: $cz}' <<<"$runs" 2>/dev/null || echo '{"stan":"nieznane","czerwone":[]}'
+}
+
 polecenie_workera() {
   local kat="$1" prompt="$2" m c
   m="$(model_workera)"
@@ -439,6 +454,7 @@ przygotuj_node() {
 
 task_dispatch() {
   local nr j st label panele pane stan issues ocena powody br kat env uruchom=0 cmd start zmiana=0 iter zaufanie esk
+  local mci msg
   argument_nr "$@"
   nr="$NR_ARG"
   zadania_init
@@ -503,7 +519,13 @@ task_dispatch() {
   [ "$zaufanie" = false ] || krok "zaufanie folderu Claude Code dla $ROOT_G (~/.claude.json)"
   skille_workera "$j" "$kat"
   krok "skille: $(jq -r '(.skille | if length == 0 then "brak" else join(", ") end) + (if (.brak | length) > 0 then " (brak: " + (.brak | join(", ")) + ")" else "" end)' <<<"$SKILLE_W")"
-  cmd="$(polecenie_workera "$kat" "$(z_skillami "Zrealizuj issue #$nr skillem sh-worker.")")"
+  mci="$(ci_main)"
+  msg="Zrealizuj issue #$nr skillem sh-worker."
+  if [ "$(jq -r .stan <<<"$mci")" = czerwone ]; then
+    uwaga "CI na main jest czerwone ($(jq -r '.czerwone | join(", ")' <<<"$mci")): worker dostaje ostrzeżenie"
+    msg="$msg Uwaga: CI na main jest czerwone ($(jq -r '.czerwone | join(", ")' <<<"$mci")). Nie diagnozuj ani nie naprawiaj błędów spoza zadania; opisz je w „Ryzykach” raportu."
+  fi
+  cmd="$(polecenie_workera "$kat" "$(z_skillami "$msg")")"
   if [ -z "$pane" ]; then
     krok "panel $label i start claude (model $(model_workera))"
     uruchom=1
@@ -539,9 +561,9 @@ task_dispatch() {
   info "#$nr: $( [ "$zmiana" -eq 1 ] && echo "dispatch" || echo "bez zmian") ($label, $kat)"
   wynik_json "$(jq -nc --argjson n "$nr" --arg g "$br" --arg w "$kat" --arg p "$pane" --arg l "$label" \
     --argjson e "$env" --argjson u "$uruchom" --argjson z "$zmiana" --argjson k "$KROKI" --arg c "$cmd" \
-    --argjson zf "$zaufanie" --argjson sk "$SKILLE_W" \
+    --argjson zf "$zaufanie" --argjson sk "$SKILLE_W" --argjson mci "$mci" \
     '{nr:$n, galaz:$g, worktree:$w, panel:$p, label:$l, env:$e, uruchomiono:($u == 1), polecenie:$c,
-      skille:$sk.skille, skille_brak:$sk.brak, zaufanie_dopisane:$zf, zmiana:($z == 1), kroki:$k}')"
+      skille:$sk.skille, skille_brak:$sk.brak, zaufanie_dopisane:$zf, main_ci:$mci, zmiana:($z == 1), kroki:$k}')"
 }
 
 # =========================================================================================
@@ -593,7 +615,7 @@ task_iter() {
 
   label="$(etykieta_workera "$nr")"
   kat="$WT/$nr"
-  msg="Iteracja $cel/$MAKS_ITERACJI zadania #$nr: popraw wyłącznie zgłoszenia 🔴 i 🟡 z ostatniego review Codexa w PR #$prn (komentarz „Review Codex: FAIL” dla commita ${head:0:7}). Nie zmieniaj niczego poza nimi, uruchom testy i wypchnij poprawki na gałąź PR."
+  msg="Iteracja $cel/$MAKS_ITERACJI zadania #$nr: popraw wyłącznie zgłoszenia 🔴 i 🟡 z ostatniego review w PR #$prn (komentarz „Review …: FAIL” dla commita ${head:0:7}). Nie zmieniaj niczego poza nimi, uruchom testy i wypchnij poprawki na gałąź PR."
   if [ "$DRY" -eq 0 ] && [ "$wyslano" != true ]; then
     herdr_dziala
     stan_zapisz "$nr" "$(jq -nc --arg h "$head" --argjson c "$cel" '{iter_review:$h, iter_cel:$c, iter_wyslano:false}')"
@@ -616,6 +638,85 @@ task_iter() {
   if [ "$zmiana" -eq 1 ]; then info "#$nr: iteracja $cel, polecenie wysłane do $label"; else info "#$nr: iteracja $cel już wysłana"; fi
   wynik_json "$(jq -nc --argjson n "$nr" --argjson p "$prn" --argjson c "$cel" --arg m "$msg" --argjson z "$zmiana" \
     '{nr:$n, pr:$p, iteracja:$c, eskalowano:false, polecenie:$m, zmiana:($z == 1)}')"
+}
+
+# =========================================================================================
+# task iter NR --odbior "kryterium"
+# =========================================================================================
+
+# Zmiana zgłoszona przy odbiorze po PASS (retro iskt-www, zlecenie S): kryterium trafia do issue (sekcja
+# „Kryteria z odbioru”), worker dostaje polecenie, status wraca do in-progress. Licznik iteracji review
+# się nie zmienia. PASS bieżącego commita przestaje wystarczać: task close odmawia, dopóki w PR nie ma
+# nowego commita (stan .odbior_head), a nowy commit i tak wymaga nowego review.
+SEKCJA_ODBIORU='## Kryteria z odbioru'
+
+task_iter_odbior() {
+  local nr j pr prn head stan body linia dodano=false wyslano=false msg label pane kat pol plik kryt="$ODBIOR_KRYT"
+  argument_nr "$@"
+  nr="$NR_ARG"
+  kryt="$(printf '%s' "$kryt" | tr '\r\n' '  ' | sed 's/^ *//; s/ *$//')"
+  [ -n "$kryt" ] || die "$E_UZYCIE" "--odbior wymaga treści kryterium: shctl task iter NR --odbior \"...\""
+  zadania_init
+  j="$(issue_json "$nr")"
+  [ "$(jq -r .state <<<"$j")" = OPEN ] || die "$E_ODMOWA" "issue #$nr jest zamknięte"
+  pr="$(pr_zadania "$nr")"
+  [ -n "$pr" ] && [ "$(jq -r .state <<<"$pr")" = OPEN ] || die "$E_ODMOWA" "#$nr nie ma otwartego PR"
+  prn="$(jq -r .number <<<"$pr")"
+  head="$(jq -r .headRefOid <<<"$pr")"
+  stan="$(stan_zadania "$nr")"
+
+  body="$(jq -r '.body // ""' <<<"$j")"
+  if grep -Fq -- "] $kryt (odbiór" <<<"$body"; then
+    info "#$nr: kryterium jest już w issue"
+  else
+    dodano=true
+    krok "kryterium z odbioru w issue #$nr (sekcja „Kryteria z odbioru”)"
+    linia="- [ ] $kryt (odbiór $(date +%Y-%m-%d))"
+    if grep -qx "$SEKCJA_ODBIORU" <<<"$body"; then
+      body="$(printf '%s\n%s' "$body" "$linia")"
+    else
+      body="$(printf '%s\n\n%s\n\n%s' "$body" "$SEKCJA_ODBIORU" "$linia")"
+    fi
+    if [ "$DRY" -eq 0 ]; then
+      plik="$(tmp_plik)"
+      printf '%s\n' "$body" >"$plik"
+      gh issue edit "$nr" --repo "$SLUG" --body-file "$plik" >/dev/null || die "$E_WYKONANIE" "nie można dopisać kryterium do #$nr"
+    fi
+  fi
+
+  label="$(etykieta_workera "$nr")"
+  kat="$WT/$nr"
+  msg="Zmiana z odbioru właściciela w zadaniu #$nr (PR #$prn): $kryt. Kryterium jest w issue, sekcja „Kryteria z odbioru”. Zrealizuj tylko tę zmianę, uruchom testy, uzupełnij raport T-$nr.md i wypchnij poprawki na gałąź PR. To nie jest iteracja review: licznik iteracji się nie zmienia."
+  if jq -e --arg k "$kryt" '(.odbior_wyslane // []) | index($k) != null' <<<"$stan" >/dev/null; then
+    info "#$nr: polecenie tej zmiany już wysłane"
+  else
+    wyslano=true
+    krok "status:in-progress i polecenie dla $label (bez zmiany iteracji)"
+    if [ "$DRY" -eq 0 ]; then
+      herdr_dziala
+      ustaw_status "$nr" "$(issue_json "$nr")" status:in-progress
+      stan_zapisz "$nr" "$(jq -nc --arg h "$head" '{odbior_head:$h}')"
+      pane="$(panel_po_etykiecie "$(panele_herdr)" "$label")"
+      pol="$(teraz_utc)"
+      if [ -n "$pane" ]; then
+        herdr pane run "$pane" "$msg" >/dev/null || die "$E_WYKONANIE" "nie można wysłać polecenia do panelu $pane"
+      else
+        worktree_tego_repo "$kat" || die "$E_ODMOWA" "brak panelu $label i worktree $kat; sprawdź shctl task resume-check $nr"
+        zaufaj_projektowi >/dev/null
+        skille_workera "$j" "$kat"
+        pane="$(otworz_panel "$label" "$kat")"
+        herdr pane run "$pane" "$(polecenie_workera "$kat" "$(z_skillami "$msg")")" >/dev/null ||
+          die "$E_WYKONANIE" "nie można uruchomić claude w panelu $pane"
+      fi
+      stan_zapisz "$nr" "$(jq -c --arg k "$kryt" --arg p "$pane" --arg l "$label" --arg t "$pol" \
+        '{odbior_wyslane:(((. // {}).odbior_wyslane // []) + [$k]), panel:$p, label:$l, uruchomiono:true, polecenie:$t, tura:false}' <<<"$stan")"
+    fi
+  fi
+  info "#$nr: zmiana z odbioru $( [ "$wyslano" = true ] && echo "wysłana do $label" || echo "bez zmian")"
+  wynik_json "$(jq -nc --argjson n "$nr" --argjson p "$prn" --arg k "$kryt" --argjson d "$dodano" --argjson w "$wyslano" \
+    --argjson i "$(iteracja_issue "$j")" --arg m "$msg" \
+    '{nr:$n, pr:$p, odbior:true, kryterium:$k, dodano_do_issue:$d, wyslano:$w, iteracja:$i, polecenie:$m,
+      zmiana:($d or $w)}')"
 }
 
 # =========================================================================================
@@ -814,9 +915,25 @@ tryb_odbioru_s() {
   esac
 }
 
+# Linia „PR: #N” w raporcie T-NR.md na main (sh-dryrun T-9, T-10, T-43): worker nie zna numeru PR
+# przed jego utworzeniem, więc wpisuje go shctl po merge'u. Zastępuje pierwszą linię „PR:”, a bez niej
+# dopisuje ją pod „Issue:” albo pod tytułem. Zwraca 0, gdy plik się zmienił (do commitu orkiestratora).
+wpisz_pr_raportu() {
+  local f="$1" n="$2" t gdzie=tytul
+  grep -qx "PR: #$n" "$f" && return 1
+  if grep -q '^PR:' "$f"; then gdzie=pr; elif grep -q '^Issue:' "$f"; then gdzie=issue; fi
+  t="$(tmp_plik)"
+  awk -v n="$n" -v g="$gdzie" '
+    !z && g == "pr" && /^PR:/ { print "PR: #" n; z = 1; next }
+    { print }
+    !z && g == "issue" && /^Issue:/ { print "PR: #" n; z = 1 }
+    !z && g == "tytul" && /^# / { print ""; print "PR: #" n; z = 1 }' "$f" >"$t"
+  cat "$t" >"$f"
+}
+
 task_close() {
   local nr j pr prn prst head ci rev kat label raport dec uw prop prop_url="" tytul tryb_z iter czas esk f
-  local bledy=0 d_n=0 u_n=0 r_n=0 metr=false chlog=false st_rev rev_plik pyt uw_m pz odb
+  local bledy=0 d_n=0 u_n=0 r_n=0 metr=false chlog=false st_rev rev_plik pyt uw_m pz odb raport_pr=false
   argument_nr "$@"
   nr="$NR_ARG"
   zadania_init
@@ -842,6 +959,8 @@ task_close() {
     rev="$(review_dla_heada "$prn" "$head")"
     st_rev="$(jq -r '.werdykt // "brak"' <<<"${rev:-null}")"
     [ "$st_rev" = PASS ] || die "$E_ODMOWA" "PR #$prn nie ma werdyktu PASS dla commita ${head:0:7} (jest: $st_rev)"
+    [ "$(jq -r '.odbior_head // ""' <<<"$(stan_zadania "$nr")")" != "$head" ] ||
+      die "$E_ODMOWA" "#$nr: zmiana z odbioru (task iter --odbior) czeka na nowy commit w PR #$prn i jego review"
     odb="$(tryb_odbioru_s "$j")"
     if [ "$odb" = odbior ] && [ "${ODBIOR:-0}" -eq 0 ]; then
       die "$E_ODMOWA" "zlecenie S #$nr czeka na odbiór właściciela (odbior_S=$(konf odbior_S reczny)); po jego „odbieram #${nr}” powtórz z --odbior"
@@ -862,6 +981,7 @@ task_close() {
     z_limitem 120 git -C "$ROOT_G" pull -q --ff-only origin main ||
       die "$E_WYKONANIE" "git pull --ff-only na main nie powiódł się; popraw i powtórz komendę"
     raport="$ROOT_G/docs/07-realizacja/T-$nr.md"
+    if [ -f "$raport" ] && wpisz_pr_raportu "$raport" "$prn"; then raport_pr=true; fi
     if [ -f "$raport" ]; then
       dec="$(czytaj_sekcje "$raport" Decyzje)"
       uw="$(czytaj_sekcje "$raport" "Drobne uwagi")"
@@ -943,8 +1063,8 @@ task_close() {
   fi
   info "#$nr: zamknięte (PR #$prn)"
   wynik_json "$(jq -nc --argjson n "$nr" --argjson p "$prn" --argjson d "$d_n" --argjson u "$u_n" --argjson r "$r_n" \
-    --argjson m "$metr" --argjson c "$chlog" --arg pr "$prop_url" --argjson k "$KROKI" \
-    '{nr:$n, pr:$p, decyzje:$d, uwagi:$u, uwagi_review:$r, metryki:$m, changelog:$c,
+    --argjson m "$metr" --argjson c "$chlog" --arg pr "$prop_url" --argjson k "$KROKI" --argjson rp "$raport_pr" \
+    '{nr:$n, pr:$p, decyzje:$d, uwagi:$u, uwagi_review:$r, metryki:$m, changelog:$c, raport_pr:$rp,
       propozycje:(if $pr == "" then null else $pr end), kroki:$k}')"
 }
 
@@ -1208,7 +1328,14 @@ komenda_main() {
   SUB=""
   ANULUJ=0
   ODBIOR=0
+  ODBIOR_KRYT=""
   for a in "$@"; do
+    # task iter NR --odbior "kryterium": wartość opcji; task close NR --odbior: sama flaga.
+    if [ "$poprz" = --odbior ] && [ "$SUB" = iter ] && [ -z "$ODBIOR_KRYT" ]; then
+      ODBIOR_KRYT="$a"
+      poprz="$a"
+      continue
+    fi
     case "$poprz" in
       --projekt | --plik | --testy | --powod | --timeout) reszta+=("$a") ;;
       *)
@@ -1220,13 +1347,14 @@ komenda_main() {
     poprz="$a"
   done
   [ "$ANULUJ" -eq 0 ] || [ "$SUB" = close ] || die "$E_UZYCIE" "--anuluj tylko z shctl task close NR"
-  [ "$ODBIOR" -eq 0 ] || [ "$SUB" = close ] || die "$E_UZYCIE" "--odbior tylko z shctl task close NR"
+  [ "$ODBIOR" -eq 0 ] || [ "$SUB" = close ] || [ "$SUB" = iter ] ||
+    die "$E_UZYCIE" "--odbior tylko z shctl task close NR albo shctl task iter NR --odbior \"kryterium\""
   set -- ${reszta[@]+"${reszta[@]}"}
   case "$SUB" in
     create) task_create "$@" ;;
     ready) task_ready "$@" ;;
     dispatch) task_dispatch "$@" ;;
-    iter) task_iter "$@" ;;
+    iter) if [ "$ODBIOR" -eq 1 ]; then task_iter_odbior "$@"; else task_iter "$@"; fi ;;
     close) if [ "$ANULUJ" -eq 1 ]; then task_cancel "$@"; else task_close "$@"; fi ;;
     resume-check) task_resume_check "$@" ;;
     cancel)

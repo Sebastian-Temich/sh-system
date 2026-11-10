@@ -116,7 +116,9 @@ usługa, dostęp albo podniesienie trybu przychodzi jako eskalacja.
 1. Push „Czeka na Twoją akceptację: PROJEKT / #NR” z linkiem do PR (review PASS, CI zielone).
 2. Sprawdzasz zmianę (opis PR, podgląd wdrożenia, jeśli jest).
 3. Piszesz „odbieram #NR”. Orkiestrator merguje, dopisuje `CHANGELOG.md` i zamyka issue.
-   Albo opisujesz, co poprawić: worker dostaje nowe polecenie.
+   Albo „poprawki #NR: przycisk widoczny na telefonie”: zmiana trafia do issue jako „Kryterium z
+   odbioru”, worker ją robi, a po nowym review dostajesz odbiór jeszcze raz. To nie jest iteracja
+   review, więc nie przybliża eskalacji.
 
 Ustawienie `odbior_S` w `docs/konfiguracja.md` projektu ma domyślnie `reczny`. Przy
 `auto_bez_zmian_widocznych` zlecenie bez zmian widocznych dla użytkownika (etykieta `widoczne:nie`,

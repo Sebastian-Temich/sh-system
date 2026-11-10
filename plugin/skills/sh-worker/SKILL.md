@@ -106,11 +106,15 @@ shctl escalate --dotyczy "#NR" --powod "..." --potrzebne "..." --opcje "A;B"
    Lokalnie tylko lint, typy, testy jednostkowe i build. E2E i Lighthouse nie działają w sandboxie
    (przeglądarki nie startują): testy E2E piszesz, a uruchamia je CI, także część E2E „Komendy testów” z issue (job `e2e` na PR, Lighthouse w
    `qa-staging` u QA). Czerwony `e2e` czytasz przez `gh run view RUN --log-failed` w kroku 12.
-8. Sprawdź sekrety: `gitleaks git --redact --no-banner .`, gdy jest zainstalowany, i przegląd diffu.
-   Sekret znaleziony w repo to eskalacja, nie samodzielne czyszczenie historii.
+8. Przejrzyj diff pod kątem sekretów (`git diff`). Skan gitleaks robisz w kroku 10 na zmianach do
+   commita, nigdy `gitleaks dir`: skanuje cały katalog z plikami ignorowanymi (`.env.local`, `dist/`) i
+   daje fałszywe alarmy (iskt-www T-13). Sekret znaleziony w repo to eskalacja, nie samodzielne
+   czyszczenie historii.
 9. Napisz raport `docs/07-realizacja/T-NR.md` według „Raportu” (niżej).
-10. `git add PLIKI`, potem commit `#NR: opis` (stopka przez drugie `-m`, przykład niżej) i
-    `git push -u origin task/NR-slug`; każda komenda w osobnym wywołaniu.
+10. `git add PLIKI`, potem `gitleaks git --staged --redact --no-banner .` (tylko zmiany do commita),
+    commit `#NR: opis` (stopka przez drugie `-m`, przykład niżej) i `git push -u origin task/NR-slug`;
+    każda komenda w osobnym wywołaniu. Przy wznowieniu z gotowymi commitami skanujesz też je:
+    `gitleaks git --log-opts=origin/main..HEAD --redact --no-banner .`.
 11. Gdy PR nie istnieje: `gh pr create --base main --head task/NR-slug --title "#NR: TYTUŁ"
     --body-file PLIK`, gdzie PLIK leży w worktree (np. `pr-opis.md`; nie dodajesz go do commita i usuwasz
     po utworzeniu PR). Plik spoza `/Users/Shared/sh` blokuje hook `gh-plik-hook.sh`. Treść według `.github/PULL_REQUEST_TEMPLATE.md`: `Closes #NR`, krótki opis i
@@ -202,7 +206,8 @@ Pytanie nie jest eskalacją z sekcji „Eskalacja” i nie liczy się w metrykac
 ### Raport
 
 `docs/07-realizacja/T-NR.md`, oparty na `docs/_szablony/raport-zadania.md`. Tytuł
-`# Raport T-NR: TYTUŁ`, pod nim linie `Issue: #NR` i `PR: #NR_PR`, potem sekcje drugiego poziomu
+`# Raport T-NR: TYTUŁ`, pod nim linie `Issue: #NR` i `PR: (wpisuje shctl task close)`: numer PR
+wpisuje `shctl task close` po merge'u, więc nie robisz drugiego commita z numerem. Potem sekcje drugiego poziomu
 dokładnie w tej kolejności i z tymi nazwami, bo `shctl task close` czyta je po nazwach:
 
 | Nr | Nagłówek | Zawartość |
