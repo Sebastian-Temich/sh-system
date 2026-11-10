@@ -231,12 +231,12 @@ MD
 }
 
 # Treść promptu: wstęp i skill, potem kontekst PR. Issue i poprzednie review są danymi, w blokach tekstu.
-# zbuduj_prompt PR_JSON ISSUE_JSON|"" BAZA ETAP|"" ITERACJA POPRZEDNIE_JSON|"" POPRZEDNI_DOSTEPNY(0|1)
+# zbuduj_prompt PR_JSON ISSUE_JSON|"" BAZA ETAP|"" ITERACJA POPRZEDNIE_JSON|"" POPRZEDNI_DOSTEPNY(0|1) OCENA_JSON
 zbuduj_prompt() {
-  local pr="$1" j="$2" baza="$3" etap="$4" iter="$5" poprz="$6" dost="$7"
+  local pr="$1" j="$2" baza="$3" etap="$4" iter="$5" poprz="$6" dost="$7" ocena="${8:-null}"
   tresc_promptu
   jq -nr --arg s "$SLUG" --arg b "$baza" --argjson pr "$pr" --arg e "$etap" --arg i "$iter" \
-    --argjson p "${poprz:-null}" --arg d "$dost" --argjson j "${j:-null}" '
+    --argjson p "${poprz:-null}" --arg d "$dost" --argjson j "${j:-null}" --argjson o "$ocena" '
     def ikona: if . == "krytyczne" then "🔴" elif . == "istotne" then "🟡" else "⚪" end;
     "\n---\n\n## Kontekst (shctl)\n\n"
     + "- Repo: \($s)\n"
@@ -247,6 +247,11 @@ zbuduj_prompt() {
     + "- Iteracja: \($i)\n"
     + "- Commit PR: \($pr.headRefOid)\n"
     + "- Diff do oceny: `git diff \($b)...HEAD` (baza to merge-base z main)\n"
+    # Lista kontrolna bazy (skill sh-review): kategoria baza albo zmienione pliki migracji.
+    + ([($o // {}).powody // [] | .[] | select(startswith("kategoria baza") or startswith("pliki migracje"))] as $lk
+       | if ($lk | length) > 0
+         then "- Lista kontrolna baza i migracje: tak (\($lk | join("; "))). Przejdź każdy punkt sekcji „Lista kontrolna: baza i migracje” i podaj wynik w podsumowaniu\n"
+         else "" end)
     + (if $p == null then ""
        elif $d == "1" then "- Poprzednie review: commit \($p.head), werdykt \($p.werdykt)\n"
          + "- Diff od poprzedniego review: `git diff \($p.head)..HEAD` (nowe zgłoszenia tylko z tego zakresu, poza 🔴)\n"
@@ -575,7 +580,7 @@ review_run() {
       [ -z "$i" ] || die "$E_ODMOWA" "PR #$prn zawiera pliki env ($(printf '%s' "$i" | sed "s#$kat/##" | paste -sd, -)); review bez sekretów niemożliwe"
 
       prompt="$dir/prompt.md"
-      zbuduj_prompt "$pr" "$j" "$baza" "$etap" "$iter" "$poprz" "$dost" >"$prompt"
+      zbuduj_prompt "$pr" "$j" "$baza" "$etap" "$iter" "$poprz" "$dost" "$ocena" >"$prompt"
       REVIEW_PANEL="$(panel_po_etykiecie "$(panele_herdr)" "$REVIEW_LABEL")"
       [ -n "$REVIEW_PANEL" ] || REVIEW_PANEL="$(otworz_panel "$REVIEW_LABEL" "$WT")"
       start="$(date +%s)"

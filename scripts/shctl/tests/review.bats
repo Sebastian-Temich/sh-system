@@ -231,6 +231,7 @@ nowy_commit() {
   [[ "$linia" == *"--model opus --effort medium --output-format json --json-schema"* ]] || false
   [ ! -s "$CLAUDE_ATRAPA/env-w-katalogu" ]
   grep -q 'Tryb review: PR' "$CLAUDE_ATRAPA/prompt"
+  ! grep -q '^- Lista kontrolna baza i migracje' "$CLAUDE_ATRAPA/prompt"
   jq -e '.permissions.defaultMode == "dontAsk"' "$SH_DIR/stan/review/demo-12/reviewer-settings.json"
   # Claude Code odrzuca $schema draft 2020-12 w --json-schema.
   jq -e 'has("$schema") | not' "$SH_DIR/stan/review/demo-12/schemat-claude.json"
@@ -285,6 +286,8 @@ nowy_commit() {
   [[ "$(jq -r '.wynik.metryki.powody[0]' <<<"$output")" == "pliki migracje (supabase/migrations/20261110_init.sql)" ]] || false
   komentarze 20 | grep -q '^## Review Codex: PASS'
   komentarze 20 | grep -q 'Poziom ryzyko (pliki migracje'
+  grep -q '^- Lista kontrolna baza i migracje: tak (pliki migracje' "$CODEX_ATRAPA/prompt"
+  grep -q 'polityka `insert` i `update` ma `with check` zgodne z `using`' "$CODEX_ATRAPA/prompt"
 }
 
 @test "review: ryzyko z pliku auth, CI i sekretow" {
@@ -312,6 +315,7 @@ nowy_commit() {
   ustaw_tresc $'### Warstwy skilli\n\n- kategoria: baza\n'
   run --separate-stderr "$SHCTL" review run 20 --json
   [ "$(jq -r '.wynik.metryki.powody[0]' <<<"$output")" = "kategoria baza" ]
+  grep -q '^- Lista kontrolna baza i migracje: tak (kategoria baza)' "$CODEX_ATRAPA/prompt"
 }
 
 @test "review: diff powyzej progu linii to ryzyko" {
