@@ -16,10 +16,13 @@ JSON
   [ "$(jq -r .wynik.zrodlo_zadan <<<"$output")" = github ]
 }
 
-@test "bez GitHuba bierze liczniki z Projekt.md" {
+@test "bez GitHuba bierze liczniki z tabeli 06-zadania/index.md" {
+  mkdir -p docs/06-zadania
+  printf '# Zadania\n\n<!-- sync-status:start -->\n| Zadanie | Tytuł | Status | Iteracja | Kamień milowy | PR | CI |\n|---|---|---|---|---|---|---|\n| #1 | A | done | 1 | M1 | #9 merged | pass |\n| #2 | B | done | 1 | M1 | - | - |\n| #3 | C | in-progress | 2 | M1 | - | - |\n| #4 | D | anulowane | 0 | - | - | - |\n<!-- sync-status:end -->\n' >docs/06-zadania/index.md
   run "$SHCTL" status show --json
   [ "$status" -eq 0 ]
-  [ "$(jq -r '.wynik.zrodlo_zadan, .wynik.zadania.done' <<<"$output" | tr '\n' ' ')" = "Projekt.md 3 " ]
+  [ "$(jq -r '.wynik.zrodlo_zadan' <<<"$output")" = "06-zadania/index.md" ]
+  [ "$(jq -c '.wynik.zadania | [.done, .in_progress, .anulowane, .todo]' <<<"$output")" = '[2,1,1,0]' ]
 }
 
 @test "pokazuje etap, eskalacje i wstrzymania" {
@@ -45,7 +48,9 @@ JSON
   [ "$status" -eq 0 ]
 }
 
-@test "status show zaczyna od Gdzie jestesmy i Czeka na Ciebie z Projekt.md" {
+@test "status show zaczyna od Gdzie jestesmy i Czeka na Ciebie z Projekt.md, lista z stan/czeka" {
+  mkdir -p "$SH_DIR/stan/czeka"
+  printf '[{"co":"E-001 (#2): klucz","od":"2026-11-09T07:00:00Z","wpisz":"E-001: A"}]\n' >"$SH_DIR/stan/czeka/demo.json"
   run "$SHCTL" status show
   [ "$status" -eq 0 ]
   [ "$(printf '%s\n' "$output" | head -1)" = "Gdzie jesteśmy" ]

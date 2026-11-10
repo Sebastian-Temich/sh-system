@@ -10,6 +10,9 @@
 - Szablon: `README.md` projektu (cel, zakres, stack, uruchomienie, środowiska, status z linkiem do `Projekt.md`), opis procesu w `docs/proces.md`, workflowy z `runs-on` ze zmiennej `SH_RUNS_ON`.
 - Czekanie na właściciela: `przypomnienia.sh` (LaunchAgent co 15 min) wysyła ntfy, gdy coś czeka ponad 4 h (8–22). `odbior_S: reczny | auto_bez_zmian_widocznych` zamiast `auto_merge_S`: `task close` zlecenia S wymaga `--odbior` (po „odbieram #NR”), chyba że zlecenie ma `widoczne:nie` przy `auto_bez_zmian_widocznych` (merge po PASS i zielonym CI z powiadomieniem). `task create` przyjmuje `widoczne: false`.
 - `CLAUDE-sh.md`: przekierowanie do pliku też odbiera wyjątek sandboxa.
+- Czytelność `Projekt.md` (przed merge'em F5): frontmatter tylko `projekt`, `tryb`, `etap_opis`, `postep_etapy`, `postep_zadania`, `czeka_na_ciebie`, `eskalacje`, `nastepny_krok`, `ostatnia_synchronizacja`; postęp „Etapy X/Y · Zadania A/B”; „Nic w toku” zamiast pustych sekcji; „Zrobione” tylko bieżące zlecenie (`zlecenie_od` w `konfiguracja.md`, przebieg dryrun z `metryki.md` albo seria S po zamkniętym M), najwyżej 10 ostatnich; „Czeka na Ciebie” przy zakończonym projekcie „Nic. Projekt zakończony.”. Plik kończy się sekcją „Dokumenty”.
+- `docs/historia.md`: „Punkt przekazania”, „Dziennik etapów” (`shctl stage`) i pełna lista zadań; pierwsza synchronizacja przenosi sekcje z `Projekt.md` albo `status.md`. Etap przygotowania w `todo` przy zadaniach zlecenia liczy się jako pominięty (dryrun).
+- Lista „Czeka na Ciebie” z czasem w `/Users/Shared/sh/stan/czeka/NAZWA.json` (przypomnienia, `status show`); `status show` bez GitHuba liczy zadania z `06-zadania/index.md`. Przypomnienia nie kasują stanu przy nieczytelnej liście. `Wszystkie projekty.md`: kolejność czeka, w toku, zakończone i kolumna „Następny krok”.
 
 ## 2026-11-09 (SH-lite F4: funkcjonalność przed planem)
 

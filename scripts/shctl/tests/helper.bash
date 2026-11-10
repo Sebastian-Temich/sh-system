@@ -102,7 +102,8 @@ szablon_projektu() {
     printf -- '---\netap: %s\nstatus: todo\niteracja: 0\n---\n\n# DoD\n\n## Dokumentacja\n\n- [ ] punkt\n' "$e" >"$d/docs/$e/DoD.md"
   done
   printf -- '---\nwersja_procesu: 2\netap_wdrozenia: A\ntryb_procesu: M\nmax_local: 1\n---\n\n# Konfiguracja\n\nTekst.\n' >"$d/docs/konfiguracja.md"
-  printf -- '---\nzadania_todo: 2\nzadania_in_progress: 1\nzadania_review: 0\nzadania_blocked: 0\nzadania_escalated: 0\nzadania_done: 3\nzadania_anulowane: 0\nczeka: [{"co":"E-001 (#2): klucz","od":"2026-11-09T07:00:00Z","wpisz":"E-001: A"}]\n---\n\n# demo\n\n<!-- projekt:start -->\n## Gdzie jesteśmy\n\n- **Etap:** Realizacja\n\n## Czeka na Ciebie\n\n1. E-001 (#2): klucz\n\n## Zadania\n\nBrak.\n<!-- projekt:end -->\n\n## Punkt przekazania\n\n(brak)\n' >"$d/docs/Projekt.md"
+  printf -- '---\nprojekt: demo\ntryb: M\netap_opis: "Realizacja"\npostep_etapy: "3/5"\npostep_zadania: "3/6"\nczeka_na_ciebie: 1\neskalacje: 1\nnastepny_krok: "Twoja odpowiedź: E-001 (#2): klucz"\nostatnia_synchronizacja: brak\n---\n\n# demo\n\n## Gdzie jesteśmy\n\n- **Etap:** Realizacja\n\n## Czeka na Ciebie\n\n1. E-001 (#2): klucz\n\n## Zadania\n\nNic w toku.\n\n## Dokumenty\n\n- [Historia](historia.md)\n' >"$d/docs/Projekt.md"
+  printf '# Historia projektu\n\n## Punkt przekazania\n\n(brak)\n\n## Dziennik etapów\n\n(brak)\n\n<!-- historia:start -->\n## Wszystkie zadania zrobione (0)\n\nJeszcze nic.\n<!-- historia:end -->\n' >"$d/docs/historia.md"
   printf '# Decyzje projektu\n\n| Data | Źródło | Pytanie | Decyzja |\n|---|---|---|---|\n' >"$d/docs/decyzje.md"
   printf '# Zlecenie źródłowe\n\nTreść.\n' >"$d/docs/00-intake/zrodlo.md"
   printf '# ADR-NNN: TYTUŁ\n\nStatus: proponowana | zastąpiona przez ADR-NNN\nData: RRRR-MM-DD\n\n## Kontekst\n' >"$d/docs/_szablony/adr.md"

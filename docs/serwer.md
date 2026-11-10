@@ -691,8 +691,9 @@ helperem i dopisuje do PATH brakujące katalogi narzędzi.
 
 **Wszystkie projekty.** Po pullach skrypt zapisuje `SH/Wszystkie projekty.md` (rodzic
 `SH_OBSIDIAN_DIR`): jedna tabela z frontmattera `docs/Projekt.md` każdego klonu (projekt, etap,
-postęp, ile czeka na właściciela, eskalacje i pytania, link do `Projekt.md`). Czysty Markdown, bez
-Dataview; plik zmienia się tylko przy zmianie treści. `Projekt.md` w projekcie generuje
+postęp „Etapy X/Y · Zadania A/B”, ile czeka na właściciela, eskalacje i pytania, następny krok, link
+do `Projekt.md`). Kolejność: najpierw projekty, w których coś czeka na właściciela, potem w toku,
+potem zakończone. Czysty Markdown, bez Dataview; plik zmienia się tylko przy zmianie treści. `Projekt.md` w projekcie generuje
 `scripts/sync-status.sh` przy każdej zmianie stanu w shctl (SH-lite F5).
 
 Sprawdzenie: `launchctl kickstart -k gui/$(id -u)/pl.iskt.softwarehouse.obsidian-sync`, potem
@@ -716,10 +717,12 @@ zgodne z origin).
 ## Przypomnienia o czekaniu na właściciela
 
 LaunchAgent `pl.iskt.softwarehouse.przypomnienia` co 15 minut uruchamia
-`/Users/Shared/sh/bin/przypomnienia.sh`. Skrypt czyta frontmatter `czeka` z
-`/Users/Shared/sh/projekty/*/docs/Projekt.md` (pozycje „Czeka na Ciebie” z czasem, od którego czekają,
-i tekstem do wpisania) i wysyła jedno powiadomienie ntfy na projekt, gdy coś czeka dłużej niż 4 h,
-tylko w godzinach 8–22 czasu lokalnego. Ta sama pozycja wraca najwcześniej po kolejnych 4 h. Retro
+`/Users/Shared/sh/bin/przypomnienia.sh`. Skrypt czyta `/Users/Shared/sh/stan/czeka/NAZWA.json`
+(pozycje „Czeka na Ciebie” z czasem, od którego czekają, i tekstem do wpisania; zapisuje je
+`scripts/sync-status.sh` projektu) i wysyła jedno powiadomienie ntfy na projekt, gdy coś czeka dłużej
+niż 4 h, tylko w godzinach 8–22 czasu lokalnego. Ta sama pozycja wraca najwcześniej 4 h po
+poprzednim przypomnieniu, nie co przebieg. Lista nieczytelna w danym przebiegu nie kasuje stanu, więc
+nie powoduje przedwczesnej powtórki. Retro
 iskt-www: 10,8 h czekania na właściciela w zleceniu M i 57 h w zleceniu S.
 
 | Rzecz | Miejsce |

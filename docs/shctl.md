@@ -131,8 +131,8 @@ Jedna komenda etapu z akcjami; `iter` nie przyjmuje `--notatka`. `ETAP` to nazwa
 projektu: `2` to `00-intake`, `04-plan`, `06-zadania`, `08-qa`, `wydanie`; brak pola (wersja 1,
 projekty sprzed migracji) to `04-architektura` i `05-plan` zamiast `04-plan`. Etap spoza wersji
 projektu to kod 2. Mapowanie etapów trybu M:
-`proces-v1.md`, „Definition of Done”. Komenda zmienia `status` w `DoD.md`, sekcję „Bieżący etap” i
-„Dziennik etapów” w `Projekt.md`.
+`proces-v1.md`, „Definition of Done”. Komenda zmienia `status` w `DoD.md`, odświeża `Projekt.md` (`sync-status.sh`) i dopisuje wpis do
+„Dziennika etapów” w `docs/historia.md` (projekt ze szablonem sprzed historii: w `Projekt.md`).
 
 | Akcja | Dozwolone z | Wynik |
 |---|---|---|
@@ -267,8 +267,10 @@ shctl status show
 ```
 
 Krótkie podsumowanie dla właściciela: etap, zadania według statusu, otwarte eskalacje, wstrzymania z
-`/Users/Shared/sh/limity.md`. Zadania pochodzą z GitHuba, a gdy jest niedostępny, z liczników `Projekt.md`
-(`zrodlo_zadan`). Z `limity.md` bierze pozycje list i wiersze tabeli bez nagłówka (sekcja „Format
+`/Users/Shared/sh/limity.md`. Zadania pochodzą z GitHuba, a gdy jest niedostępny, z tabeli
+`docs/06-zadania/index.md` (`zrodlo_zadan`). Tekst zaczyna się od „Gdzie jesteśmy” i „Czeka na
+Ciebie” z `Projekt.md`; JSON ma je w polach `gdzie` i `czeka` (lista z czasem z
+`/Users/Shared/sh/stan/czeka/NAZWA.json`, zapisuje ją `sync-status.sh`). Z `limity.md` bierze pozycje list i wiersze tabeli bez nagłówka (sekcja „Format
 /Users/Shared/sh/limity.md”). Komenda tylko czyta.
 
 ```json

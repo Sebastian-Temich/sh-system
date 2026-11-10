@@ -175,7 +175,7 @@ Tryb L (nowy produkt, MVP, duża przebudowa, z osobnymi etapami briefu, designu 
 - **Gotowość środowiska.** Przed pierwszym `shctl task dispatch` projektu orkiestrator uruchamia
   `shctl doctor`. Stan `blad` wstrzymuje dispatch: brakujące narzędzie, logowanie albo dostęp staje się
   zadaniem właściciela albo eskalacją i blokuje zadania od niego zależne. Wynik z czasem UTC trafia do
-  „Punktu przekazania” w `Projekt.md`.
+  „Punktu przekazania” w `docs/historia.md`.
 
 ### Zasady
 
@@ -374,7 +374,7 @@ staje, gdy na review czeka `max_review_queue` PR (domyślnie 3, w `konfiguracja.
 - Każdy skill czyta tylko pliki z sekcji „Wejście”. `AGENTS.md` jest krótki (do ok. 150 linii) i
   jest jedynym plikiem instrukcji. `CLAUDE.md` tylko go importuje i dodaje krótkie wskazówki dla
   Claude.
-- Orkiestrator po każdym kamieniu milowym zapisuje w `Projekt.md` punkt przekazania i proponuje
+- Orkiestrator po każdym kamieniu milowym zapisuje w `docs/historia.md` punkt przekazania i proponuje
   właścicielowi restart sesji (`/clear` + „wznów”). Stan jest w plikach, więc nic nie ginie.
 
 - **Jedna sesja = jeden projekt.** Sesja orkiestratora prowadzi jeden projekt. Polecenie bez

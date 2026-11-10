@@ -32,7 +32,7 @@ otwarte() { jq -r '[.[] | select(.state == "OPEN") | .number] | join(",")' "$GH_
   [ "$(jq -r '.[] | select(.number == 1) | .stateReason' "$GH_ATRAPA/issues.json")" = NOT_PLANNED ]
   jq -r '.[] | select(.number == 1) | .body' "$GH_ATRAPA/issues.json" | grep -q 'shctl:archiwum-id=D1'
   [ "$(git rev-parse main^)" = "$BASE" ]
-  git diff --quiet "$BASE" main -- . ':(exclude)docs/metryki.md' ':(exclude)docs/06-zadania/index.md' ':(exclude)docs/status.md'
+  git diff --quiet "$BASE" main -- . ':(exclude)docs/metryki.md' ':(exclude)docs/06-zadania/index.md' ':(exclude)docs/status.md' ':(exclude)docs/Projekt.md' ':(exclude)docs/historia.md'
   [ ! -e "$SH_DIR/wt/demo/1" ]
   [ -z "$(git branch --list 'task/*')" ]
   [ "$(etykiety_paneli)" = "" ]

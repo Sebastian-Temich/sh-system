@@ -14,7 +14,7 @@
 DRYRUN_NAZWA="${SHCTL_DRYRUN_NAZWA:-sh-dryrun}"
 
 # Pliki, które reset zapisuje po task create; poza nimi drzewo main musi być równe baseline.
-PLIKI_PRZEBIEGU="docs/metryki.md docs/06-zadania/index.md docs/Projekt.md docs/status.md"
+PLIKI_PRZEBIEGU="docs/metryki.md docs/06-zadania/index.md docs/Projekt.md docs/historia.md docs/status.md"
 
 # Artefakty przebiegu w commicie baseline, po jednym w linii; pusto, gdy baseline jest czysty.
 artefakty_baseline() {

@@ -205,7 +205,7 @@ Punkt przekazania zapisany. Proponuję /clear i „wznów”.
 
 **Ty:** wpisujesz `/clear`, potem „wznów”. Orkiestrator odtwarza stan z plików.
 
-**W Obsidianie:** raport QA, „Punkt przekazania” w `Projekt.md`, zaktualizowane liczniki.
+**W Obsidianie:** raport QA, „Punkt przekazania” w `historia.md`, zaktualizowany `Projekt.md`.
 
 ## 7. Odbiór na stagingu
 

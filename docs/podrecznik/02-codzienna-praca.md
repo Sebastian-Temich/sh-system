@@ -160,7 +160,8 @@ v1 plik zostaje do migracji.
 
 | Plik | Po co zaglądać |
 |---|---|
-| `docs/Projekt.md` | Gdzie jesteśmy, co czeka na Ciebie, zadania, eskalacje, dokumenty, „Punkt przekazania” |
+| `docs/Projekt.md` | Gdzie jesteśmy (etap, postęp „Etapy X/Y · Zadania A/B”), co czeka na Ciebie, zadania bieżącego zlecenia, eskalacje, dokumenty |
+| `docs/historia.md` | „Punkt przekazania”, dziennik etapów, wszystkie zadania wszystkich zleceń |
 | `docs/00-intake/specyfikacja.md` | Co budujemy: wymagania `W-NN` |
 | `docs/04-plan/plan.md` | Krótka architektura, kamienie, scenariusze odbioru, Twoje zadania ręczne |
 | `docs/decyzje.md` | Wszystkie decyzje, także Twoje zgody |
