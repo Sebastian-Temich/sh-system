@@ -39,7 +39,7 @@ warn() { printf 'UWAGA: %s\n' "$*" >&2; }
 
 mkdir -p "$BIN_DIR" "$BROWSERS_DIR"
 export PATH="$BIN_DIR:$PATH"
-WORK="$(mktemp -d)"
+WORK="$(mktemp -d "${TMPDIR:-/tmp}/setup-toolchain.XXXXXX")"
 trap 'rm -rf "$WORK"' EXIT
 
 # download URL SHA256 CEL - pobiera i weryfikuje sume, przy niezgodnosci przerywa.

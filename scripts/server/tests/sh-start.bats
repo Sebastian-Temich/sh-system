@@ -17,6 +17,9 @@ echo "$cmd \$*" >>"$T/calls"
 MOCK
     chmod +x "$T/mock/$cmd"
   done
+  # Sieć „jest”: bez atrapy wait_network woła prawdziwy curl (w sandboxie odmowa i czekanie do limitu).
+  printf '#!/bin/sh\nexit 0\n' >"$T/mock/curl"
+  chmod +x "$T/mock/curl"
 }
 
 start() {

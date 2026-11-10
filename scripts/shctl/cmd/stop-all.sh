@@ -1,4 +1,4 @@
-# shctl stop-all [--projekt NAZWA]: awaryjny stop (proces-v1.md, „Awaryjny stop”).
+# shctl stop-all [--projekt NAZWA]: awaryjny stop (proces.md, „Limity, stop, wznowienie”).
 # Panele: worker:NAZWA:NR, review:NAZWA:NR, qa:NAZWA:NR, eskalacja:NAZWA:NR, agent z katalogiem w projekty/NAZWA lub wt/NAZWA,
 # orkiestrator:NAZWA oraz wspólny „orkiestrator”. Bez --projekt zatrzymuje wszystko.
 # Z --projekt tylko ten projekt: wspólny orkiestrator obsługuje też inne projekty i zostaje.

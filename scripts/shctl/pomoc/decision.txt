@@ -1,0 +1,6 @@
+Użycie: shctl decision add --co "..." --dlaczego "..." --cofniecie "..." [--rola ROLA]
+
+Dopisuje wiersz do docs/decyzje.md (Data | Źródło | Pytanie | Decyzja): Źródło to --rola
+(domyślnie orkiestrator; akceptacje i zgody: wlasciciel), Pytanie to --co, Decyzja to
+„DLACZEGO. Cofnięcie: COFNIECIE”. Ta sama decyzja nie trafia do pliku drugi raz, także innego dnia.
+Wynik JSON: wiersz, dodano.

@@ -1,7 +1,7 @@
 # Kontrakt SKILL.md
 
 Każdy skill pluginu `software-house` (`plugin/skills/NAZWA/SKILL.md`) spełnia ten kontrakt. Proces:
-`docs/proces-v1.md`, mechanika: `docs/shctl.md`. Nowy skill zaczynamy od kopii istniejącego
+`docs/proces.md`, mechanika: `docs/shctl.md`. Nowy skill zaczynamy od kopii istniejącego
 skilla. Zgodność sprawdza `scripts/plugin/sprawdz-skille.sh` (też w CI).
 
 Ten plik leży w `skills/`, ale nie jest skillem: Claude Code ładuje tylko katalogi
@@ -96,7 +96,7 @@ Trzy podsekcje, zawsze wszystkie:
 
 ## 7. DoD
 
-- Checklista `- [ ]` dla wyniku pracy skilla. Dla workera zawiera DoD zadania z `proces-v1.md`:
+- Checklista `- [ ]` dla wyniku pracy skilla. Dla workera zawiera DoD zadania z `proces.md`:
   kryteria z issue spełnione, testy zielone, raport `T-NR.md`, brak sekretów, migracje zgodne wstecz.
 - Pole review zawsze w brzmieniu: „- [ ] Review PASS (zaznacza reviewer, nie ten skill)”.
   Wyjątek: wynik bez review (raport QA `sh-qa`) ma „- [-] Review PASS (nie dotyczy: powód)”.
@@ -109,7 +109,7 @@ Trzy podsekcje, zawsze wszystkie:
 
 ## 9. Eskalacja
 
-- Kiedy: tylko sytuacje z `proces-v1.md` („Autonomia, decyzje, eskalacje”) istotne dla roli.
+- Kiedy: tylko sytuacje z `proces.md` („Eskalacje i pytania”) istotne dla roli.
 - Jak: dokładne wywołanie
   `shctl escalate --dotyczy "#NR" --powod "..." --potrzebne "..." --opcje "A;B"` (albo
   `--dotyczy ETAP`), potem co skill robi dalej (zadania niezależne trwają).
@@ -198,5 +198,5 @@ licencja: NAZWA -->`. Aktualizacja to nowa kopia z nowym SHA, przez PR.
 - Język polski, zdania krótkie, tryb rozkazujący („Czytasz”, „Uruchom”).
 - SKILL.md do ok. 300 linii. Dłuższy materiał w plikach obok (`reference.md`, `przyklady.md`) z
   odnośnikiem z SKILL.md; takie pliki też są „Wejściem” i muszą być wymienione w sekcji 2.
-- Bez kopiowania `proces-v1.md`: skill odsyła do sekcji procesu nazwą, a przepisuje tylko to, czego
+- Bez kopiowania `proces.md`: skill odsyła do sekcji procesu nazwą, a przepisuje tylko to, czego
   rola potrzebuje do działania.

@@ -1,6 +1,6 @@
 # shctl review run PR [--timeout SEKUNDY]: review PR w świeżej sesji Claude albo Codexa, w czystym
 # worktree bez plików env. PR zadania (Closes #NR, task/NR-) albo PR etapu (gałąź stage/ETAP). Silnik
-# wybiera konfiguracja review (zwykle albo ryzyko, docs/shctl.md „review run”). Wynik idzie
+# wybiera konfiguracja review (zwykle albo ryzyko, docs/shctl.md, „review”). Wynik idzie
 # komentarzem do PR ze znacznikiem commita; powtórka dla tego samego commita go zwraca.
 # shellcheck shell=bash
 

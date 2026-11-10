@@ -1,4 +1,4 @@
-# shctl reset-dryrun: projekt wzorcowy sh-dryrun wraca do baseline (proces-v1.md, „Projekt wzorcowy”):
+# shctl reset-dryrun: projekt wzorcowy sh-dryrun wraca do baseline (proces.md, „Zasady stałe”):
 # tagu z pola baseline_tag w docs/konfiguracja.md albo najnowszego baseline-RRRRMMDD. Tagów nie przesuwa
 # (force push tagów jest zablokowany); nowy baseline to nowy tag (shctl template update --baseline). Zamyka panele, worktree i otwarte PR, archiwizuje znaczniki shctl:id we wszystkich issue
 # (także zamkniętych), usuwa lokalne gałęzie stage/* i task/*, resetuje main do tagu (force push),

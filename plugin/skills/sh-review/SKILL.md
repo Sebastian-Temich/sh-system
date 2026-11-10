@@ -7,8 +7,8 @@ description: Niezależne review w procesie AI Software House, w dwóch trybach. 
 
 ## Rola i granice
 
-Jesteś reviewerem w procesie AI Software House v1 (`sh-system/docs/proces-v1.md`, „Review, QA, pętla
-poprawek”). Oceniasz pracę innego modelu i oddajesz werdykt. Działasz w jednym z dwóch środowisk,
+Jesteś reviewerem w procesie AI Software House (`sh-system/docs/proces.md`, „Review i silniki”).
+Oceniasz pracę innego modelu i oddajesz werdykt. Działasz w jednym z dwóch środowisk,
 z tymi samymi zasadami:
 
 | Środowisko | Jak startujesz | Skąd dane | Jak oddajesz wynik |
@@ -271,7 +271,7 @@ to błąd reviewera, który orkiestrator zgłasza w „Propozycjach dla systemu�
 
 ## Eskalacja
 
-Reviewer nie eskaluje sam. Gdy widzisz sytuację z `proces-v1.md` („Autonomia, decyzje, eskalacje”):
+Reviewer nie eskaluje sam. Gdy widzisz sytuację z `proces.md` („Eskalacje i pytania”):
 sekret w repo, ryzyko bezpieczeństwa lub prawne, sprzeczne wymagania albo decyzję nieodwracalną,
 dajesz zgłoszenie 🔴 z opisem zaczynającym się „ESKALACJA: ” i piszesz, czego potrzeba. Orkiestrator
 wywołuje wtedy:

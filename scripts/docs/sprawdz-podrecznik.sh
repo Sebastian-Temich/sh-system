@@ -1,9 +1,12 @@
 #!/usr/bin/env bash
 # Sprawdza podręcznik właściciela docs/podrecznik/*.md względem kodu:
 #   - każda komenda „shctl KOMENDA [PODKOMENDA]” istnieje w `shctl --help`;
-#   - każda nazwa sh-NAZWA to skill pluginu (plugin/skills/NAZWA), skrypt serwera
-#     (scripts/server/NAZWA.sh) albo jedna z nazw spoza skilli (NIE_SKILLE niżej);
-#   - 03-skille.md wymienia każdy skill pluginu, a 04-shctl.md każdą komendę shctl.
+#   - każda nazwa sh-NAZWA to skill pluginu (plugin/skills/NAZWA albo plugin/skills/techniczne/NAZWA),
+#     skrypt serwera (scripts/server/NAZWA.sh) albo jedna z nazw spoza skilli (NIE_SKILLE niżej);
+#   - 01-start.md wymienia każdy skill roli (plugin/skills/sh-*) jako `sh-NAZWA`;
+#   - każdy wikilink [[PLIK]] i [[PLIK#Nagłówek]] prowadzi do istniejącego pliku w docs/podrecznik/
+#     albo docs/ i do istniejącego nagłówka.
+# Komendy shctl opisuje docs/shctl.md, generowany z --help (scripts/docs/shctl-md.sh).
 # Linie ze słowami „etap B” (także „etapu B”, „etapie B”) opisują funkcje zapowiedziane i są pomijane.
 # W zwykłym tekście nazwę piszemy jako `shctl` (w backtickach); „shctl SŁOWO” bez nich to komenda.
 # Użycie: scripts/docs/sprawdz-podrecznik.sh [KATALOG_REPO]
@@ -72,25 +75,45 @@ done < <(trafienia 'shctl +[a-z][a-z-]*( +[a-z][a-z-]*)?')
 while IFS=: read -r plik nr tekst; do
   sh="sh-${tekst#*sh-}"
   [ -f "$REPO/plugin/skills/$sh/SKILL.md" ] && continue
+  [ -f "$REPO/plugin/skills/techniczne/$sh/SKILL.md" ] && continue
   [ -f "$REPO/scripts/server/$sh.sh" ] && continue
   case "$NIE_SKILLE" in *" $sh "*) continue ;; esac
   blad "${plik#"$REPO"/}:$nr: nieznany skill „${sh}”"
 done < <(trafienia '(^|[^A-Za-z0-9_.-])sh-[a-z][a-z-]*[a-z]')
 
-# Kompletność: każdy skill w 03-skille.md, każda komenda w 04-shctl.md.
+# Kompletność: każdy skill roli w 01-start.md.
 for s in "$REPO"/plugin/skills/sh-*/SKILL.md; do
   [ -f "$s" ] || continue
   sk="$(basename "$(dirname "$s")")"
-  grep -q "^## $sk\$" "$PODR/03-skille.md" 2>/dev/null ||
-    blad "docs/podrecznik/03-skille.md: brak sekcji „## ${sk}”"
+  grep -q "\`$sk\`" "$PODR/01-start.md" 2>/dev/null ||
+    blad "docs/podrecznik/01-start.md: brak skilla „${sk}”"
 done
-for kom in $KOMENDY; do
-  grep -Eq "shctl +$kom([^a-z-]|\$)" "$PODR/04-shctl.md" 2>/dev/null ||
-    blad "docs/podrecznik/04-shctl.md: brak komendy „shctl ${kom}”"
-done
+
+# Wikilinki: [[PLIK]], [[PLIK#Nagłówek]], [[PLIK|tekst]]; PLIK w docs/podrecznik/ albo docs/.
+while IFS=: read -r plik nr tekst; do
+  cel="${tekst#\[\[}"
+  cel="${cel%\]\]}"
+  cel="${cel%%|*}"
+  nazwa="${cel%%#*}"
+  naglowek=""
+  case "$cel" in *"#"*) naglowek="${cel#*#}" ;; esac
+  if [ -z "$nazwa" ]; then
+    docel="$plik"
+  elif [ -f "$PODR/$nazwa.md" ]; then
+    docel="$PODR/$nazwa.md"
+  elif [ -f "$REPO/docs/$nazwa.md" ]; then
+    docel="$REPO/docs/$nazwa.md"
+  else
+    blad "${plik#"$REPO"/}:$nr: martwy link „[[${cel}]]”"
+    continue
+  fi
+  [ -z "$naglowek" ] && continue
+  grep -Fxq "$naglowek" <<<"$(sed -n 's/^#\{1,6\} //p' "$docel")" ||
+    blad "${plik#"$REPO"/}:$nr: brak nagłówka „${naglowek}” w ${docel#"$REPO"/}"
+done < <(trafienia '[[][[][^]]+[]][]]')
 
 if [ "$bledy" -gt 0 ]; then
   echo "Podręcznik niezgodny z kodem: $bledy błąd(ów)" >&2
   exit 1
 fi
-echo "Podręcznik zgodny z kodem: komendy shctl i skille istnieją"
+echo "Podręcznik zgodny z kodem: komendy shctl, skille i linki istnieją"

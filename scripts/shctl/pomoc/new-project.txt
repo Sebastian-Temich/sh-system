@@ -1,0 +1,19 @@
+Użycie: shctl new-project NAZWA --opis "krótki opis repo" [--zlecenie "..."] [--tryb S|M] [--prywatny]
+
+Zakłada projekt SH: repo SH_GH_OWNER/NAZWA (domyślnie publiczne, bez „generated from”), pliki
+szablonu sh-template-projekt jako pierwszy commit w /Users/Shared/sh/projekty/NAZWA, opis i temat
+sh-projekt (gh repo edit), etykiety, frontmatter docs/konfiguracja.md (tryb_procesu,
+etap_wdrozenia, blok_portow), blok portów w porty.md, zlecenie w docs/00-intake/zrodlo.md,
+widok docs/Projekt.md, check-dod.sh, gitleaks (sekret: kod 4, bez pushu), push na main i ruleset
+sh-ochrona-galezi (bez usuwania i force push na main i production). Na końcu klon docs/ w vaulcie
+Obsidiana i skrzynka na materiały (jak obsidian link).
+
+  --opis       wymagany: opis repo na GitHubie, do 350 znaków
+  --zlecenie   treść zlecenia do docs/00-intake/zrodlo.md
+  --tryb       M (domyślnie) albo S (z ostrzeżeniem: nowy projekt zaczyna od M); L: kod 2
+  --prywatny   tylko na wyraźne polecenie właściciela; zmienna repo SH_RUNS_ON kieruje CI na
+               runner serwera (docs/serwer.md, „Repo prywatne”)
+
+W trybie S wszystkie etapy dostają status pominiety. Odmowa (kod 4): repo istnieje i nie jest
+projektem SH, katalog jest klonem innego repo, sekret w plikach, --tryb inny niż w projekcie.
+Wynik JSON: repo, katalog, tryb, kroki, porty, obsidian (katalog, skrzynka).

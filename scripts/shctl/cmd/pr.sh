@@ -2,7 +2,7 @@
 # Najpierw konflikt z main: przy CONFLICTING GitHub nie uruchamia workflowów pull_request, więc
 # czekanie na CI nie ma sensu i shctl zgłasza konflikt wprost (kod 4). Potem wynik CI; z --czekaj
 # czeka, aż CI się rozstrzygnie. Dla PR zadania liczy czerwone commity: po 2 nieudanych naprawach
-# workera zadanie idzie do review albo eskalacji (proces-v1.md, „Czerwone CI”). Commit zmieniający
+# workera zadanie idzie do review albo eskalacji (proces.md, „Etapy trybu M”, „Realizacja”). Commit zmieniający
 # tylko raport zadania nie jest próbą naprawy.
 # shellcheck shell=bash
 
@@ -94,7 +94,7 @@ pr_check() {
     pass) krok="shctl review run $prn" ;;
     fail)
       if [ -n "$nr" ] && [ "$naprawy" -ge "$MAKS_NAPRAW_CI" ]; then
-        krok="limit napraw CI: review albo eskalacja (proces-v1.md, „Czerwone CI”)"
+        krok="limit napraw CI: review albo eskalacja (proces.md, „Etapy trybu M”, „Realizacja”)"
       else
         krok="naprawa CI przez workera (nieudane naprawy: $naprawy z $MAKS_NAPRAW_CI)"
       fi

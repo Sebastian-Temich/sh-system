@@ -17,37 +17,11 @@ SHCTL_DIR="$(cd -P "$(dirname "$zrodlo")" && pwd)"
 # shellcheck source=lib/projekt.sh
 . "$SHCTL_DIR/lib/projekt.sh"
 
+# Pomoc: pomoc/shctl.txt (przegląd) i pomoc/KOMENDA.txt (shctl KOMENDA --help). Z tych plików
+# scripts/docs/shctl-md.sh generuje docs/shctl.md, a CI sprawdza zgodność.
 pomoc() {
-  cat <<'TXT'
-Użycie: shctl KOMENDA [argumenty] [--dry-run] [--json] [--projekt NAZWA]
-
-  new-project NAZWA --opis "krótki opis repo" [--zlecenie "..."] [--tryb S|M] [--prywatny]
-  repo opis [--opis "..."] [--topics "a,b"] [--website URL]
-  stage start|review|done|escalate ETAP [--notatka "..."]
-  stage iter ETAP
-  decision add --co "..." --dlaczego "..." --cofniecie "..." [--rola ROLA]
-  escalate --dotyczy "#NR|ETAP" --powod "..." --potrzebne "..." [--opcje "A;B"] [--priorytet high] [--akceptacja] [--typ blokada|pytanie]
-  escalate close E-NNN --odpowiedz "..."
-  status show
-  stop-all
-  skrzynka przyjmij NAZWA
-  obsidian link|unlink NAZWA
-  doctor [--test-notify]
-  task create --plik zadania.yaml
-  task ready [--czekaj] [--timeout SEKUNDY]
-  task dispatch NR
-  task iter NR
-  task close NR [--odbior] [--anuluj [--powod "..."]]   (task cancel NR: alias do następnej wersji)
-  task resume-check NR [--testy "..."] [--bez-testow]
-  task wait NR [--timeout SEKUNDY]
-  pr check PR [--czekaj] [--timeout SEKUNDY]
-  review run PR [--timeout SEKUNDY]
-  reset-dryrun
-  template update [--baseline] [--force]
-  sprzataj
-
-Dokumentacja: sh-system/docs/shctl.md
-TXT
+  cat "$SHCTL_DIR/pomoc/${1:-shctl}.txt" 2>/dev/null ||
+    { echo "BŁĄD: brak pliku pomocy pomoc/${1:-shctl}.txt" >&2; exit "$E_BRAK"; }
 }
 
 [ $# -gt 0 ] || { pomoc >&2; exit "$E_UZYCIE"; }
@@ -60,6 +34,11 @@ case "$KOMENDA" in
   task | review | reset-dryrun | skrzynka | pr | template | sprzataj | repo) ;;
   *) echo "BŁĄD: nieznana komenda: $KOMENDA (shctl --help)" >&2; exit "$E_UZYCIE" ;;
 esac
+
+# --help w dowolnym miejscu po komendzie: opis komendy, bez wykonania i bez wpisu w logu.
+for a in "$@"; do
+  case "$a" in -h | --help) pomoc "$KOMENDA"; exit 0 ;; esac
+done
 
 start_shctl "$KOMENDA" "$@"
 # shellcheck disable=SC1090

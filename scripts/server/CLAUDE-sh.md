@@ -29,3 +29,18 @@ w sandboxie, bez tokenu GitHuba z pęku kluczy: `git push` pyta o login, `gh` da
 | `gh issue view 54 --json body \| jq -r .body` | `gh issue view 54 -R Sebastian-Temich/sh-system --json body -q .body` |
 | `GIT_TERMINAL_PROMPT=0 git push` | `git push` |
 | `gh pr view 5 --json body > opis.md` | `gh pr view 5 --json body -q .body`, potem Write `opis.md` |
+
+## Testy (bats) w sandboxie
+
+`bats --recursive scripts` (albo jeden plik) uruchamiasz wprost, bez nakładek i obejść: bats bierze
+katalog tymczasowy z `TMPDIR` (`BATS_TMPDIR`), który sandbox ustawia na dozwolony katalog
+(`/tmp/claude-UID`). Nie ustawiaj `TMPDIR` ani `BATS_TMPDIR` ręcznie.
+
+- W skryptach i testach plik tymczasowy zawsze z jawnym szablonem:
+  `mktemp -d "${TMPDIR:-/tmp}/nazwa.XXXXXX"`. Samo `mktemp -d` na macOS ignoruje `TMPDIR`, pisze do
+  `/var/folders` i w sandboxie kończy się „Operation not permitted”.
+- Bez `<(...)` przekazywanego zewnętrznemu programowi (`diff <(…)`): `/dev/fd` jest w sandboxie
+  niedostępne. Zapisz wynik do pliku tymczasowego.
+- Testy nie wołają prawdziwego `claude`, `codex`, `gh` ani sieci: atrapy w `scripts/shctl/tests/atrapy/`
+  i w `$T/mock` testu. `new-project-szablon.bats` w sandboxie jest pomijany, sprawdza go CI.
+- Wynik testu w tle czytasz z pliku wyjścia po zakończeniu; długi zestaw dziel na pliki.

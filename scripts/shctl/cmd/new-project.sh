@@ -82,7 +82,7 @@ komenda_main() {
   [ "${#opis}" -le 350 ] || die "$E_UZYCIE" "--opis ma ${#opis} znaków, GitHub przyjmuje do 350; treść zlecenia daj w --zlecenie"
   case "${tryb_arg:-M}" in
     M) ;;
-    S) uwaga "proces-v1.md: nowy projekt zaczyna od M lub L; S oznacza brak etapów DoD" ;;
+    S) uwaga "proces.md: nowy projekt zaczyna od M lub L; S oznacza brak etapów DoD" ;;
     L) die "$E_UZYCIE" "tryb L jest dostępny dopiero w etapie wdrożenia B" ;;
     *) die "$E_UZYCIE" "--tryb: dozwolone S albo M" ;;
   esac
@@ -161,7 +161,7 @@ komenda_main() {
   if [ "$prywatny" -eq 1 ]; then
     gh variable set SH_RUNS_ON --repo "$slug" --body "$SH_RUNNER_PRYWATNY" >/dev/null ||
       die "$E_WYKONANIE" "nie można ustawić zmiennej SH_RUNS_ON w $slug"
-    uwaga "repo prywatne: CI czeka na runner serwera z etykietami $SH_RUNNER_PRYWATNY (docs/serwer.md, „Runner dla repo prywatnych”)"
+    uwaga "repo prywatne: CI czeka na runner serwera z etykietami $SH_RUNNER_PRYWATNY (docs/serwer.md, „Repo prywatne”)"
   fi
   rzeczy="$(bash "$ROOT/scripts/setup-labels.sh" --repo "$slug" 2>&1)" || die "$E_WYKONANIE" "setup-labels: $rzeczy"
 

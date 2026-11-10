@@ -104,7 +104,7 @@ start_shctl() {
   # Log jest jednowierszowy i ucięty: pełna treść notatek zostaje w plikach projektu.
   # LC_ALL=C: printf %q rozcina znaki wielobajtowe, a tr w UTF-8 pada na takim wejściu.
   SHCTL_ARGI="$(printf '%q ' "$@" | LC_ALL=C tr '\r\n' '  ' | LC_ALL=C cut -c1-400)"
-  SHCTL_TMP="$(mktemp -d)"
+  SHCTL_TMP="$(mktemp -d "${TMPDIR:-/tmp}/shctl.XXXXXX")"
   : >"$SHCTL_TMP/blad"
   trap koniec_shctl EXIT
 }

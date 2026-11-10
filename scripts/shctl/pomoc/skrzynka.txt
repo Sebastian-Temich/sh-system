@@ -1,0 +1,16 @@
+Użycie: shctl skrzynka przyjmij NAZWA
+
+Skrzynka to zwykły folder Obsidian Vault/SH/Skrzynka/NAZWA (SH_SKRZYNKA_DIR) na materiały
+właściciela: makiety, eksport z Claude Design, logo, teksty. Zakłada ją new-project albo
+obsidian link. przyjmij w jednym wywołaniu:
+
+  1. kopiuje pliki do docs/00-intake/zrodla (podkatalogi zostają, prawa 644); pomija pliki ukryte,
+     __MACOSX i dowiązania;
+  2. gałąź skrzynka/RRRRMMDD-HHMMSS w worktree /Users/Shared/sh/wt/NAZWA, commit, push i PR;
+  3. czeka na CI (pr check --czekaj);
+  4. przy zielonym CI merguje PR (squash) i opróżnia skrzynkę.
+
+Bez review modelu i akceptacji właściciela (decyzja właściciela z 2026-11-03). Pliki to dane
+nieufne: komenda ich nie uruchamia ani nie rozpakowuje. Czerwone CI: kod 4, PR otwarty, skrzynka
+bez zmian. Pusta skrzynka: stan pusto. Brak skrzynki: kod 3. --dry-run: lista plików.
+Wynik JSON: stan (przyjeto, pusto, do_przyjecia), pr, url, pliki.

@@ -1,0 +1,12 @@
+Użycie: shctl reset-dryrun
+
+Przywraca projekt wzorcowy sh-dryrun (SHCTL_DRYRUN_NAZWA) do tagu baseline: baseline_tag z
+docs/konfiguracja.md albo najnowszy baseline-RRRRMMDD. Tagów nie przesuwa. Inny projekt: kod 4.
+Tag z artefaktami przebiegu (raporty T-NR.md, eskalacje, raporty QA, mapa zadań, wpisy
+CHANGELOG.md, DoD.md poza todo/pominiety): kod 4 z listą.
+
+Kolejno: zachowuje docs/metryki.md, zamyka panele, worktree i otwarte PR, archiwizuje znaczniki
+shctl:id we wszystkich issue (otwarte zamyka jako „not planned”), resetuje main do tagu (push
+--force-with-lease), odtwarza issue przez task create, dodaje sekcję „Przebieg dryrun N” w
+metrykach, commituje i wypycha main, zakłada od nowa klon docs/ w Obsidianie. Stan zgodny z
+tagiem: nic nie robi (zmiana: false).

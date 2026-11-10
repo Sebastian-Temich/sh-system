@@ -1,6 +1,6 @@
 # shctl template update [--baseline] [--force]: pliki zarządzane przez szablon SH_TEMPLATE (scripts/,
 # .github/workflows/, .claude/roles/, AGENTS.md, docs/_szablony/) z main szablonu do istniejącego
-# projektu (docs/shctl.md, „template update”). Plik projektu równy którejś wersji z historii szablonu
+# projektu (docs/shctl.md, „template”). Plik projektu równy którejś wersji z historii szablonu
 # to treść szablonu i dostaje bieżącą wersję; plik zmieniony w projekcie zostaje (pominięty), chyba że
 # --force. Brakujące pliki dochodzą; pliki usunięte z szablonu zostają w projekcie. Klon projektu musi
 # stać na main: komenda nie przełącza gałęzi; zmiana to commit na main i push. --baseline robi to samo

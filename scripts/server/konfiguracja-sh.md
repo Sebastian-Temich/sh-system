@@ -30,4 +30,4 @@ nie w repo.
 Projekt może nadpisać każde pole `review` w swoim `docs/konfiguracja.md`. Modele: Claude `opus`,
 `sonnet`, `haiku`, `fable` albo pełny identyfikator; effort `low`, `medium`, `high`, `xhigh`, `max`.
 Codex: identyfikator z `~/.codex/models_cache.json` (np. `gpt-6-astra`, `gpt-6.1-terra`); effort
-dodatkowo `ultra`. Szczegóły: `sh-system/docs/shctl.md`, „review run”.
+dodatkowo `ultra`. Szczegóły: `sh-system/docs/shctl.md`, „review”.

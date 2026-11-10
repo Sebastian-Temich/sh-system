@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-11-10 (SH-lite F8: dokumentacja v2)
+
+- `docs/proces.md` (wersja 2) zastępuje `proces-v1.md`: lista zmian względem v1, tryby S i M, etapy `00-intake` (karty funkcji, lista startowa, pytania paczkami), `04-plan`, `06-zadania`, realizacja, `08-qa`, `wydanie` (wydanie produkcyjne odłożone do B2), checkpointy i autoryzacja, DoD, review i silniki, eskalacje i pytania, kategorie i skille techniczne, sandbox (co lokalnie, co w CI), repo publiczne domyślnie. Odwołania w skillach, skryptach i pluginie wskazują `proces.md`.
+- Podręcznik właściciela w trzech plikach: `01-start.md`, `02-codzienna-praca.md` (jak czytać `Projekt.md` i `Wszystkie projekty.md`, pytania intake i karty funkcji, checkpointy, odbiór S, przypomnienia ntfy), `03-gdy-cos-nie-dziala.md` (w tym „Co wykonujesz Ty”: `install.sh`, usuwanie gałęzi bez PR, repo testowe, sekrety, logowania). `sprawdz-podrecznik.sh`: skille techniczne dozwolone, każdy skill roli w `01-start.md`, wikilinki i nagłówki muszą istnieć; bez kontroli `03-skille.md` i `04-shctl.md`.
+- `shctl KOMENDA --help` dla każdej komendy (teksty w `scripts/shctl/pomoc/`, także przegląd `shctl --help` ze zmiennymi środowiska); `--help` nie wykonuje komendy i nie pisze logu. `docs/shctl.md` generuje `scripts/docs/shctl-md.sh`, a CI (`szybkie`) sprawdza zgodność (`--sprawdz`).
+- `serwer.md` przycięty do aktualnych elementów (bez diagnozy dysku z 2026-11-01, usług Forgejo i runnerów, przeglądów kluczy, historii testów); sekcja „Runner dla repo prywatnych” to „Repo prywatne”.
+- Testy w sandboxie bez nakładek: `mktemp -d "${TMPDIR:-/tmp}/…XXXXXX"` w `shctl` (`lib/common.sh`), atrapie `gh` i `setup-toolchain.sh`; opis w `CLAUDE-sh.md`, „Testy (bats) w sandboxie”.
+- `decyzje-systemu.md`: wpis „SH-lite” (herdr, DoD, Obsidian jako główny widok, silnik review, kategorie skilli, sandbox, repo publiczne, bez płatnych minut Actions).
+
 ## 2026-11-10 (SH-lite F7: skille techniczne workerów)
 
 - Skille techniczne w `plugin/skills/techniczne/`: bazowe `sh-weryfikacja-przed-gotowe`, `sh-tdd-testy`, `sh-debugowanie`; kategorie `sh-kat-frontend`, `sh-kat-bezpieczenstwo`, `sh-kat-baza` (szkielet, pełny w B1); stack `sh-stack-astro`. Każdy do 150 linii: zakres, lista kontrolna z wagami 🔴🟡⚪, weryfikacja lokalnie (lint, typy, testy jednostkowe, build) i w CI (E2E, Lighthouse, `gh run view RUN --log-failed`), przykłady i „Błędy z naszych projektów” z iskt-www (brak CSP, statyczny formularz, test omijający `/404`, Lighthouse 87–89, zdublowany klucz `build`).

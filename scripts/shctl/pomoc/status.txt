@@ -1,0 +1,7 @@
+Użycie: shctl status show
+
+Tylko czyta. Stan projektu dla właściciela: „Gdzie jesteśmy” i „Czeka na Ciebie” z
+docs/Projekt.md, zadania według statusu (z GitHuba, bez sieci z docs/06-zadania/index.md), otwarte
+eskalacje i pytania, wstrzymania z /Users/Shared/sh/limity.md. JSON: gdzie, czeka (z czasem z
+/Users/Shared/sh/stan/czeka/NAZWA.json), projekt, tryb, etap, zadania, zrodlo_zadan, eskalacje,
+wstrzymania.

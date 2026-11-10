@@ -38,6 +38,8 @@ jobs:
         run: bash scripts/ci/zakres.sh
       - name: Podręcznik zgodny z kodem
         run: bash scripts/docs/sprawdz-podrecznik.sh
+      - name: docs/shctl.md zgodny z --help
+        run: bash scripts/docs/shctl-md.sh --sprawdz
       - name: Skille zgodne z kontraktem
         run: bash scripts/plugin/sprawdz-skille.sh
 
