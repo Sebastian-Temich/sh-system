@@ -12,12 +12,16 @@ limicie nie ma: strażnik już ich nie śledzi.
 
 | Limit | Skutek |
 |---|---|
-| Claude | Nowe zadania nie startują, przerwany worker stoi |
-| Codex | Review czeka, PR zostają w kolejce; nowe zadania startują, dopóki kolejka review nie ma 3 PR |
+| Claude | Nowe zadania nie startują, przerwany worker stoi; review Claude czeka albo przechodzi na Codexa |
+| Codex | Review Codex czeka albo przechodzi na Claude; nowe zadania startują, dopóki kolejka review nie ma 3 PR |
+
+Review przy limicie działa według `review.gdy_limit` w `/Users/Shared/sh/konfiguracja.md`: `czekaj`
+(PR zostaje w kolejce) albo `drugi_silnik` (review robi drugi silnik, a komentarz w PR to opisuje). W
+obu przypadkach dostajesz push z godziną odnowienia, jeśli silnik ją podał.
 
 **Co robisz:**
 
-1. Nic, do godziny odnowienia. Pracy nie przenosimy na inny model.
+1. Nic, do godziny odnowienia. Pracy workerów nie przenosimy na inny model.
 2. Po tej godzinie piszesz „wznów”. Orkiestrator usuwa wpis z `limity.md`, sprawdza każde przerwane
    zadanie i decyduje, jak kontynuować.
 

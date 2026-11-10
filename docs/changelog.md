@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-11-10 (SH-lite F6: wybór silnika review)
+
+- `shctl review run` wybiera silnik według ryzyka PR: `review.zwykle` (domyślnie Claude `opus`, `medium`) albo `review.ryzyko` (domyślnie Codex `gpt-6-astra`, `high`). Ryzyko: kategoria `baza`, `bezpieczenstwo` albo `backend` z autoryzacją w issue, pliki auth, migracji, sekretów, CI lub uprawnień, diff powyżej `review.prog_linii` (400). Konfiguracja w `/Users/Shared/sh/konfiguracja.md` (`scripts/server/konfiguracja-sh.md`), projekt nadpisuje pole po polu w `docs/konfiguracja.md`; `modele.reviewer` przestaje działać.
+- Reviewer Claude: `claude -p` w świeżej sesji (bez historii i kontekstu workera), profil `.claude/roles/reviewer/settings.json` z `main` projektu (szablon), `--setting-sources user --strict-mcp-config`, narzędzia tylko do odczytu, wynik przez `--json-schema`. Ten sam format uwag 🔴🟡⚪, komentarz, blokada, worktree i panel co Codex.
+- Jedno źródło promptu: shctl składa prompt przy każdym review ze skilla `sh-review`; schemat `templates/review.schema.json` (dawniej `codex/sh-review.schema.json`). Usunięte `scripts/sync-codex.sh`, `codex/sh-review.md` i krok CI.
+- Iteracje: prompt ma commit poprzedniego review, „Diff od poprzedniego review: `git diff POPRZEDNI..HEAD`” i listę poprzednich zgłoszeń. PR zadania tylko z dokumentacją: „## Review shctl: PASS” bez modelu.
+- Limit silnika (z `limity.md` albo komunikatu silnika): `review.gdy_limit` `czekaj | drugi_silnik`, ntfy z godziną odnowienia (raz na silnik, godzinę i dzień), „Przełączenie silnika” w komentarzu PR.
+- Metryki review w komentarzu („### Metryki”), w ukrytych danych i w `/Users/Shared/sh/stan/review/metryki.jsonl`: silnik, model, effort, poziom z powodami, czas, rozmiar diffu, diff od poprzedniego review, uwagi według wagi, przełączenie.
+- Profil Codexa `codex/reviewer.config.toml`: bez zmiany modelu (`gpt-6-astra`, `high`), opis jako wartość zapasowa; doraźne lokalne `gpt-6-luna`, `medium` zastępuje podział zwykłe/ryzyko.
+
 ## 2026-11-09 (SH-lite F5: czytelny Obsidian i tożsamość repo)
 
 - Widok projektu `docs/Projekt.md` zamiast `docs/status.md`: generuje go `scripts/sync-status.sh` szablonu (czysty Markdown): „Gdzie jesteśmy” (etap słownie, postęp, co się dzieje z workerem, review, iteracją i czasem, następny krok, szacowany czas z metryk), „Czeka na Ciebie” z dokładnym tekstem do wpisania (eskalacje, pytania, lista startowa, akceptacja etapu po PASS, odbiór S), zadania według stanu (w realizacji, gotowe do startu z zależnościami, zaplanowane, zrobione, anulowane), eskalacje i pytania, dokumenty. „Punkt przekazania” i „Dziennik etapów” zostają pod blokiem; pierwsza synchronizacja w starym projekcie przenosi je ze `status.md` i usuwa go. shctl odświeża widok przy każdej zmianie stanu (etap, eskalacja, status zadania, review, zamknięcie).

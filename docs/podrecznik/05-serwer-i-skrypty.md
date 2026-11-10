@@ -168,7 +168,6 @@ Do pracy nad samym systemem, uruchamiane też w CI:
 | Skrypt | Co sprawdza |
 |---|---|
 | `scripts/plugin/sprawdz-skille.sh` | Każdy skill ma sekcje i zasady z kontraktu |
-| `scripts/sync-codex.sh` | Prompt Codexa `codex/sh-review.md` jest zgodny ze skillem `sh-review` |
 | `scripts/docs/sprawdz-podrecznik.sh` | Każda komenda `shctl` i każdy skill wymieniony w tym podręczniku istnieje |
 | `scripts/ci/zakres.sh` | Które testy uruchamia CI: pełne tylko przy zmianie poza dokumentacją |
 

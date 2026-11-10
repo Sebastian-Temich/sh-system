@@ -15,7 +15,7 @@ czeka na Ciebie.
 | `sh-intake` | Specyfikacja albo zlecenie S | Orkiestrator | Sesja orkiestratora | S, M |
 | `sh-plan` | Plan (krótka architektura i kamienie), potem zadania (issue) | Orkiestrator po akceptacji specyfikacji i planu | Sesja orkiestratora | M |
 | `sh-worker` | Kod i testy jednego zadania | `shctl task dispatch` i `shctl task iter` | Panel `worker:PROJEKT:NR` | S, M |
-| `sh-review` | Niezależne review | `shctl review run` (Codex) | Panel `review:PROJEKT:NR` | S, M |
+| `sh-review` | Niezależne review | `shctl review run` (Claude albo Codex) | Panel `review:PROJEKT:NR` | S, M |
 | `sh-qa` | QA po kamieniu milowym | Orkiestrator | Sesja orkiestratora | M |
 
 Wszystkie skille mają te same zasady wspólne: rozstrzygnij niejasność sam i zapisz decyzję; nie
@@ -142,9 +142,12 @@ tymczasowy.
 
 ## sh-review
 
-**Cel:** niezależna ocena pracy innego modelu. W etapie A autorem jest Claude, a reviewerem Codex.
+**Cel:** niezależna ocena pracy workera w świeżej sesji, bez jego kontekstu. Silnik wybiera
+`shctl` według ryzyka PR (SH-lite F6): zwykłe PR ocenia Claude, a PR z ryzykiem (baza, bezpieczeństwo,
+backend z autoryzacją, pliki auth, migracji, sekretów, CI lub uprawnień, diff powyżej 400 linii) Codex.
+PR zadania zmieniający tylko dokumentację dostaje PASS bez review modelu.
 
-**Kiedy działa:** `shctl review run PR` uruchamia Codexa po zielonym CI. Dwa rodzaje:
+**Kiedy działa:** `shctl review run PR` uruchamia reviewera po zielonym CI. Dwa rodzaje:
 
 - review PR zadania: kod, testy, kryteria z issue, bezpieczeństwo, sekrety, migracje, zgodność ze
   stackiem, zakres;

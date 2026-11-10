@@ -40,8 +40,6 @@ jobs:
         run: bash scripts/docs/sprawdz-podrecznik.sh
       - name: Skille zgodne z kontraktem
         run: bash scripts/plugin/sprawdz-skille.sh
-      - name: Prompty Codexa aktualne
-        run: bash scripts/sync-codex.sh --check
 
   bats:
     needs: szybkie

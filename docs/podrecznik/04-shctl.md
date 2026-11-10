@@ -227,7 +227,7 @@ Pętla realizacji. Wywołuje ją orkiestrator.
 | `shctl task dispatch NR` | Kopia robocza, panel `worker:PROJEKT:NR`, start workera z listą skilli (bazowe, kategoria, stack, projekt) |
 | `shctl task wait NR` | Czeka na nową turę workera po poleceniu, z limitem czasu; stan: gotowe, idle, blocked, pracuje, bez_tury (worker nie podjął polecenia) |
 | `shctl pr check PR` | Konflikt z `main` i wynik CI; z `--czekaj` czeka na CI, liczy nieudane naprawy (commit z samym raportem się nie liczy) |
-| `shctl review run PR` | Review Codexa w czystej kopii, komentarz z werdyktem w PR; jedno naraz na PR |
+| `shctl review run PR` | Review w świeżej sesji (Claude albo Codex według ryzyka) w czystej kopii, komentarz z werdyktem i metrykami w PR; jedno naraz na PR |
 | `shctl task iter NR` | Po FAIL: kolejna iteracja poprawek; po 3. FAIL eskalacja |
 | `shctl task close NR` | Merge (tylko zielone CI i PASS), wpisy w plikach wspólnych, propozycje do issue miesiąca, sprzątanie |
 | `shctl task close NR --anuluj` | Anuluje zadanie: issue „not planned”, PR, kopia robocza, panel, stan (dawniej `task cancel`) |

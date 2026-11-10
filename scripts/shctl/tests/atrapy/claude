@@ -1,3 +1,17 @@
 #!/usr/bin/env bash
-# Atrapa claude: zapisuje katalog, SH_NOTIFY i argumenty.
-echo "$PWD | SH_NOTIFY=${SH_NOTIFY:-} | $*" >>"${CLAUDE_ATRAPA:?}/calls"
+# Atrapa claude: zapisuje katalog, SH_NOTIFY i argumenty. Z -p (reviewer shctl review run) czyta prompt
+# ze stdin do $CLAUDE_ATRAPA/prompt i wypisuje wynik jak --output-format json: structured_output z
+# $CLAUDE_ATRAPA/wynik.json. Plik $CLAUDE_ATRAPA/limit: komunikat limitu (is_error, kod 1).
+D="${CLAUDE_ATRAPA:?}"
+echo "$PWD | SH_NOTIFY=${SH_NOTIFY:-} | $*" >>"$D/calls"
+for a in "$@"; do
+  [ "$a" = -p ] || continue
+  cat >"$D/prompt"
+  find . -name '.env*' ! -name .env.example ! -path './.git/*' >"$D/env-w-katalogu"
+  if [ -f "$D/limit" ]; then
+    jq -nc --arg r "$(cat "$D/limit")" '{type:"result", is_error:true, result:$r}'
+    exit 1
+  fi
+  jq -c '{type:"result", is_error:false, result:"", structured_output:.}' "$D/wynik.json"
+  exit 0
+done

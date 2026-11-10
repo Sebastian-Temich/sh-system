@@ -23,7 +23,7 @@ Robisz:
 Nie robisz:
 
 - merge'a, zamykania issue, zmian etykiet, statusów i iteracji (orkiestrator przez shctl);
-- review własnego PR ani zaznaczania pola review (Codex przez `shctl review run`);
+- review własnego PR ani zaznaczania pola review (świeża sesja reviewera przez `shctl review run`);
 - edycji plików wspólnych: `docs/Projekt.md`, `docs/historia.md`, `docs/decyzje.md`, `docs/metryki.md`,
   `docs/backlog-drobne.md`, `docs/06-zadania/index.md`, `CHANGELOG.md`;
 - niczego na produkcji: bez `vercel`, `supabase link`, `supabase db push`, sekretów GitHuba i pushu na
@@ -314,7 +314,7 @@ Polecenie w panelu `worker:sklep:14`: „Zrealizuj issue #14 skillem sh-worker.�
 4. Raport `T-14.md`; decyzja „Gdzie trzymać koszyk gościa? → localStorage, bo W-02 nie wymaga konta”.
 5. `git add`, `git commit -q -m "#14: dodaj koszyk"`, `git push -u origin task/14-koszyk`, `gh pr create`
    z `Closes #14`, każde w osobnym wywołaniu: PR #31, `gh pr checks 31 --watch` zielone.
-6. Review Codex: FAIL, 🟡 brak testu usunięcia ostatniej pozycji. Orkiestrator: `shctl task iter 14`.
+6. Review: FAIL, 🟡 brak testu usunięcia ostatniej pozycji. Orkiestrator: `shctl task iter 14`.
 7. „Iteracja 2/3 zadania #14”: test i poprawka tylko tego zgłoszenia, `### Iteracja 2` w raporcie,
    push. PR #31 zaktualizowany.
 

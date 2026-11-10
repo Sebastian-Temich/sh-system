@@ -457,8 +457,7 @@ Z `docs/konfiguracja.md` (frontmatter) zadania czytają:
 | `min_wolne_gb` | 15 | Mniej wolnego miejsca na dysku projektu zatrzymuje dispatch |
 | `env_files` | brak | Lista dodatkowych plików env (ścieżki względne, bez `..`) dla workera |
 | `modele.worker` | `opus` | `claude --model`; `domyslny` pomija opcję |
-| `modele.reviewer.model` | `domyslny` | `codex exec -m`; „GPT-6.1 Terra” staje się `gpt-6.1-terra` |
-| `modele.reviewer.rozumowanie` | brak | `-c model_reasoning_effort="..."` |
+| `review.*` | `/Users/Shared/sh/konfiguracja.md` | Nadpisanie silnika review dla projektu (`review run`, „Konfiguracja”) |
 
 ### task create
 
@@ -717,49 +716,109 @@ przejmowana. Iteracja review etapu pochodzi z `DoD.md` na main (`stage iter`). P
 
 Zadanie wynika z `Closes #NR` albo gałęzi `task/NR-` (review PR). PR z gałęzi `stage/ETAP` bez
 `Closes` to review etapu: wymaga `docs/ETAP/DoD.md`, nie ma issue ani etykiet, a worktree, panel i
-pliki robocze mają w nazwie `ETAP` zamiast `NR`. Kolejno:
+pliki robocze mają w nazwie `ETAP` zamiast `NR`.
+
+**Konfiguracja (SH-lite F6).** Frontmatter `/Users/Shared/sh/konfiguracja.md`, klucz `review`; projekt
+może nadpisać każde pole w `docs/konfiguracja.md` (ten sam klucz). Brak wpisu: wartości domyślne.
+
+| Pole | Domyślnie | Znaczenie |
+|---|---|---|
+| `review.zwykle` | `{silnik: claude, model: opus, effort: medium}` | PR bez ryzyka |
+| `review.ryzyko` | `{silnik: codex, model: gpt-6-astra, effort: high}` | PR z ryzykiem |
+| `review.gdy_limit` | `czekaj` | Limit silnika: `czekaj` (kod 4, PR w `status:review`) albo `drugi_silnik` |
+| `review.prog_linii` | `400` | Diff powyżej tej liczby linii (dodane + usunięte) to ryzyko |
+
+`silnik` to `claude` albo `codex`. `effort`: Claude `low|medium|high|xhigh|max`, Codex dodatkowo
+`ultra`. Model Codexa można podać nazwą wyświetlaną („GPT-6.1 Terra” → `gpt-6.1-terra`). Błędna
+wartość to kod 3 przed jakąkolwiek zmianą. Stare `modele.reviewer` w projekcie shctl pomija.
+
+**Ryzyko** (dowolny warunek), liczone na diffie `merge-base(main)...HEAD` PR:
+
+- kategoria zadania (`- kategoria:` w issue) `baza` albo `bezpieczenstwo`, albo `backend`, gdy tytuł
+  lub treść issue mówi o autoryzacji (autoryz, uwierzyteln, auth, logowani, uprawnie, rls);
+- zmiany w plikach: auth (`auth`, `oauth`, `login`, `session`, `middleware`, nazwy z `auth` lub
+  `rls`), migracji (`migrations/`, `*.sql`), sekretów (`.env*`, `secret`, `credential`, `*.pem`,
+  `*.key`), CI (`.github/`, `.gitlab-ci*`, `.circleci/`) lub uprawnień (`.claude/`, `CODEOWNERS`,
+  `supabase/config.toml`, `permission`, `policy`, `role`);
+- diff powyżej `review.prog_linii` linii.
+
+Powody trafiają do metryk i komentarza („Poziom ryzyko (…)”).
+
+**Tylko dokumentacja.** PR zadania, w którym każdy zmieniony plik to `docs/**` albo `*.md` (bez
+`AGENTS.md`, `CLAUDE.md`, `.claude/`, `.github/`), dostaje komentarz „## Review shctl: PASS” bez
+uruchamiania modelu, worktree i panelu. Review etapu (dokumenty `stage/ETAP`) zawsze idzie do modelu.
+
+Kolejno:
 
 1. etykieta `status:review` na issue (tylko review PR), na czas oczekiwania;
-2. przy wstrzymaniu Codexa w `limity.md` koniec z kodem 4: PR czeka w kolejce;
-3. czysty worktree `/Users/Shared/sh/wt/NAZWA/review-NR` na commicie PR (`git fetch origin pull/PR/head`), bez plików
-   env; plik `.env*` (poza `.env.example`) w samym PR daje kod 4;
-4. karta z panelem `review:NAZWA:NR` otwarta w `/Users/Shared/sh/wt/NAZWA` (nie w worktree PR) i w nim
-   `codex exec -C WORKTREE -p reviewer -s read-only -m MODEL --output-schema codex/sh-review.schema.json -o ... - < prompt`;
-   bez `cd` do worktree, więc `fnm --use-on-cd` nie pyta o wersję Node z `.nvmrc` (retro iskt-www:
-   panel stał około 50 minut na #44);
-5. czekanie na wynik (limit `--timeout`, domyślnie `SHCTL_REVIEW_TIMEOUT`);
-6. komentarz w PR z werdyktem i zgłoszeniami;
-7. usunięcie worktree review i zamknięcie panelu, także po błędzie.
+2. pobranie commitów PR, ocena ryzyka i iteracji; PR tylko z dokumentacją kończy się tutaj PASS;
+3. wybór profilu (`zwykle` albo `ryzyko`); silnik wstrzymany w `limity.md` (wiersz `codex`; dla Claude
+   każdy inny) obsługuje `gdy_limit` (niżej);
+4. czysty worktree `/Users/Shared/sh/wt/NAZWA/review-NR` na commicie PR, bez plików env; plik `.env*`
+   (poza `.env.example`) w samym PR daje kod 4;
+5. karta z panelem `review:NAZWA:NR` otwarta w `/Users/Shared/sh/wt/NAZWA` (nie w worktree PR; `fnm
+   --use-on-cd` nie pyta o wersję Node z `.nvmrc`, retro iskt-www #44), w nim `bash -c` z silnikiem:
+   - Codex: `codex exec -C WORKTREE -p reviewer -s read-only -m MODEL -c model_reasoning_effort="EFFORT"
+     --output-schema templates/review.schema.json -o wynik.json - < prompt`;
+   - Claude: `cd WORKTREE && claude -p --settings reviewer-settings.json --setting-sources user
+     --strict-mcp-config --no-session-persistence --permission-mode dontAsk --tools Read,Grep,Glob,Bash
+     --disallowedTools Edit,Write,MultiEdit,NotebookEdit,WebFetch,WebSearch,Agent --model MODEL --effort
+     EFFORT --output-format json --json-schema SCHEMAT < prompt`. Świeża sesja bez historii i bez
+     kontekstu workera. `reviewer-settings.json` to `.claude/roles/reviewer/settings.json` z `main`
+     projektu (nie z gałęzi PR; brak to kod 3, aktualizuje `shctl template update`). Ustawienia
+     projektu i MCP z gałęzi PR nie są wczytywane;
+6. czekanie na wynik (limit `--timeout`, domyślnie `SHCTL_REVIEW_TIMEOUT`);
+7. komentarz w PR z werdyktem, zgłoszeniami i metrykami, wiersz w `/Users/Shared/sh/stan/review/metryki.jsonl`;
+8. usunięcie worktree review i zamknięcie panelu, także po błędzie.
 
-Prompt to `codex/sh-review.md`, generowany ze skilla `sh-review` przez `scripts/sync-codex.sh`
-(brak pliku to kod 3), z dopisanym kontekstem: repo, tryb review (PR albo
-etap), PR i gałąź, zadanie albo etap z `DoD.md`, iteracja, zakres diffu, treść issue jako dane i
-poprzednie review jako dane. Iteracja pochodzi z etykiety `iter:N` issue albo z pola `iteracja` w
-`docs/ETAP/DoD.md` na commicie PR. Poprzednie review to ostatni komentarz review w PR dla innego
-commita (bez ukrytej linii danych); w pierwszej iteracji „Brak.”. Profil
-`$CODEX_HOME/reviewer.config.toml` (źródło `codex/reviewer.config.toml`, `serwer.md`, „Codex”) ustawia
-tylko odczyt i model reviewera; bez niego komenda ostrzega i działa na konfiguracji bazowej.
-`-s read-only` jest podawane zawsze.
+**Limit silnika.** Rozpoznany z `limity.md` przed startem albo z komunikatu silnika (usage limit,
+rate limit, hit your limit, 429). Godzinę odnowienia shctl bierze z kolumny „Do” (`limity.md`), z
+„do HH:MM” albo z komunikatu silnika („resets …”, „try again at …”, znacznik czasu Claude), jeśli jest.
+Każdy limit daje `notify.sh high "Limit Claude|Codex"` z godziną odnowienia (raz na silnik, godzinę i
+dzień). `gdy_limit: czekaj`: kod 4, PR zostaje w `status:review`. `gdy_limit: drugi_silnik`: review
+robi drugi silnik (profil drugiego poziomu, gdy używa tego silnika, inaczej jego domyślny model), a
+komentarz w PR ma linię „Przełączenie silnika: limit X (odnowienie …), review zrobił Y”. Oba silniki
+z limitem: jak `czekaj`. Inny błąd silnika: kod 1, issue zostaje w `status:review`.
 
-Format komentarza opisuje `templates/review.md`. Wynik czytany przez `task iter` i `task close`
-pochodzi z ukrytej linii danych, którą dopisuje `review run`, a gdy jej nie ma (komentarz napisany
-przez skill albo ręcznie), z treści komentarza w tym formacie. Werdykt liczy shctl ze zgłoszeń: FAIL, gdy jest choć jedno `krytyczne` albo `istotne`, inaczej PASS.
-Rozbieżny werdykt modelu jest odnotowany w komentarzu. Kod wyjścia 0 przy obu werdyktach. Powtórka dla
-tego samego commita nie woła Codexa i zwraca wynik z komentarza (`"ponownie":true`). Nowy commit w PR
-wymaga nowego review.
+**Prompt** (jedno źródło dla obu silników): wstęp shctl i skill `sh-review` bez frontmattera
+(kryteria, wagi, procedura), czytany przy każdym review z `plugin/skills/sh-review/SKILL.md`; format
+wyniku `templates/review.schema.json`, format komentarza `templates/review.md`. Na końcu kontekst:
+repo, tryb review (PR albo etap), PR i gałąź, zadanie albo etap z `DoD.md`, iteracja, zakres diffu,
+treść issue jako dane. W iteracji 2+ także commit poprzedniego review, „Diff od poprzedniego review:
+`git diff POPRZEDNI..HEAD`” (gdy commit zniknął po force-push: informacja, że zgłoszenia sprawdza na
+pełnym diffie) i lista poprzednich zgłoszeń z podsumowaniem; w pierwszej iteracji „Brak.”. Iteracja
+pochodzi z etykiety `iter:N` issue albo z pola `iteracja` w `docs/ETAP/DoD.md`. Profil Codexa
+`$CODEX_HOME/reviewer.config.toml` (źródło `codex/reviewer.config.toml`, `serwer.md`, „Codex”)
+ustawia tylko odczyt; bez niego komenda ostrzega. `-s read-only` jest podawane zawsze.
+
+Format komentarza opisuje `templates/review.md` (nagłówek „## Review Claude|Codex|shctl: WERDYKT”,
+sekcja „### Metryki”). Wynik czytany przez `task iter` i `task close` pochodzi z ukrytej linii danych,
+którą dopisuje `review run`, a gdy jej nie ma (komentarz napisany przez skill albo ręcznie), z treści
+komentarza w tym formacie. Werdykt liczy shctl ze zgłoszeń: FAIL, gdy jest choć jedno `krytyczne` albo
+`istotne`, inaczej PASS. Rozbieżny werdykt modelu jest odnotowany w komentarzu. Kod wyjścia 0 przy
+obu werdyktach. Powtórka dla tego samego commita nie woła modelu i zwraca wynik z komentarza
+(`"ponownie":true`). Nowy commit w PR wymaga nowego review.
+
+**Metryki** (komentarz, ukryte dane, `metryki.jsonl`): silnik, model, effort, poziom i powody, czas
+pracy silnika w sekundach, rozmiar diffu (linie i pliki), diff od poprzedniego review, liczba uwag
+według wagi, przełączenie silnika.
 
 W review etapu `nr` jest `null`, a `etap` to nazwa folderu. `task iter` i `task close` dotyczą tylko
 zadań: iterację etapu podbija orkiestrator w `DoD.md`, a status zmienia `shctl stage`.
 
-Pliki robocze: `/Users/Shared/sh/stan/review/NAZWA-NR/` (prompt, wynik, `codex.log` z wyjściem panelu). Błąd
-Codexa (np. limit) daje kod 1, a issue zostaje w `status:review`.
+Pliki robocze: `/Users/Shared/sh/stan/review/NAZWA-NR/` (prompt, `wynik.json`, `claude.json`,
+`silnik.log`, `reviewer-settings.json`).
 
 ```json
 {"ok":true,"komenda":"review","dry_run":false,"wynik":{
   "pr":20,"nr":12,"etap":null,"head":"68373f5...","werdykt":"FAIL","podsumowanie":"...",
-  "zgloszenia":[{"waga":"istotne","plik":"src/a.ts","linia":4,"opis":"brak walidacji"}],
-  "blokujace":1,"ponownie":false}}
+  "zgloszenia":[{"waga":"istotne","przyczyna":"kod","plik":"src/a.ts","linia":4,"opis":"brak walidacji"}],
+  "blokujace":1,"silnik":"claude","metryki":{"silnik":"claude","model":"opus","effort":"medium",
+  "poziom":"zwykle","powody":[],"czas_s":312,"diff_linie":184,"diff_pliki":6,"diff_od_poprzedniego":null,
+  "uwagi":{"krytyczne":0,"istotne":1,"drobne":0},"przelaczenie":""},"ponownie":false}}
 ```
+
+`--dry-run` niczego nie zmienia i zwraca profile (`profile.zwykle`, `profile.ryzyko`) i `gdy_limit`.
 
 ### task iter
 

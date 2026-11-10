@@ -8,14 +8,13 @@ Centralne repozytorium software house'u prowadzonego przez agentów AI.
 | `docs/podrecznik/` | Podręcznik właściciela (start: `00-start-tutaj.md`) |
 | `plugin/` | Plugin Claude Code `software-house`: kontrakt i szablon skilli (`plugin/README.md`) |
 | `.claude-plugin/` | Lokalny marketplace `sh-system` z pluginem `software-house` |
-| `codex/` | Konfiguracja i prompty Codex; `sh-review.md` generuje `scripts/sync-codex.sh` ze skilla `sh-review` |
+| `codex/` | Profil Codexa `reviewer.config.toml` dla `shctl review run` |
 | `templates/` | Wspólne szablony, m.in. format wyniku review (`review.md`) |
 | `scripts/server/` | Skrypty serwera (m.in. strażnik orkiestratora `sh-watchdog.sh` i `obsidian-sync.sh`), plisty LaunchAgentów i Brewfile |
 | `scripts/shctl/` | Narzędzie `shctl` |
 | `scripts/plugin/` | `sprawdz-skille.sh`: zgodność skilli z kontraktem |
 | `scripts/docs/` | `sprawdz-podrecznik.sh`: komendy `shctl` i skille z podręcznika istnieją (CI) |
 | `scripts/ci/` | `zakres.sh`: które testy uruchamia CI (oszczędność minut, `docs/serwer.md`, „CI i minuty GitHub Actions”) |
-| `scripts/sync-codex.sh` | Prompty Codexa ze skilli; `--check` w CI (`scripts/tests/sync-codex.bats`) |
 
 Repo jest źródłem plików serwera. `scripts/server/install.sh` zakłada symlinki `/Users/Shared/sh/bin` i
 `/Users/Shared/sh/Brewfile`, a plisty kopiuje do `~/Library/LaunchAgents` przy różnicy i przeładowuje agenta.

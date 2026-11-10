@@ -69,7 +69,7 @@ pytania i zakres zgody.
 | `#NR` | Odbiór zadania trybu S |
 | `podniesienie trybu` | Propozycję zmiany trybu, np. S na M (to eskalacja z numerem `E-NNN`) |
 
-Push przychodzi dopiero po review Codexa z wynikiem PASS. Po poprawkach (nowy commit i nowe PASS)
+Push przychodzi dopiero po review z wynikiem PASS. Po poprawkach (nowy commit i nowe PASS)
 przychodzi ponownie.
 
 Dokument do akceptacji jest w PR na GitHubie (gałąź `stage/…`). W Obsidianie pojawi się dopiero po
@@ -108,7 +108,7 @@ klienta.
 1. Wrzuć pliki (także w podfolderach albo jako ZIP).
 2. Napisz w czacie: „materiały w skrzynce dla NAZWA”. Pliki trafią do `docs/00-intake/zrodla/`.
 3. Orkiestrator jednym wywołaniem (`shctl skrzynka przyjmij`) otwiera PR z plikami, czeka na CI i po
-   zielonym merguje go sam: bez review Codexa i bez Twojej akceptacji (Twoja decyzja w
+   zielonym merguje go sam: bez review modelu i bez Twojej akceptacji (Twoja decyzja w
    [[decyzje-systemu]]).
 4. Po merge'u skrzynka jest pusta. Kopia jest w repo, a w Obsidianie w `docs/` projektu. Przy
    czerwonym CI pliki zostają w skrzynce, a orkiestrator mówi, co poszło nie tak.

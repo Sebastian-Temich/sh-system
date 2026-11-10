@@ -1,7 +1,8 @@
 # Wynik review
 
-Format komentarza z wynikiem review w PR. Taki komentarz pisze `shctl review run` (z odpowiedzi Codexa
-według `codex/sh-review.schema.json`), a skill `sh-review` albo człowiek może napisać go ręcznie.
+Format komentarza z wynikiem review w PR. Taki komentarz pisze `shctl review run` (z odpowiedzi
+reviewera Claude albo Codex według `templates/review.schema.json`), a skill `sh-review` albo człowiek
+może napisać go ręcznie.
 `shctl task iter` i `shctl task close` czytają z niego werdykt i zgłoszenia. Format jest ścisły:
 odstępstwo sprawia, że shctl nie znajdzie wyniku albo pominie zgłoszenie.
 
@@ -11,7 +12,7 @@ odstępstwo sprawia, że shctl nie znajdzie wyniku albo pominie zgłoszenie.
 ## Review REVIEWER: WERDYKT
 
 <!-- shctl:review head=SHA werdykt=WERDYKT -->
-Commit `SHA7`, model MODEL, iteracja N.
+Commit `SHA7`, silnik SILNIK, model MODEL (effort EFFORT), iteracja N.
 
 PODSUMOWANIE
 
@@ -20,16 +21,21 @@ PODSUMOWANIE
 - 🔴 krytyczne (przyczyna: PRZYCZYNA) `ŚCIEŻKA:LINIA`: OPIS
 - 🟡 istotne (przyczyna: PRZYCZYNA) `ŚCIEŻKA`: OPIS
 - ⚪ drobne (przyczyna: PRZYCZYNA): OPIS
+
+### Metryki
+
+Poziom POZIOM (POWODY). Czas S s. Diff L linii w P plikach. Uwagi: 🔴 a, 🟡 b, ⚪ c.
 ```
 
 | Element | Reguła |
 |---|---|
-| `REVIEWER` | Kto robi review, np. `Codex` |
+| `REVIEWER` | Kto robi review: `Claude`, `Codex` albo `shctl` (PR tylko z dokumentacją, bez modelu) |
 | `WERDYKT` | `PASS` albo `FAIL`, ten sam w nagłówku i w znaczniku |
 | Znacznik | Jedna linia `<!-- shctl:review head=SHA werdykt=WERDYKT -->`, `SHA` to pełny (40 znaków) commit PR, którego dotyczy review |
-| Linia `Commit` | Skrót commita, model reviewera, iteracja z etykiety `iter:N`; informacyjna |
+| Linia `Commit` | Skrót commita, silnik, model i effort reviewera (komentarz ręczny: sam model), iteracja z etykiety `iter:N`; informacyjna |
 | `PODSUMOWANIE` | 1–3 zdania po polsku |
 | `### Zgłoszenia` | Każde zgłoszenie w jednej linii; bez zgłoszeń jedna linia `Brak.` |
+| `### Metryki` | Opcjonalna, pisze ją `shctl review run`: poziom (`zwykle`, `ryzyko`, `tylko_docs`) z powodami, czas, diff, uwagi według wagi, ewentualnie „Przełączenie silnika: …”; shctl jej nie parsuje |
 
 Zgłoszenie: `- IKONA WAGA`, przyczyna `(przyczyna: P)`, opcjonalnie miejsce w backtickach, potem `: `
 i opis w jednej linii.
