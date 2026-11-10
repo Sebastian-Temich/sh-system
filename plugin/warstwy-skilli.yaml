@@ -2,8 +2,11 @@
 # bazowe + kategoria zadania + stack zadania + skille z zadania + skille projektu (.claude/skills, zawsze).
 # Kategoria, stack i skille pochodzą z docs/06-zadania/zadania.yaml (shctl task create).
 # Stack bez wpisu w mapie stack to skill sh-stack-NAZWA. Skill, którego nie ma (plugin, projekt,
-# ~/.claude/skills), dispatch pomija z ostrzeżeniem. Same skille kategorii i stacku powstaną w fazie 7.
-bazowe: []
+# ~/.claude/skills), dispatch pomija z ostrzeżeniem.
+# Skille techniczne leżą w plugin/skills/techniczne/NAZWA/SKILL.md (kontrakt: plugin/skills/_kontrakt.md,
+# „Skille techniczne”). Ważność przy sprzeczności: projekt > stack > kategoria > bazowe.
+# shctl review run dołącza do promptu „Listę kontrolną” skilli tej samej kategorii co u workera.
+bazowe: [sh-weryfikacja-przed-gotowe, sh-tdd-testy, sh-debugowanie]
 kategoria:
   frontend: [sh-kat-frontend]
   backend: [sh-kat-backend]

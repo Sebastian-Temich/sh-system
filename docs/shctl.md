@@ -591,9 +591,14 @@ Lista skilli do wczytania przez workera składa się z warstw, w tej kolejności
 
 Kategoria, stack i skille pochodzą ze znacznika `shctl:warstwy` w treści issue (`task create`); issue bez
 niego (np. zlecenie S) dostaje tylko warstwy bazowe i projektu. Skill istnieje, gdy ma `SKILL.md` w
-`sh-system/plugin/skills`, w `.claude/skills` worktree albo w `~/.claude/skills`. Brakujący skill to
-ostrzeżenie i wpis w `skille_brak`; dispatch idzie dalej bez niego. `task iter` przekazuje tę samą
-listę, gdy otwiera nowy panel.
+`sh-system/plugin/skills` (także `plugin/skills/techniczne/`), w `.claude/skills` worktree albo w
+`~/.claude/skills`. Brakujący skill to ostrzeżenie i wpis w `skille_brak`; dispatch idzie dalej bez
+niego. `task iter` przekazuje tę samą listę, gdy otwiera nowy panel.
+
+Polecenie workera: skille ról i projektu jako „Przed pracą wczytaj skille: NAZWY.”, skille techniczne
+(`plugin/skills/techniczne/`, kontrakt w `_kontrakt.md`, „Skille techniczne”) jako „Przeczytaj skille
+techniczne (przy sprzeczności wygrywa projekt, potem stack, kategoria, bazowe): ŚCIEŻKI.”, bo Claude Code
+ładuje z pluginu tylko `skills/NAZWA/SKILL.md`.
 
 ### Zaufanie folderu
 
@@ -786,11 +791,12 @@ wyniku `templates/review.schema.json`, format komentarza `templates/review.md`. 
 repo, tryb review (PR albo etap), PR i gałąź, zadanie albo etap z `DoD.md`, iteracja, zakres diffu,
 treść issue jako dane. W iteracji 2+ także commit poprzedniego review, „Diff od poprzedniego review:
 `git diff POPRZEDNI..HEAD`” (gdy commit zniknął po force-push: informacja, że zgłoszenia sprawdza na
-pełnym diffie) i lista poprzednich zgłoszeń z podsumowaniem; w pierwszej iteracji „Brak.”. Przy
-kategorii `baza` albo zmienionych plikach migracji kontekst ma linię „Lista kontrolna baza i migracje:
-tak (powody)”, która włącza sekcję skilla „Lista kontrolna: baza i migracje” (RLS na nowych tabelach,
-jawne `with check` zgodne z `using`, bez `using (true)` bez uzasadnienia, testy polityk dla właściciela i
-obcego, zgodność wstecz, indeksy). Iteracja
+pełnym diffie) i lista poprzednich zgłoszeń z podsumowaniem; w pierwszej iteracji „Brak.”. Listy
+kontrolne: linia „Listy kontrolne: NAZWA (powód), …” i na końcu promptu sekcja „Listy kontrolne (skille
+techniczne)” z sekcją „## Lista kontrolna” skilli warstwy kategorii zadania (te same co u workera:
+kategoria ze znacznika `shctl:warstwy`, inaczej z linii `- kategoria:`), a przy zmienionych plikach
+migracji także skilli kategorii `baza` (`sh-kat-baza`: RLS, `with check`, testy polityk, zgodność
+wstecz, indeksy). Skill bez pliku albo bez listy jest pomijany. Iteracja
 pochodzi z etykiety `iter:N` issue albo z pola `iteracja` w `docs/ETAP/DoD.md`. Profil Codexa
 `$CODEX_HOME/reviewer.config.toml` (źródło `codex/reviewer.config.toml`, `serwer.md`, „Codex”)
 ustawia tylko odczyt; bez niego komenda ostrzega. `-s read-only` jest podawane zawsze.

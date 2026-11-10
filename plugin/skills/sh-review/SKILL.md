@@ -55,6 +55,8 @@ W review PR dodatkowo:
   „Zakres”, komenda testów, etykiety `iter:N`, `tryb:S`, `db:migracja`
 - `docs/07-realizacja/T-NR.md`: raport workera
 - pliki zmienione w diffie i kod, który wywołują
+- „Listy kontrolne (skille techniczne)” na końcu promptu, a ręcznie
+  `sh-system/plugin/skills/techniczne/sh-kat-KATEGORIA/SKILL.md`: lista kontrolna kategorii zadania
 
 W review etapu dodatkowo:
 
@@ -176,27 +178,15 @@ werdykcie orkiestrator wywołuje `shctl task iter NR` albo `shctl task close NR`
    nietknięte; raport `T-NR.md` z sekcjami; PR z `Closes #NR`; bez zmian produkcji (`deploy-prod`,
    gałąź `production`, zmienne prod).
 
-### Lista kontrolna: baza i migracje
+### Listy kontrolne kategorii
 
-Stosujesz, gdy kontekst shctl ma linię „Lista kontrolna baza i migracje: tak” (kategoria `baza` albo
-zmienione pliki migracji). Przechodzisz każdy punkt na plikach migracji i testach z diffu, a w
-podsumowaniu piszesz, które punkty są spełnione. Brak zgłasza się z podaną wagą:
-
-1. RLS włączone (`enable row level security`) na każdej nowej tabeli z danymi użytkowników: brak to 🔴.
-2. Każda polityka `insert` i `update` ma jawne `with check` zgodne z `using`. `with check` luźniejsze
-   niż `using` (np. `true` albo inny warunek, który pozwala przepisać wiersz na cudzy `user_id`) albo
-   `insert` bez `with check` to 🔴. Brak jawnego `with check` w `update` przy poprawnym `using` to 🟡:
-   PostgreSQL stosuje wtedy `using` także do nowego wiersza, więc to wymóg jawności, nie luka.
-3. Brak polityk `using (true)` i `with check (true)` bez uzasadnienia w ADR albo raporcie: taka
-   polityka bez uzasadnienia to 🔴.
-4. Testy polityk dla właściciela wiersza i dla obcego użytkownika (pozytywne i negatywne, dla każdej
-   operacji z polityką): brak to 🟡, a gdy test polityk jest kryterium issue, 🔴 (niespełnione
-   kryterium).
-5. Migracja zgodna wstecz (expand/contract): bez usuwania i zmiany typu kolumn używanych przez
-   poprzednią wersję, nowe kolumny `not null` tylko z wartością domyślną, bez zmian w istniejących
-   migracjach: naruszenie to 🔴.
-6. Indeksy pod nowe zapytania: kolumny w filtrach polityk (np. `user_id`), kluczach obcych i nowych
-   zapytaniach aplikacji mają indeks: brak to 🟡.
+Stosujesz, gdy kontekst shctl ma linię „Listy kontrolne: …”. shctl dołącza na końcu promptu sekcję
+„Listy kontrolne (skille techniczne)” z listą kontrolną skilli tej samej kategorii, którą dostał
+worker (`plugin/skills/techniczne/`, np. `sh-kat-frontend`), a przy zmienionych plikach migracji także
+listę `sh-kat-baza`. Przechodzisz każdy punkt na diffie i testach, a w podsumowaniu piszesz, które
+punkty są spełnione. Niespełniony punkt zgłaszasz z wagą podaną przy nim (🔴🟡⚪). Poza Claude Code
+(ręczne review bez kontekstu shctl) czytasz `## Lista kontrolna` skilla kategorii z issue
+(„Warstwy skilli”, `- kategoria:`) w `sh-system/plugin/skills/techniczne/sh-kat-KATEGORIA/SKILL.md`.
 
 ### Review etapu
 

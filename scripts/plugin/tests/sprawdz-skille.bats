@@ -76,3 +76,65 @@ sprawdz() { run --separate-stderr bash "$REPO/scripts/plugin/sprawdz-skille.sh" 
   [ "$status" -eq 1 ]
   [[ "$stderr" == *"brak wpisu dla pluginu software-house"* ]] || false
 }
+
+# --- skille techniczne ------------------------------------------------------------------------------
+
+techniczny() {
+  ST="$K/plugin/skills/techniczne/sh-kat-test"
+  mkdir -p "$ST"
+  sed 's/^name: sh-kat-frontend$/name: sh-kat-test/' \
+    "$REPO/plugin/skills/techniczne/sh-kat-frontend/SKILL.md" >"$ST/SKILL.md"
+}
+
+@test "techniczne: kopia skilla kategorii jest zgodna" {
+  techniczny
+  sprawdz
+  echo "$stderr"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"8 skill(i) techniczne zgodne"* ]] || false
+}
+
+@test "techniczne: ponad 150 linii" {
+  techniczny
+  for _ in $(seq 1 100); do echo "- dopisek" >>"$ST/SKILL.md"; done
+  sprawdz
+  [ "$status" -eq 1 ]
+  [[ "$stderr" == *"sh-kat-test/SKILL.md: 17"*"linii, limit 150"* ]] || false
+}
+
+@test "techniczne: brak sekcji Bledy, punkt bez wagi, brak log-failed" {
+  techniczny
+  sed -i.bak -e '/^## Błędy z naszych projektów$/,$d' -e 's/^1\. 🔴 /1. /' -e 's/--log-failed/--log/g' "$ST/SKILL.md"
+  sprawdz
+  [ "$status" -eq 1 ]
+  [[ "$stderr" == *"sekcje ## inne niż w kontrakcie skilli technicznych"* ]] || false
+  [[ "$stderr" == *"bez wagi"* ]] || false
+  [[ "$stderr" == *"--log-failed"* ]] || false
+}
+
+@test "techniczne: komenda zlozona w bloku sh i zla adnotacja zrodla" {
+  techniczny
+  printf '\n```sh\npnpm lint && pnpm test\n```\n<!-- źródło: https://github.com/anthropics/skills, wersja: main -->\n' >>"$ST/SKILL.md"
+  sprawdz
+  [ "$status" -eq 1 ]
+  [[ "$stderr" == *"komendą złożoną"* ]] || false
+  [[ "$stderr" == *"adnotacja źródła"* ]] || false
+}
+
+@test "techniczne: poprawna adnotacja zrodla przechodzi" {
+  techniczny
+  awk 'NR == 4 { print; print "<!-- źródło: https://github.com/anthropics/skills/skills/webapp-testing, wersja: 0123abc, skopiowano: 2026-11-10, licencja: Apache-2.0 -->"; next } 1' \
+    "$ST/SKILL.md" >"$ST/nowy" && mv "$ST/nowy" "$ST/SKILL.md"
+  grep -q '^<!-- źródło:' "$ST/SKILL.md"
+  sprawdz
+  echo "$stderr"
+  [ "$status" -eq 0 ]
+}
+
+@test "techniczne: brakujacy skill bazowy z mapy warstw" {
+  command -v yq >/dev/null || skip "brak yq"
+  sed -i.bak 's/^bazowe: \[/bazowe: [sh-nie-ma, /' "$K/plugin/warstwy-skilli.yaml"
+  sprawdz
+  [ "$status" -eq 1 ]
+  [[ "$stderr" == *"skill bazowy sh-nie-ma nie istnieje"* ]] || false
+}

@@ -154,6 +154,32 @@ WT() { echo "$SH_DIR/wt/demo/$1"; }
   grep -q "Zrealizuj issue #12 skillem sh-worker. Przed pracą wczytaj skille: sh-baza, sh-kat-frontend, sh-stack-nextjs, projekt-ui." "$CLAUDE_ATRAPA/calls"
 }
 
+@test "dispatch: skille techniczne jako sciezki do przeczytania, z kolejnoscia waznosci" {
+  export SH_SKILLE_PLUGINU="$T/plugin-skille" SH_WARSTWY_SKILLI="$T/warstwy.yaml"
+  mkdir -p "$SH_SKILLE_PLUGINU/techniczne/sh-tdd" "$SH_SKILLE_PLUGINU/techniczne/sh-kat-frontend" "$SH_SKILLE_PLUGINU/sh-rola"
+  for s in techniczne/sh-tdd techniczne/sh-kat-frontend sh-rola; do echo "# $s" >"$SH_SKILLE_PLUGINU/$s/SKILL.md"; done
+  printf 'bazowe: [sh-tdd]\nkategoria:\n  frontend: [sh-kat-frontend]\nstack: {}\n' >"$SH_WARSTWY_SKILLI"
+  w="$(jq -nc '{kategoria:"frontend", skille:["sh-rola"]}' | base64 | tr -d '\n')"
+  issue 12 "Strona" "status:todo" "$(printf '### Cel\n\nx\n\n<!-- shctl:warstwy %s -->\n' "$w")"
+  run --separate-stderr "$SHCTL" task dispatch 12 --json
+  echo "$output $stderr"
+  [ "$status" -eq 0 ]
+  [ "$(jq -r '.wynik.skille | join(",")' <<<"$output")" = "sh-tdd,sh-kat-frontend,sh-rola" ]
+  p="$(cd -P "$SH_SKILLE_PLUGINU" && pwd -P)/techniczne"
+  grep -qF "Zrealizuj issue #12 skillem sh-worker. Przed pracą wczytaj skille: sh-rola. Przeczytaj skille techniczne (przy sprzeczności wygrywa projekt, potem stack, kategoria, bazowe): $p/sh-tdd/SKILL.md, $p/sh-kat-frontend/SKILL.md." "$CLAUDE_ATRAPA/calls"
+}
+
+@test "dispatch: domyslna mapa warstw wskazuje istniejace skille techniczne" {
+  w="$(jq -nc '{kategoria:"frontend", stack:["astro"]}' | base64 | tr -d '\n')"
+  issue 12 "Strona" "status:todo" "$(printf '### Cel\n\nx\n\n<!-- shctl:warstwy %s -->\n' "$w")"
+  run --separate-stderr "$SHCTL" task dispatch 12 --json
+  echo "$output $stderr"
+  [ "$status" -eq 0 ]
+  [ "$(jq -r '.wynik.skille | join(",")' <<<"$output")" = "sh-weryfikacja-przed-gotowe,sh-tdd-testy,sh-debugowanie,sh-kat-frontend,sh-stack-astro" ]
+  [ "$(jq -r '.wynik.skille_brak | length' <<<"$output")" -eq 0 ]
+  grep -q "plugin/skills/techniczne/sh-stack-astro/SKILL.md\.$" "$CLAUDE_ATRAPA/calls"
+}
+
 @test "dispatch: issue bez warstw i projekt bez skilli to polecenie bez listy" {
   export SH_SKILLE_PLUGINU="$T/pusto" SH_WARSTWY_SKILLI="$T/brak.yaml"
   issue 12 "Zadanie" "status:todo"
