@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+# Atrapa sysctl -n: vm.loadavg z $SYSCTL_LOAD (np. "1.50 2.00 2.50"), vm.swapusage, hw.ncpu. $SYSCTL_BLAD: błąd.
+[ -z "${SYSCTL_BLAD:-}" ] || { echo "sysctl: Operation not permitted" >&2; exit 1; }
+[ "${1:-}" = -n ] && shift
+case "${1:-}" in
+  vm.loadavg) echo "{ ${SYSCTL_LOAD:-1.50 2.00 2.50} }" ;;
+  vm.swapusage) echo "total = 4096.00M  used = ${SYSCTL_SWAP:-3277.25M}  free = 818.75M  (encrypted)" ;;
+  hw.ncpu) echo 4 ;;
+  *) echo "sysctl: unknown oid '$1'" >&2; exit 1 ;;
+esac

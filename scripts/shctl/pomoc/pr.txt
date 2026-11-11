@@ -1,9 +1,11 @@
 Użycie: shctl pr check PR [--czekaj] [--timeout SEKUNDY]
 
 Stan PR przed czekaniem na CI. Najpierw mergeable: przy CONFLICTING GitHub nie uruchamia CI, więc
-kod 4 z komunikatem o konflikcie (rozwiązuje autor gałęzi: git merge origin/main). Potem CI: pass,
-fail, pending albo brak; z --czekaj czeka do rozstrzygnięcia (1800 s, przy braku CI 180 s).
-Pominięte joby (SKIPPED) liczą się jak zaliczone.
+kod 4 z komunikatem o konflikcie (rozwiązuje autor gałęzi: git pull --no-rebase origin main w
+worktree, bez konfliktu gh pr update-branch). Potem CI: pass, fail, pending albo brak; z --czekaj
+czeka do rozstrzygnięcia (1800 s, przy braku CI 180 s). pass dopiero, gdy wszystkie joby są
+zakończone: poza statusCheckRollup sprawdza biegi workflow commita (gh run list --commit), bo job
+czekający na inny (needs) nie ma jeszcze checku. Pominięte joby (SKIPPED) liczą się jak zaliczone.
 
 Dla PR zadania liczy czerwone commity: pierwszy to wynik pracy, kolejne to próby naprawy. Po 2
 nieudanych naprawach zwraca limit_napraw_ci: true (dalej review albo eskalacja, decyduje

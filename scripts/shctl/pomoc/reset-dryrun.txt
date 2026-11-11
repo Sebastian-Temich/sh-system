@@ -7,6 +7,8 @@ CHANGELOG.md, DoD.md poza todo/pominiety): kod 4 z listą.
 
 Kolejno: zachowuje docs/metryki.md, zamyka panele, worktree i otwarte PR, archiwizuje znaczniki
 shctl:id we wszystkich issue (otwarte zamyka jako „not planned”), resetuje main do tagu (push
---force-with-lease), odtwarza issue przez task create, dodaje sekcję „Przebieg dryrun N” w
-metrykach, commituje i wypycha main, zakłada od nowa klon docs/ w Obsidianie. Stan zgodny z
-tagiem: nic nie robi (zmiana: false).
+--force-with-lease), w procesie v1 (wersja_procesu w konfiguracji tagu) odtwarza issue przez task
+create z zadania.yaml tagu; w v2 nie zakłada issue: zadania powstają z planu po etapie 06-zadania.
+Dodaje sekcję „Przebieg dryrun N” w metrykach (N = numer ostatniej sekcji + 1), odświeża widok
+projektu (Projekt.md liczy zadania od nowej sekcji), commituje i wypycha main, zakłada od nowa klon
+docs/ w Obsidianie. Stan zgodny z tagiem: nic nie robi (zmiana: false).

@@ -163,14 +163,17 @@ ustaw_status() {
   odswiez_projekt || true
 }
 
-# Numery zależności z sekcji „### Zależności” treści issue (format formularza i task create).
+# Numery zależności z pola strukturalnego: pierwsza niepusta linia sekcji „### Zależności” (format
+# task create i formularza), a w niej tylko lista „#NR, #NR” od początku linii. „brak”, notatki pod
+# listą i dalsze wzmianki „#NR” (np. „#79 anulowane”) nie są zależnościami (sh-dryrun, przebieg 5).
+# Linię zmienia shctl task deps.
 JQ_ZALEZNOSCI='def zaleznosci:
   ((.body // "") | split("\n")) as $l
   | ([range(0; $l | length) | select($l[.] | test("^### Zale"))][0]) as $s
   | if $s == null then []
-    else [$l[$s + 1:][]] as $r
-      | ([range(0; $r | length) | select($r[.] | test("^### "))][0] // ($r | length)) as $k
-      | [$r[0:$k][] | scan("#([0-9]+)") | .[0] | tonumber] | unique
+    else ([$l[$s + 1:][] | select(test("^\\s*$") | not)][0] // "") as $p
+      | if ($p | test("^### ")) then []
+        else [(($p | capture("^(?<l>(\\s*#[0-9]+\\s*,?)+)").l) // "") | scan("#([0-9]+)") | .[0] | tonumber] | unique end
     end;'
 
 # PR zadania: otwarty, a gdy go nie ma, najnowszy scalony. Wiąże przez „Closes #NR” lub gałąź task/NR-.
@@ -182,6 +185,23 @@ pr_zadania() {
       map(select(([.closingIssuesReferences[]?.number] | index($n)) != null
         or (.headRefName | startswith("task/\($n)-"))))
       | (map(select(.state == "OPEN")) | max_by(.number)) // (map(select(.state == "MERGED")) | max_by(.number)) // empty'
+}
+
+# Wynik CI PR dla commita HEAD: statusCheckRollup, a przy pass jeszcze biegi workflow tego commita.
+# Job czekający na inny (needs:) nie ma jeszcze check runu w rollupie, więc sam rollup dawał pass
+# przy e2e w toku (sh-dryrun PR #83). Bieg workflow w toku to pending; błąd gh run list nie zmienia
+# wyniku z rollupu. Wypisuje pass, fail, pending albo brak.
+ci_pr() {
+  local prn="$1" head="$2" ci runs
+  ci="$(gh pr view "$prn" --repo "$SLUG" --json statusCheckRollup | jq -r "$JQ_CI"' ci')" || return 1
+  if [ "$ci" = pass ] && [ -n "$head" ]; then
+    runs="$(gh run list --repo "$SLUG" --commit "$head" --limit 50 --json workflowName,status,conclusion 2>/dev/null || echo '[]')"
+    ci="$(jq -r '
+      if any(.[]; (.status // "completed") != "completed") then "pending"
+      elif any(.[]; (.conclusion // "") | IN("failure", "timed_out", "startup_failure", "cancelled")) then "fail"
+      else "pass" end' <<<"$runs" 2>/dev/null || echo pass)"
+  fi
+  printf '%s' "$ci"
 }
 
 # Wynik CI z statusCheckRollup, jak w scripts/sync-status.sh: pass, fail, pending albo brak.
@@ -300,19 +320,39 @@ aktywni_workerzy_projektu() {
 # obniżyć i liczy workerów tego projektu.
 # Lista startowa (sh-intake): rzeczy zewnętrzne od właściciela (konta, dostępy, domeny, klucze testowe,
 # materiały). Realizacja nie startuje, dopóki w docs/00-intake/lista-startowa.md na main jest pole
-# „- [ ]” poza blokiem kodu. „- [x]” to potwierdzone, „- [-] … (nie dotyczy: powód)” to pominięte.
-# Brak pliku (projekt sprzed SH-lite F4) nie blokuje. Wypisuje liczbę niepotwierdzonych pozycji.
+# „- [ ]” poza blokiem kodu i komentarzem HTML (przykład w szablonie). „- [x]” to potwierdzone,
+# „- [-] … (nie dotyczy: powód)” to pominięte. Brak pliku (projekt sprzed SH-lite F4) nie blokuje.
+# Wypisuje liczbę niepotwierdzonych pozycji.
 lista_startowa_braki() {
   local plik="$ROOT_G/docs/00-intake/lista-startowa.md"
   if [ ! -f "$plik" ]; then
     echo 0
     return 0
   fi
+  pola_bez_komentarzy <"$plik" | awk '/^[ \t]*[-*+] \[ \]/ { n++ } END { print n + 0 }'
+}
+
+# Treść Markdown bez bloków kodu (``` i ~~~) i komentarzy HTML (także wieloliniowych); usunięte
+# fragmenty zostają pustymi liniami. Pola „- [ ]” w przykładach nie są polami do zaznaczenia.
+pola_bez_komentarzy() {
   awk '
-    /^[ \t]*(```|~~~)/ { kod = !kod; next }
-    kod { next }
-    /^[ \t]*[-*+] \[ \]/ { n++ }
-    END { print n + 0 }' "$plik"
+    !kom && /^[ \t]*(```|~~~)/ { kod = !kod; print ""; next }
+    kod { print ""; next }
+    {
+      l = $0; w = ""
+      while (l != "") {
+        if (kom) {
+          i = index(l, "-->")
+          if (i == 0) { l = ""; break }
+          l = substr(l, i + 3); kom = 0
+        } else {
+          i = index(l, "<!--")
+          if (i == 0) { w = w l; l = ""; break }
+          w = w substr(l, 1, i - 1); l = substr(l, i + 4); kom = 1
+        }
+      }
+      print w
+    }'
 }
 
 ocen_gotowe() {
@@ -362,14 +402,23 @@ ocen_gotowe() {
     (map({key: (.number | tostring), value: .}) | from_entries) as $mapa
     | (map(select(.state == "OPEN" and status == "review")) | length) as $q
     | (map(select(.state == "OPEN" and (et | index("db:migracja")) and status != "todo")) | map(.number)) as $db_w_toku
-    | (map(select(.state == "OPEN" and status == "todo")) | sort_by(.number)
+    # Ścieżka krytyczna: długość najdłuższego łańcucha otwartych zadań, który zaczyna się od zadania
+    # (ono i wszystkie zależne od niego pośrednio). Przy cyklu wynik jest ograniczony liczbą zadań.
+    | (map(select(.state == "OPEN")) | map({key: (.number | tostring), value: [zaleznosci[] | tostring]}) | from_entries) as $zo
+    | ($zo | keys) as $otw
+    | (reduce range(0; $otw | length) as $_ ($otw | map({key: ., value: 1}) | from_entries;
+        . as $d | reduce $otw[] as $n (.;
+          .[$n] = 1 + ([$otw[] | select(($zo[.] | index($n)) != null) | $d[.]] | max // 0)))) as $sciezka
+    | (map(select(.state == "OPEN" and status == "todo"))
+      | map(. + {sciezka: ($sciezka[.number | tostring] // 1)}) | sort_by([-.sciezka, .number])
       | map(. as $i
         | ([zaleznosci[] | tostring | . as $z
             | if $mapa[$z] == null then "brak zależności #\($z)"
               elif $mapa[$z].state == "OPEN" then "zależność #\($z) otwarta"
-              elif $mapa[$z].stateReason == "NOT_PLANNED" then "zależność #\($z) anulowana"
+              elif $mapa[$z].stateReason == "NOT_PLANNED" then
+                "zależność #\($z) anulowana: zadanie zablokowane; usuń zależność (shctl task deps \($i.number) --usun #\($z)) albo eskaluj (shctl escalate --dotyczy \"#\($i.number)\")"
               else empty end]) as $p
-        | {nr: .number, tytul: .title, db_migracja: ((et | index("db:migracja")) != null), powody: $p})) as $todo
+        | {nr: .number, tytul: .title, sciezka, db_migracja: ((et | index("db:migracja")) != null), powody: $p})) as $todo
     | (reduce $todo[] as $t ({lista: [], db: ($db_w_toku | length > 0), db_nr: ($db_w_toku[0] // null)};
         if ($t.powody | length) > 0 then .lista += [$t]
         elif $t.db_migracja and .db then
@@ -486,7 +535,7 @@ mergeable_pr() {
 }
 
 komunikat_konfliktu() {
-  printf 'PR #%s ma konflikt z main (mergeable: CONFLICTING): CI nie wystartuje, nie czekaj na nie. Zaktualizuj gałąź %s: git merge origin/main, rozwiąż konflikt, push' "$1" "$2"
+  printf 'PR #%s ma konflikt z main (mergeable: CONFLICTING): CI nie wystartuje, nie czekaj na nie. Zaktualizuj gałąź %s: w worktree git pull --no-rebase origin main, rozwiąż konflikt w zakresie zadania, git commit --no-edit, push (bez konfliktu wystarczy gh pr update-branch %s i git pull)' "$1" "$2" "$1"
 }
 
 # --- git ------------------------------------------------------------------------------------------

@@ -111,6 +111,9 @@ shctl task close NR --odbior --json --projekt NAZWA
 shctl task iter NR --odbior "kryterium z odbioru" --json --projekt NAZWA
 shctl task close NR --anuluj --powod "..." --json --projekt NAZWA
 shctl task resume-check NR --json --projekt NAZWA
+shctl task deps NR --usun "#X" --json --projekt NAZWA
+shctl metryki serwer --json
+shctl metryki serwer --probki 20 --co 30 --json
 shctl decision add --co "..." --dlaczego "..." --cofniecie "..." --rola ROLA --projekt NAZWA
 shctl escalate --dotyczy "#NR|ETAP" --powod "..." --potrzebne "..." --opcje "A;B" --projekt NAZWA
 shctl escalate close E-NNN --odpowiedz "..." --projekt NAZWA
@@ -156,7 +159,7 @@ shctl stop-all
   etapu w swojej sesji), nie czekasz i nie diagnozujesz CI.
 - `task wait`: po `dispatch` i `iter` czeka na nową turę agenta (working, potem idle, albo commit w PR
   nowszy niż polecenie), więc raport z poprzedniej iteracji go nie kończy. `stan` `gotowe` (PR z
-  raportem i commitem po poleceniu), `idle` (agent skończył turę bez PR z raportem: polecenie
+  commitem po poleceniu, który zmienia raport, i agent, który już nie pracuje), `idle` (agent skończył turę bez PR z raportem: polecenie
   dokończenia), `blocked` (pytanie do właściciela), `brak_agenta` albo `brak_panelu` (`resume-check`,
   potem `dispatch`), `pracuje` (limit czasu minął: ponów), `bez_tury` (agent nie podjął polecenia:
   `herdr agent read`, potem `herdr agent prompt`).
@@ -199,6 +202,15 @@ shctl stop-all
 - `task dispatch`: pole `main_ci.stan: czerwone` znaczy, że CI na `main` jest czerwone. Dispatch idzie
   dalej, a worker dostaje ostrzeżenie, żeby nie diagnozował cudzego błędu; naprawę `main` zlecasz
   osobno (zlecenie S albo eskalacja), gdy czerwone CI nie jest skutkiem zadania w toku.
+- `task dispatch`: pole `skille_brak` to skille warstw, których jeszcze nie ma (np. `sh-kat-ci`,
+  `sh-stack-node`; odłożone do B7). Nie ostrzegasz o nich przy każdym zadaniu: w raporcie przebiegu
+  (metryki, „Kontrole”) podajesz je raz, zbiorczo. Ostrzeżenie shctl zostaje tylko dla skilla z pola
+  `skille` zadania.
+- `task deps NR --usun "#X"`: zależność z pola strukturalnego issue (lista w „### Zależności”),
+  zwłaszcza anulowana. Wzmianki „#X” w notatkach nie są zależnościami; issue nie edytujesz ręcznie.
+- `metryki serwer`: load, swap, wolne miejsce i rdzenie do metryk przebiegu, zamiast `sysctl` i `df`
+  (w sandboxie zablokowane). Prosta komenda, bez potoku; `--probki N --co S` daje średni i maksymalny
+  load z N próbek (komenda czeka N×S sekund).
 - Raport `T-NR.md` nie potrzebuje numeru PR od workera: `task close` wpisuje linię `PR: #N` na `main`
   (zmiana do Twojego commita razem z plikami wspólnymi).
 - Widok `docs/Projekt.md` odświeża shctl przy każdej zmianie stanu; commitujesz go z innymi plikami
@@ -336,16 +348,24 @@ QA) to nowa pozycja listy, nie eskalacja.
    o „Kryteria do potwierdzenia” z PR zadań (`sh-plan`) rozstrzygnięte (`shctl decision add --rola
    wlasciciel`) i `shctl doctor --json`. Wynik z czasem UTC wpisz do „Punktu
    przekazania”. Stan `blad` wstrzymuje dispatch: brak to zadanie właściciela albo eskalacja.
-2. `shctl task ready`, potem `shctl task dispatch NR` dla kolejnych z `gotowe`, aż `sloty.wolne` = 0.
-   Na wolny slot czekasz przez `shctl task ready --czekaj`, nie przez ponawianie `task ready`.
-   Zadanie szkieletu (`T1`) idzie samo: do jego zamknięcia nie dispatchujesz niczego w projekcie.
+2. `shctl task ready`, potem `shctl task dispatch NR` dla kolejnych z `gotowe` w podanej kolejności
+   (najpierw ścieżka krytyczna, pole `sciezka`), aż `sloty.wolne` = 0. Na wolny slot czekasz przez
+   `shctl task ready --czekaj`, nie przez ponawianie `task ready`. Zadanie szkieletu (`T1`) idzie
+   samo: do jego zamknięcia nie dispatchujesz niczego w projekcie. Zależność anulowana („zależność #X
+   anulowana”): gdy zadanie ma sens bez niej, `shctl task deps NR --usun #X` i `shctl decision add`;
+   gdy nie, `shctl escalate --dotyczy "#NR"`. Issue nie edytujesz ręcznie.
 3. Monitoring: `shctl task wait NR --timeout 600`. Zadanie jest skończone, gdy istnieje PR z `Closes
-   #NR` z gałęzi `task/NR-*` i raport `docs/07-realizacja/T-NR.md` w jego plikach (`stan: gotowe`).
-   Stan `idle` albo `done` panelu tego nie oznacza. `blocked` to pytanie do właściciela w statusie.
+   #NR` z gałęzi `task/NR-*`, commit po poleceniu zmienia raport `docs/07-realizacja/T-NR.md`, a agent
+   już nie pracuje (`stan: gotowe`). Stan `idle` albo `done` panelu tego nie oznacza. `blocked` to
+   pytanie do właściciela w statusie.
 4. Panel bez agenta, a PR albo raportu brak: `shctl task resume-check NR`, potem `shctl task dispatch NR`.
    Agent `idle` bez PR: polecenie dokończenia przez `herdr agent prompt` (brak komendy shctl).
-5. `shctl pr check PR --czekaj`. Konflikt (kod 4): polecenie dla workera „git merge origin/main,
-   rozwiąż konflikt, push”, potem znów `pr check`. Zielone CI: `shctl review run PR`. Czerwone CI
+5. `shctl pr check PR --czekaj` (`pass` dopiero, gdy wszystkie joby są zakończone). Gałąź za `main`
+   bez konfliktu nie wymaga niczego przed merge'em (squash). Konflikt (kod 4): polecenie dla workera
+   „git pull --no-rebase origin main w worktree, rozwiąż konflikt, git commit --no-edit, push”, potem
+   znów `pr check`. Workerowi nie każesz robić `git merge origin/main`: lokalny merge działa w
+   sandboxie, który blokuje zapis plików wspólnych, i pada w połowie; aktualizacja bez konfliktu to
+   `gh pr update-branch PR` (merge po stronie GitHuba) i `git pull` w worktree. Zielone CI: `shctl review run PR`. Czerwone CI
    naprawia worker (polecenie przez `herdr agent prompt`), najwyżej 2 próby. Przy
    `"limit_napraw_ci":true`: przyczyna w kodzie lub testach zadania → `shctl review run PR` mimo
    czerwonego CI (FAIL idzie pętlą iteracji); przyczyna poza zadaniem (środowisko, sekret, sprzeczne

@@ -4,8 +4,10 @@ load helper-zadania
 setup() {
   zadania_setup
   export SHCTL_DRYRUN_NAZWA=demo
+  # Proces v1: reset odtwarza issue z zadania.yaml baseline (v2 w osobnych testach na końcu).
+  sed -i.bak 's/^wersja_procesu: 2/wersja_procesu: 1/' docs/konfiguracja.md && rm docs/konfiguracja.md.bak
   printf -- '- {id: D1, tytul: Pierwsze, cel: c, kryteria: [k]}\n- {id: D2, tytul: Drugie, cel: c, kryteria: [k], zaleznosci: [D1]}\n' >zadania.yaml
-  git add zadania.yaml && git commit -qm baseline && git tag baseline && git push -q origin main baseline
+  git add zadania.yaml docs/konfiguracja.md && git commit -qm baseline && git tag baseline && git push -q origin main baseline
   "$SHCTL" task create --plik zadania.yaml >/dev/null
   git checkout -q -- . && git clean -fdq
   BASE="$(git rev-parse baseline)"
@@ -149,4 +151,44 @@ otwarte() { jq -r '[.[] | select(.state == "OPEN") | .number] | join(",")' "$GH_
   sed -i.bak 's/^tryb_procesu: M/tryb_procesu: M\nbaseline_tag: baseline/' docs/konfiguracja.md && rm -f docs/konfiguracja.md.bak
   run --separate-stderr "$SHCTL" reset-dryrun --dry-run --json
   [ "$(jq -r '.wynik.tag, .wynik.baseline' <<<"$output" | tr '\n' ' ')" = "baseline $BASE " ]
+}
+
+# Baseline procesu v2 bez zadania.yaml; sync-status zapisuje liczbę sekcji przebiegu w chwili wywołania.
+baseline_v2() {
+  sed -i.bak 's/^wersja_procesu: 1/wersja_procesu: 2/' docs/konfiguracja.md && rm docs/konfiguracja.md.bak
+  git rm -q zadania.yaml
+  printf '#!/usr/bin/env bash\necho "przebiegi=$(grep -c "^## Przebieg dryrun" docs/metryki.md)" >>"${SYNC_LOG:-/dev/null}"\n' >scripts/sync-status.sh
+  git add -A && git commit -qm "baseline v2" && git tag baseline-20261111 && git push -q origin main baseline-20261111
+}
+
+@test "reset-dryrun v2: bez issue z baseline, stare znaczniki zarchiwizowane, widok po nowej sekcji metryk" {
+  baseline_v2
+  printf '\n## Przebieg dryrun 5: M1 z kartami (2026-11-10)\n\n| Zlecenie | Tryb |\n|---|---|\n' >>docs/metryki.md
+  git add -A && git commit -qm "przebieg 5" && git push -q origin main
+  : >"$SYNC_LOG"
+  : >"$GH_ATRAPA/calls"
+  run --separate-stderr "$SHCTL" reset-dryrun --json
+  echo "$output $stderr"
+  [ "$status" -eq 0 ]
+  [ "$(jq -c '.wynik | [.wersja_procesu, .plik_zadan, .mapa, .przebieg]' <<<"$output")" = '[2,null,{},6]' ]
+  [ "$(jq -r '.wynik.zarchiwizowane | join(",")' <<<"$output")" = "1,2" ]
+  [ "$(otwarte)" = "" ]
+  [ "$(jq length "$GH_ATRAPA/issues.json")" -eq 2 ]
+  ! grep -q '^issue create' "$GH_ATRAPA/calls" || false
+  # Ostatnie odświeżenie widoku widzi już sekcję przebiegu 6.
+  [ "$(tail -1 "$SYNC_LOG")" = "przebiegi=2" ]
+  grep -q '^## Przebieg dryrun 6 ' docs/metryki.md
+  [ "$(git log -1 --format=%s main)" = "reset-dryrun: przebieg 6 od baseline $(git rev-parse --short=7 baseline-20261111)" ]
+  run --separate-stderr "$SHCTL" reset-dryrun --json
+  echo "$output $stderr"
+  [ "$(jq -r .wynik.zmiana <<<"$output")" = false ]
+}
+
+@test "reset-dryrun: numer przebiegu z ostatniej sekcji metryk + 1" {
+  printf '\n## Przebieg dryrun 1 (2026-11-01)\n\n## Przebieg dryrun 7: stary opis (2026-11-02)\n\n## Przebieg dryrun 3 (2026-11-03)\n\n| Zlecenie | Tryb |\n|---|---|\n\n## Przyczyny uwag\n\nx\n' >>docs/metryki.md
+  echo zmiana >src/main.txt
+  git add -A && git commit -qm "przebiegi" && git push -q origin main
+  run --separate-stderr "$SHCTL" reset-dryrun --json
+  echo "$output $stderr"
+  [ "$(jq -r .wynik.przebieg <<<"$output")" = 4 ]
 }

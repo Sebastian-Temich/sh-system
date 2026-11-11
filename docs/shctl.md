@@ -8,7 +8,7 @@ operacje na plikach, GitHubie i panelach herdr. Źródło: `scripts/shctl/` (`cm
 `lib/`, `pomoc/` teksty pomocy, `tests/` bats). Symlink `/Users/Shared/sh/bin/shctl` zakłada
 `scripts/server/install.sh`. Zależności: bash 3.2+, gh, jq, yq (mikefarah), git, herdr.
 
-Komendy: [new-project](#new-project), [repo](#repo), [stage](#stage), [decision](#decision), [escalate](#escalate), [status](#status), [stop-all](#stop-all), [skrzynka](#skrzynka), [obsidian](#obsidian), [doctor](#doctor), [task](#task), [pr](#pr), [review](#review), [reset-dryrun](#reset-dryrun), [template](#template), [sprzataj](#sprzataj).
+Komendy: [new-project](#new-project), [repo](#repo), [stage](#stage), [decision](#decision), [escalate](#escalate), [status](#status), [stop-all](#stop-all), [skrzynka](#skrzynka), [obsidian](#obsidian), [doctor](#doctor), [task](#task), [pr](#pr), [review](#review), [reset-dryrun](#reset-dryrun), [template](#template), [sprzataj](#sprzataj), [metryki](#metryki).
 
 ## shctl --help
 
@@ -34,11 +34,13 @@ Użycie: shctl KOMENDA [argumenty] [--dry-run] [--json] [--projekt NAZWA]
   task close NR [--odbior] [--anuluj [--powod "..."]]   (task cancel NR: alias do następnej wersji)
   task resume-check NR [--testy "..."] [--bez-testow]
   task wait NR [--timeout SEKUNDY]
+  task deps NR [--usun #X] [--dodaj #X]
   pr check PR [--czekaj] [--timeout SEKUNDY]
   review run PR [--timeout SEKUNDY]
   reset-dryrun
   template update [--baseline] [--force]
   sprzataj
+  metryki serwer [--probki N] [--co SEKUNDY]
 
 Opcje wspólne (w dowolnym miejscu po nazwie komendy):
   --dry-run        pokazuje, co by się stało; nie zapisuje, nie zmienia GitHuba, nie powiadamia
@@ -263,6 +265,7 @@ Użycie: shctl task create --plik zadania.yaml
         shctl task iter NR [--odbior "kryterium"]
         shctl task close NR [--odbior] [--anuluj [--powod "..."]]
         shctl task resume-check NR [--testy "..."] [--bez-testow]
+        shctl task deps NR [--usun #X]... [--dodaj #X]...
 
 Cykl zadania: create -> ready -> dispatch -> wait (PR z raportem) -> pr check --czekaj ->
 review run -> przy FAIL iter i znów review run -> close. Po przerwie: resume-check.
@@ -276,10 +279,17 @@ create: issue z pliku YAML (lista albo klucz zadania). Pola: id, tytul, cel, kry
   stack, skille, widoczne. Etykiety status:todo, runner:local, wykonawca:claude, typ:X i
   opcjonalne. „Zakres” zawsze wymienia też raport docs/07-realizacja/T-NR.md. Znaczniki shctl:id i shctl:warstwy w treści, brakujące milestone'y, mapa w
   docs/06-zadania/index.md. Błędne pole, zależność albo cykl: kod 2 przed jakąkolwiek zmianą.
+  Issue z tym samym ID: w status:todo aktualizowane według pliku (tytuł, treść, etykiety typu,
+  milestone; pole zaktualizowane), bez duplikatu; w toku albo zamknięte o innym tytule: kod 4.
 ready: tylko czyta. gotowe = kandydaci (status:todo, zależności zamknięte; najwyżej jedno zadanie
   db:migracja naraz), gdy nie ma blokad: slot max_local (Mac i projekt), wolne miejsce poniżej
   min_wolne_gb (15), kolejka review max_review_queue (3), limit Claude w limity.md, niekompletna
-  docs/00-intake/lista-startowa.md. --czekaj sprawdza blokady co 30 s do --timeout (1800 s).
+  docs/00-intake/lista-startowa.md (pola „- [ ]” poza blokami kodu i komentarzami HTML).
+  --czekaj sprawdza blokady co 30 s do --timeout (1800 s). Kolejność: najpierw ścieżka krytyczna
+  (pole sciezka: najdłuższy łańcuch otwartych zadań od zadania), potem numer.
+  Zależności to tylko lista „#NR, #NR” w pierwszej niepustej linii sekcji „### Zależności”; notatki
+  pod nią i wzmianki w innych sekcjach się nie liczą. Zależność anulowana (not planned) blokuje z
+  propozycją: shctl task deps NR --usun #X albo eskalacja.
 dispatch: te same bramki, potem worktree, kopia .env.local i env_files, zaufanie folderu w
   ~/.claude.json, fnm install przy .nvmrc, lista skilli workera (warstwy niżej), karta herdr z
   claude --settings .claude/roles/worker/settings.json i poleceniem „Zrealizuj issue #NR skillem
@@ -287,16 +297,18 @@ dispatch: te same bramki, potem worktree, kopia .env.local i env_files, zaufanie
   CI na main (ostatni bieg każdego workflow, gh run list): czerwone to ostrzeżenie na stderr i w
   poleceniu workera (nie diagnozuje cudzego błędu), nie blokada. Pole main_ci: stan
   (zielone|czerwone|brak|nieznane), czerwone (nazwy workflow).
-wait: czeka na nową turę workera po poleceniu. Stany: gotowe (PR z Closes #NR i raportem
-  docs/07-realizacja/T-NR.md po poleceniu), idle, pracuje, bez_tury, blocked, brak_agenta,
-  brak_panelu. Domyślnie 600 s; pole nastepny_krok podpowiada dalszy krok.
+wait: czeka na nową turę workera po poleceniu. Stany: gotowe (PR z Closes #NR, commit po poleceniu
+  zmieniający raport docs/07-realizacja/T-NR.md i agent, który już nie pracuje), idle, pracuje,
+  bez_tury, blocked, brak_agenta, brak_panelu. Pierwszy commit przy pracującym agencie nie kończy
+  czekania. Domyślnie 600 s; pole nastepny_krok podpowiada dalszy krok.
 iter: tylko po FAIL review bieżącego commita. iter:N -> iter:N+1, status:in-progress, polecenie
   dla workera: popraw tylko zgłoszenia 🔴 i 🟡. FAIL w iteracji 3 otwiera eskalację.
 iter --odbior "kryterium": zmiana zgłoszona przez właściciela przy odbiorze, także po PASS. Dopisuje
   „- [ ] kryterium (odbiór DATA)” do sekcji „Kryteria z odbioru” w issue, ustawia status:in-progress
   i wysyła workerowi polecenie; licznika iteracji nie zmienia. close odmawia (kod 4), dopóki w PR nie
   ma nowego commita po tym poleceniu. Powtórka z tym samym kryterium niczego nie dubluje.
-close: w repo głównym na main. Merge (squash) tylko przy zielonym CI i PASS dla bieżącego commita;
+close: w repo głównym na main. Merge (squash) tylko przy zielonym CI (wszystkie biegi workflow
+  commita zakończone, jak w pr check) i PASS dla bieżącego commita;
   zlecenie S wymaga --odbior (po „odbieram #NR”), chyba że ma widoczne:nie przy odbior_S:
   auto_bez_zmian_widocznych. Potem: Decyzje z raportu do decyzje.md, Drobne uwagi i ⚪ z review
   do backlog-drobne.md, wiersz metryk, „Niewydane” w CHANGELOG.md, Propozycje dla systemu jako
@@ -308,10 +320,14 @@ close --anuluj: zamyka PR z gałęzią, panele, worktree i issue jako „not pla
 resume-check: stan po przerwie (status, iteracja, panel, gałąź, HEAD, niezacommitowane pliki,
   commity za i przed origin/main, wynik testów z „Komendy testów” issue albo --testy).
   Nie zmienia etykiet: przerwanie przez limit nie jest iteracją. Pole sugestia to podpowiedź.
+deps: zależności zadania z pola strukturalnego; --usun i --dodaj przepisują linię listy („#1, #2”
+  albo „brak”, notatki pod nią zostają), dodają komentarz w issue i odświeżają widok. Bez opcji
+  tylko odczyt. Zależność od siebie: kod 2; nieistniejące issue: kod 3.
 
 Warstwy skilli workera (plugin/warstwy-skilli.yaml): bazowe, kategoria (sh-kat-NAZWA), stack
-(sh-stack-NAZWA), skille z zadania, skille projektu (.claude/skills). Brakujący skill: ostrzeżenie
-i skille_brak. Skille techniczne (plugin/skills/techniczne) idą do polecenia jako ścieżki do
+(sh-stack-NAZWA), skille z zadania, skille projektu (.claude/skills). Brakujący skill: pole
+skille_brak; ostrzeżenie tylko dla skilla z pola skille zadania (brakujące skille kategorii i stacku
+orkiestrator podaje raz, zbiorczo, w raporcie przebiegu). Skille techniczne (plugin/skills/techniczne) idą do polecenia jako ścieżki do
 przeczytania; przy sprzeczności wygrywa projekt, potem stack, kategoria, bazowe.
 
 Z docs/konfiguracja.md: max_local (tylko obniża limit z /Users/Shared/sh/konfiguracja.md),
@@ -325,9 +341,11 @@ limity.md: wpis ze słowem codex wstrzymuje review, każdy inny workerów Claude
 Użycie: shctl pr check PR [--czekaj] [--timeout SEKUNDY]
 
 Stan PR przed czekaniem na CI. Najpierw mergeable: przy CONFLICTING GitHub nie uruchamia CI, więc
-kod 4 z komunikatem o konflikcie (rozwiązuje autor gałęzi: git merge origin/main). Potem CI: pass,
-fail, pending albo brak; z --czekaj czeka do rozstrzygnięcia (1800 s, przy braku CI 180 s).
-Pominięte joby (SKIPPED) liczą się jak zaliczone.
+kod 4 z komunikatem o konflikcie (rozwiązuje autor gałęzi: git pull --no-rebase origin main w
+worktree, bez konfliktu gh pr update-branch). Potem CI: pass, fail, pending albo brak; z --czekaj
+czeka do rozstrzygnięcia (1800 s, przy braku CI 180 s). pass dopiero, gdy wszystkie joby są
+zakończone: poza statusCheckRollup sprawdza biegi workflow commita (gh run list --commit), bo job
+czekający na inny (needs) nie ma jeszcze checku. Pominięte joby (SKIPPED) liczą się jak zaliczone.
 
 Dla PR zadania liczy czerwone commity: pierwszy to wynik pracy, kolejne to próby naprawy. Po 2
 nieudanych naprawach zwraca limit_napraw_ci: true (dalej review albo eskalacja, decyduje
@@ -383,9 +401,11 @@ CHANGELOG.md, DoD.md poza todo/pominiety): kod 4 z listą.
 
 Kolejno: zachowuje docs/metryki.md, zamyka panele, worktree i otwarte PR, archiwizuje znaczniki
 shctl:id we wszystkich issue (otwarte zamyka jako „not planned”), resetuje main do tagu (push
---force-with-lease), odtwarza issue przez task create, dodaje sekcję „Przebieg dryrun N” w
-metrykach, commituje i wypycha main, zakłada od nowa klon docs/ w Obsidianie. Stan zgodny z
-tagiem: nic nie robi (zmiana: false).
+--force-with-lease), w procesie v1 (wersja_procesu w konfiguracji tagu) odtwarza issue przez task
+create z zadania.yaml tagu; w v2 nie zakłada issue: zadania powstają z planu po etapie 06-zadania.
+Dodaje sekcję „Przebieg dryrun N” w metrykach (N = numer ostatniej sekcji + 1), odświeża widok
+projektu (Projekt.md liczy zadania od nowej sekcji), commituje i wypycha main, zakłada od nowa klon
+docs/ w Obsidianie. Stan zgodny z tagiem: nic nie robi (zmiana: false).
 ```
 
 ## template
@@ -420,4 +440,17 @@ worktree z niezacommitowanymi zmianami, gałąź z commitami spoza head PR, gał
 main i gałąź bieżąca bez wpisu. Gałęzie usuwa skrypt przez git branch -D (po squash merge -d
 odmawia); agent nie usuwa gałęzi sam. Gałąź bez PR usuwa właściciel.
 Wynik JSON: worktree, galezie, pominiete.
+```
+
+## metryki
+
+```text
+Użycie: shctl metryki serwer [--probki N] [--co SEKUNDY]
+
+Obciążenie Maca do metryk przebiegu: load (1, 5, 15 min), swap (zajęty i całkowity, MB), wolne
+miejsce na dysku z SH_DIR (GB) i liczba rdzeni. Bez projektu, tylko odczyt. Orkiestrator woła ją
+zamiast sysctl i df: shctl działa poza sandboxem sesji SH, a sysctl w sandboxie jest zablokowany.
+
+--probki N   N próbek co --co sekund (domyślnie 1 próbka, co 30 s); wynik to ostatnia próbka i
+             load_m1 {srednia, maks} ze wszystkich
 ```

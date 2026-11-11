@@ -150,7 +150,9 @@ WT() { echo "$SH_DIR/wt/demo/$1"; }
   [ "$status" -eq 0 ]
   [ "$(jq -r '.wynik.skille | join(",")' <<<"$output")" = "sh-baza,sh-kat-frontend,sh-stack-nextjs,projekt-ui" ]
   [ "$(jq -r '.wynik.skille_brak | join(",")' <<<"$output")" = "sh-stack-supabase,sh-dodatkowy" ]
-  [[ "$stderr" == *"brak skilla sh-stack-supabase"* ]] || false
+  # Brak skilla stacku bez ostrzeżenia przy dispatchu (zbiorczo w raporcie); brak skilla z pola skille z ostrzeżeniem.
+  [[ "$stderr" != *"sh-stack-supabase"* ]] || false
+  [[ "$stderr" == *"brak skilla sh-dodatkowy z pola skille zadania"* ]] || false
   grep -q "Zrealizuj issue #12 skillem sh-worker. Przed pracą wczytaj skille: sh-baza, sh-kat-frontend, sh-stack-nextjs, projekt-ui." "$CLAUDE_ATRAPA/calls"
 }
 

@@ -31,7 +31,7 @@ shift
 case "$KOMENDA" in
   -h | --help | help) pomoc; exit 0 ;;
   new-project | stage | decision | escalate | status | stop-all | obsidian | doctor) ;;
-  task | review | reset-dryrun | skrzynka | pr | template | sprzataj | repo) ;;
+  task | review | reset-dryrun | skrzynka | pr | template | sprzataj | repo | metryki) ;;
   *) echo "BŁĄD: nieznana komenda: $KOMENDA (shctl --help)" >&2; exit "$E_UZYCIE" ;;
 esac
 

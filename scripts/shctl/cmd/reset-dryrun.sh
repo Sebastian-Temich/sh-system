@@ -2,8 +2,9 @@
 # tagu z pola baseline_tag w docs/konfiguracja.md albo najnowszego baseline-RRRRMMDD. Tagów nie przesuwa
 # (force push tagów jest zablokowany); nowy baseline to nowy tag (shctl template update --baseline). Zamyka panele, worktree i otwarte PR, archiwizuje znaczniki shctl:id we wszystkich issue
 # (także zamkniętych), usuwa lokalne gałęzie stage/* i task/*, resetuje main do tagu (force push),
-# odtwarza issue z zadania.yaml zapisanego w repo, dopisuje nowy przebieg do docs/metryki.md (plik
-# przechodzi przez reset) i odtwarza klon docs/ w vaulcie Obsidiana. Działa wyłącznie na sh-dryrun.
+# w procesie v1 odtwarza issue z zadania.yaml zapisanego w repo (w v2 zadania powstają dopiero z planu,
+# po etapie 06-zadania), dopisuje nowy przebieg do docs/metryki.md (plik przechodzi przez reset),
+# odświeża widok projektu i odtwarza klon docs/ w vaulcie Obsidiana. Działa wyłącznie na sh-dryrun.
 # shellcheck shell=bash
 
 # shellcheck source=../lib/zadania.sh
@@ -46,10 +47,18 @@ metryki_przed() {
   fi
 }
 
-# Następny numer przebiegu z nagłówków „## Przebieg dryrun N”.
+# Następny numer przebiegu: ostatnia sekcja „## Przebieg dryrun N…” w pliku + 1 (numer nadany przez
+# orkiestratora w nagłówku wygrywa z licznikiem resetów, sh-dryrun przebieg 5).
 nastepny_przebieg() {
-  awk 'match($0, /^## Przebieg dryrun [0-9]+/) { n = substr($0, 20, RLENGTH - 19) + 0; if (n > m) m = n }
+  awk 'match($0, /^## Przebieg dryrun [0-9]+/) { m = substr($0, 20, RLENGTH - 19) + 0 }
     END { print m + 1 }' "$1"
+}
+
+# wersja_procesu z docs/konfiguracja.md w commicie baseline (1, gdy brak pola).
+wersja_baseline() {
+  local v
+  v="$(git -C "$ROOT_G" show "$1:docs/konfiguracja.md" 2>/dev/null | yq --front-matter=extract '.wersja_procesu // 1' 2>/dev/null || true)"
+  case "$v" in "" | null) echo 1 ;; *) echo "$v" ;; esac
 }
 
 # Nowa sekcja przebiegu na końcu metryk; wiersze zadań trafiają do jej tabeli (task close).
@@ -82,7 +91,7 @@ odtworz_obsidian() {
 
 komenda_main() {
   local baseline baseline_tag plik_rel ids prs issues main_sha zgodne ile_wt panele etyk n wyn mapa='{}' t art galezie
-  local zam_pr='[]' zam_is='[]' arch='[]' oznaczone metryki nr_przebiegu=null obs="" drzewo
+  local zam_pr='[]' zam_is='[]' arch='[]' oznaczone metryki nr_przebiegu=null obs="" drzewo wersja
   while [ $# -gt 0 ]; do opcja_wspolna "$@"; shift "$ZJEDZONE"; done
   [ -n "$PROJEKT" ] || PROJEKT="$DRYRUN_NAZWA"
   [ "$PROJEKT" = "$DRYRUN_NAZWA" ] || die "$E_ODMOWA" "reset-dryrun działa tylko na projekcie $DRYRUN_NAZWA, nie na $PROJEKT"
@@ -96,13 +105,19 @@ komenda_main() {
   art="$(artefakty_baseline "$baseline")"
   [ -z "$art" ] || die "$E_ODMOWA" "baseline ${baseline:0:7} zawiera artefakty przebiegu: $(printf '%s' "$art" | paste -sd ';' - | sed 's/;/; /g'); wskaż czysty tag w baseline_tag (docs/konfiguracja.md) albo utwórz nowy baseline"
   plik_rel=""
-  for t in zadania.yaml docs/06-zadania/zadania.yaml; do
-    if git -C "$ROOT_G" cat-file -e "$baseline:$t" 2>/dev/null; then plik_rel="$t"; break; fi
-  done
-  [ -n "$plik_rel" ] || die "$E_BRAK" "baseline nie ma zadania.yaml ani docs/06-zadania/zadania.yaml"
-  ids="$(git -C "$ROOT_G" show "$baseline:$plik_rel" | yq -o=json '.' |
-    jq -c '(if type == "array" then . else .zadania end) | map(.id | tostring) | sort')" ||
-    die "$E_UZYCIE" "$plik_rel w baseline: niepoprawny YAML"
+  ids='[]'
+  wersja="$(wersja_baseline "$baseline")"
+  # Proces v2: przebieg zaczyna się od intake i planu, więc issue z baseline byłyby duplikatami zadań
+  # z zadania.yaml po etapie 06 (sh-dryrun, przebieg 5: #66–#71 anulowane, plan założył #75–#82).
+  if [ "$wersja" = 1 ]; then
+    for t in zadania.yaml docs/06-zadania/zadania.yaml; do
+      if git -C "$ROOT_G" cat-file -e "$baseline:$t" 2>/dev/null; then plik_rel="$t"; break; fi
+    done
+    [ -n "$plik_rel" ] || die "$E_BRAK" "baseline nie ma zadania.yaml ani docs/06-zadania/zadania.yaml"
+    ids="$(git -C "$ROOT_G" show "$baseline:$plik_rel" | yq -o=json '.' |
+      jq -c '(if type == "array" then . else .zadania end) | map(.id | tostring) | sort')" ||
+      die "$E_UZYCIE" "$plik_rel w baseline: niepoprawny YAML"
+  fi
 
   prs="$(gh pr list --repo "$SLUG" --state open --limit 200 --json number,headRefName)" || die "$E_WYKONANIE" "gh pr list nie działa"
   issues="$(wszystkie_issue)"
@@ -136,7 +151,11 @@ komenda_main() {
   info "- zamknij panele: $(jq -r 'map(.label) | join(", ") | if . == "" then "brak" else . end' <<<"$etyk")"
   info "- usuń worktree, gałęzie task/* i stage/*, zamknij PR: $(jq -r 'map("#\(.number)") | join(", ") | if . == "" then "brak" else . end' <<<"$prs")"
   info "- zarchiwizuj znaczniki shctl:id: $(jq -r 'map("#\(.number)") | join(", ") | if . == "" then "brak" else . end' <<<"$oznaczone")"
-  info "- main = baseline (force push), issue z $plik_rel, nowy przebieg w docs/metryki.md"
+  if [ -n "$plik_rel" ]; then
+    info "- main = baseline (force push), issue z $plik_rel, nowy przebieg w docs/metryki.md"
+  else
+    info "- main = baseline (force push), bez issue (proces v$wersja: zadania powstaną z planu), nowy przebieg w docs/metryki.md"
+  fi
   info "- klon docs/ w vaulcie Obsidiana od nowa"
   zam_pr="$(jq -c 'map(.number)' <<<"$prs")"
   zam_is="$(jq -c 'map(select(.state == "OPEN") | .number)' <<<"$oznaczone")"
@@ -181,13 +200,18 @@ komenda_main() {
       jq '.zadania = {} | del(.etapy)' "$(plik_stanu)" >"$t" && mv "$t" "$(plik_stanu)"
     fi
     rm -rf "$STAN/review/$PROJEKT-"*
-    wyn="$("$SHCTL_DIR/shctl" task create --projekt "$PROJEKT" --plik "$ROOT_G/$plik_rel" --json)" ||
-      die "$E_WYKONANIE" "task create po resecie nie powiódł się; powtórz reset-dryrun"
-    mapa="$(jq -c '.wynik.mapa' <<<"$wyn")"
+    if [ -n "$plik_rel" ]; then
+      wyn="$("$SHCTL_DIR/shctl" task create --projekt "$PROJEKT" --plik "$ROOT_G/$plik_rel" --json)" ||
+        die "$E_WYKONANIE" "task create po resecie nie powiódł się; powtórz reset-dryrun"
+      mapa="$(jq -c '.wynik.mapa' <<<"$wyn")"
+    fi
 
     nr_przebiegu="$(nastepny_przebieg "$metryki")"
     dopisz_przebieg "$metryki" "$nr_przebiegu" "$baseline"
     podmien_plik "$metryki" "$ROOT_G/docs/metryki.md"
+    # Widok po nowej sekcji metryk: sync-status liczy zadania od ostatniego „Przebiegu dryrun”, więc
+    # Projekt.md sprzed dopisania liczyłby zadania wcześniejszych przebiegów („Zadania 19/25”).
+    odswiez_projekt || uwaga "widok projektu nieodświeżony; odśwież go przy następnej zmianie stanu"
     # status.md znika po pierwszej synchronizacji nowym sync-status.sh (Projekt.md): usunięcie też do commita.
     for t in $PLIKI_PRZEBIEGU; do
       if [ -e "$ROOT_G/$t" ] || git -C "$ROOT_G" ls-files --error-unmatch -- "$t" >/dev/null 2>&1; then
@@ -204,7 +228,8 @@ komenda_main() {
     case "$obs" in pominiety*) uwaga "Obsidian: $obs" ;; esac
   fi
   wynik_json "$(jq -nc --arg b "$baseline" --arg t "$baseline_tag" --argjson p "$zam_pr" --argjson i "$zam_is" --argjson a "$arch" --argjson m "$mapa" \
-    --arg f "$plik_rel" --argjson n "$nr_przebiegu" --arg o "$obs" \
-    '{baseline:$b, tag:$t, zamkniete_pr:$p, zamkniete_issue:$i, zarchiwizowane:$a, plik_zadan:$f, mapa:$m,
+    --arg f "$plik_rel" --argjson n "$nr_przebiegu" --arg o "$obs" --argjson w "$wersja" \
+    '{baseline:$b, tag:$t, wersja_procesu:$w, zamkniete_pr:$p, zamkniete_issue:$i, zarchiwizowane:$a,
+      plik_zadan:(if $f == "" then null else $f end), mapa:$m,
       przebieg:$n, obsidian:(if $o == "" then null else $o end), zmiana:true}')"
 }

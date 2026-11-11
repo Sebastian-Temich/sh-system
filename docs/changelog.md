@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-11-11 (SH-lite F9b: poprawki z przebiegu 5 sh-dryrun)
+
+- `shctl reset-dryrun`: w projekcie z `wersja_procesu: 2` (z konfiguracji tagu) nie zakłada issue z baseline; zadania powstają z `zadania.yaml` po etapie 06. Numer przebiegu to numer ostatniej sekcji „Przebieg dryrun” w `metryki.md` + 1. Po dopisaniu sekcji odświeża `Projekt.md` (liczy tylko zadania bieżącego przebiegu).
+- `shctl task create`: issue o tym samym ID w `status:todo` aktualizowane według pliku (tytuł, treść, etykiety typu, milestone; pole `zaktualizowane`) zamiast duplikatu; w toku albo zamknięte o innym tytule: odmowa.
+- Zależności tylko z pola strukturalnego (lista „#NR, #NR” w pierwszej linii „### Zależności”). Anulowana zależność blokuje z propozycją `shctl task deps NR --usun #X` albo eskalacji. Nowa komenda `shctl task deps NR [--usun #X] [--dodaj #X]`.
+- `shctl pr check` i `task close`: `pass` dopiero, gdy wszystkie biegi workflow commita są zakończone (`gh run list --commit`), nie tylko checki z rollupu.
+- `shctl task ready` i `task dispatch`: pola `- [ ]` w komentarzach HTML listy startowej nie blokują. Kolejność `gotowe`: najpierw ścieżka krytyczna (pole `sciezka`).
+- `shctl stage` odświeża `Projekt.md` po każdej akcji (także powtórce `stage review`), `review run` także przy powtórce.
+- `shctl task wait`: `gotowe` dopiero przy commicie po poleceniu, który zmienia raport `T-NR.md`, i agencie, który już nie pracuje (pole `raport_po_poleceniu`).
+- `shctl metryki serwer [--probki N] [--co S]`: load, swap, dysk i rdzenie poza sandboxem; orkiestrator zamiast `sysctl`.
+- `sh-worker` i `sh-orkiestrator`: aktualizacja gałęzi o `main` przez `gh pr update-branch` i `git pull` (lokalny `git merge` w sandboxie padał na plikach wspólnych zablokowanych w profilu workera).
+- `task dispatch`: brakujący skill kategorii albo stacku tylko w `skille_brak`, bez ostrzeżenia przy każdym zadaniu (zbiorczo w raporcie przebiegu; skille `sh-kat-ci`, `sh-kat-backend`, `sh-kat-testy`, `sh-stack-node`, `sh-stack-typescript` w B7).
+
 ## 2026-11-10 (SH-lite F8b: propozycje z #54)
 
 - `shctl task close` wpisuje linię `PR: #N` w raporcie `T-NR.md` na `main` (pole `raport_pr`); worker nie robi drugiego commita z numerem PR. Szablon raportu ma `PR: (wpisuje shctl task close)`.

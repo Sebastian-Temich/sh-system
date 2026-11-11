@@ -44,7 +44,7 @@ stan_json() { jq -r --arg k "$1" '.zadania["12"][$k]' "$SH_DIR/stan/demo.json"; 
 }
 
 @test "wait: PR z raportem i commitem po poleceniu to gotowe" {
-  stan_agenta working
+  stan_agenta idle
   pr_workera 12 20
   run --separate-stderr "$SHCTL" task wait 12 --json
   [ "$(jq -r '.wynik.stan, .wynik.pr, .wynik.raport, .wynik.nowy_commit' <<<"$output" | tr '\n' ' ')" = "gotowe 20 true true " ]
@@ -100,4 +100,42 @@ stan_json() { jq -r --arg k "$1" '.zadania["12"][$k]' "$SH_DIR/stan/demo.json"; 
   [ "$status" -eq 0 ]
   [ "$(stan_json tura)" = false ]
   [ "$(stan_json polecenie)" != 2026-01-01T00:00:00Z ]
+}
+
+# Kolejny commit workera w PR 20 (data teraz): commit_workera PLIK
+commit_workera() {
+  local wt="$SH_DIR/wt/demo/12" sha
+  echo "zmiana" >>"$wt/$1"
+  git -C "$wt" add -A
+  git -C "$wt" commit -qm "#12: $1"
+  git -C "$wt" push -q origin HEAD
+  sha="$(git -C "$wt" rev-parse HEAD)"
+  jq --arg s "$sha" --arg d "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+    'map(if .number == 20 then .headRefOid = $s | .commits += [{oid:$s, committedDate:$d}] else . end)' \
+    "$GH_ATRAPA/prs.json" >"$T/x" && mv "$T/x" "$GH_ATRAPA/prs.json"
+}
+
+@test "wait: raport w PR, ale agent jeszcze pracuje: czeka dalej (dryrun 5, #75)" {
+  stan_agenta working
+  pr_workera 12 20
+  run --separate-stderr "$SHCTL" task wait 12 --timeout 2 --json
+  echo "$output $stderr"
+  [ "$(jq -r '.wynik.stan, .wynik.raport_po_poleceniu' <<<"$output" | tr '\n' ' ')" = "pracuje true " ]
+  # Worker dopisuje raport i kończy turę: gotowe.
+  commit_workera docs/07-realizacja/T-12.md
+  stan_agenta idle
+  run --separate-stderr "$SHCTL" task wait 12 --timeout 30 --json
+  [ "$(jq -r '.wynik.stan, .wynik.pr' <<<"$output" | tr '\n' ' ')" = "gotowe 20 " ]
+}
+
+@test "wait: po poleceniu tylko commit kodu, raport z poprzedniej tury: idle, nie gotowe" {
+  PR_COMMIT_DATA=2026-01-01T00:00:00Z pr_workera 12 20
+  commit_workera src/praca-12.txt
+  stan_agenta idle
+  run --separate-stderr "$SHCTL" task wait 12 --timeout 30 --json
+  echo "$output $stderr"
+  [ "$(jq -r '.wynik.stan, .wynik.raport, .wynik.raport_po_poleceniu, .wynik.nowy_commit' <<<"$output" | tr '\n' ' ')" = "idle true false true " ]
+  commit_workera docs/07-realizacja/T-12.md
+  run --separate-stderr "$SHCTL" task wait 12 --timeout 30 --json
+  [ "$(jq -r .wynik.stan <<<"$output")" = gotowe ]
 }

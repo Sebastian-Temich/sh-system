@@ -1,4 +1,4 @@
-# shctl task create|ready|dispatch|iter|close|resume-check|wait (docs/shctl.md, „task”).
+# shctl task create|ready|dispatch|iter|close|resume-check|wait|deps (docs/shctl.md, „task”).
 # task close NR --anuluj zastępuje task cancel (alias z ostrzeżeniem do następnej wersji).
 # Etap A: każde zadanie ma runner:local i wykonawca:claude, a review robi Codex (shctl review run).
 # shellcheck shell=bash
@@ -158,9 +158,37 @@ milestone_istniejace() {
     die "$E_WYKONANIE" "nie można odczytać milestone'ów $SLUG"
 }
 
+# Etykiety, które wynikają z pliku zadań; status, iteracja, runner i wykonawca zostają.
+ETYKIETY_Z_PLIKU='^(typ:|tryb:|sev:|db:migracja$|widoczne:nie$)'
+
+# Aktualizacja istniejącego issue zadania (JSON z istn) według pliku: tylko w status:todo i tylko,
+# gdy tytuł, treść, etykiety z pliku albo milestone się różnią. Zwraca 0, gdy była (lub byłaby) zmiana.
+aktualizuj_issue() {
+  local e="$1" z="$2" tresc="$3" etyk="$4" nr tytul m stare_m dodaj zdejmij
+  local -a a=()
+  [ "$(jq -r .todo <<<"$e")" = true ] || return 1
+  nr="$(jq -r .nr <<<"$e")"
+  tytul="$(jq -r .tytul <<<"$z")"
+  m="$(jq -r '.milestone // ""' <<<"$z")"
+  stare_m="$(jq -r .milestone <<<"$e")"
+  dodaj="$(jq -r --arg l "$etyk" --arg w "$ETYKIETY_Z_PLIKU" '($l | split(",")) - .etykiety | map(select(test($w))) | join(" ")' <<<"$e")"
+  zdejmij="$(jq -r --arg l "$etyk" --arg w "$ETYKIETY_Z_PLIKU" '[.etykiety[] | select(test($w))] - ($l | split(",")) | join(" ")' <<<"$e")"
+  if [ "$(jq -r .tytul <<<"$e")" = "$tytul" ] && [ "$m" = "$stare_m" ] && [ -z "$dodaj$zdejmij" ] &&
+    [ "$(jq -r .body <<<"$e" | tr -d '\r')" = "$(cat "$tresc")" ]; then
+    return 1
+  fi
+  [ "$DRY" -eq 0 ] || return 0
+  a=(--title "$tytul" --body-file "$tresc")
+  if [ -n "$m" ] && [ "$m" != "$stare_m" ]; then a+=(--milestone "$m"); fi
+  if [ -z "$m" ] && [ -n "$stare_m" ]; then a+=(--remove-milestone); fi
+  gh issue edit "$nr" --repo "$SLUG" "${a[@]}" >/dev/null || die "$E_WYKONANIE" "nie można zaktualizować #$nr; powtórz komendę"
+  [ -z "$dodaj$zdejmij" ] || zmien_etykiety "$nr" "$(issue_json "$nr")" "$dodaj" "$zdejmij"
+  return 0
+}
+
 task_create() {
-  local plik="" dane lista bledy kolejnosc istn mapa='{}' utw='[]' juz='[]' ms_nowe='[]' ms m id z tytul
-  local tresc etyk url nr wiersze
+  local plik="" dane lista bledy kolejnosc istn mapa='{}' utw='[]' juz='[]' akt='[]' ms_nowe='[]' ms m id z tytul
+  local tresc etyk url nr wiersze e
   while [ $# -gt 0 ]; do
     case "$1" in
       --plik) plik="$(wartosc "$@")"; shift 2 ;;
@@ -187,18 +215,23 @@ task_create() {
   kolejnosc="$(jq -r "$JQ_TOPO" <<<"$lista" 2>"$SHCTL_TMP/jq.err")" ||
     die "$E_UZYCIE" "$plik: $(sed 's/^jq: error[^:]*: //' "$SHCTL_TMP/jq.err")"
 
-  # Powtórka: issue z tym samym znacznikiem ID już istnieje.
+  # Powtórka: issue z tym samym znacznikiem ID już istnieje. Otwarte w status:todo (nikt nad nim nie
+  # pracuje) task create aktualizuje według pliku: tytuł, treść, etykiety typu i milestone, bez
+  # duplikatu (sh-dryrun, przebieg 5: plan po intake dostał nowe ID zamiast poprawić stare issue).
+  # Zadanie w toku albo zamknięte o innym tytule to odmowa.
   istn="$(wszystkie_issue | jq -c '
     [.[] | ((.body // "") | [capture("<!-- shctl:id=(?<id>[^ ]+) -->")][0].id) as $id
-      | select($id != null) | {id: $id, nr: .number, tytul: .title}]')"
+      | select($id != null) | [.labels[].name] as $e
+      | {id: $id, nr: .number, tytul: .title, body: (.body // ""), milestone: (.milestone.title // ""), etykiety: $e,
+         todo: (.state == "OPEN" and (($e | index("status:todo")) != null
+           or ([$e[] | select(startswith("status:"))] | length) == 0))}]')"
   for id in $kolejnosc; do
     z="$(jq -c --arg i "$id" '.[] | select(.id == $i)' <<<"$lista")"
     tytul="$(jq -r .tytul <<<"$z")"
-    nr="$(jq -r --arg i "$id" '[.[] | select(.id == $i)] | min_by(.nr).nr // ""' <<<"$istn")"
-    if [ -n "$nr" ]; then
-      [ "$(jq -r --arg i "$id" '[.[] | select(.id == $i)] | min_by(.nr).tytul' <<<"$istn")" = "$tytul" ] ||
-        die "$E_ODMOWA" "ID $id jest już użyte przez #$nr o innym tytule; ID muszą być unikalne w projekcie"
-    fi
+    e="$(jq -c --arg i "$id" '[.[] | select(.id == $i)] | min_by(.nr) // empty' <<<"$istn")"
+    [ -n "$e" ] || continue
+    [ "$(jq -r .tytul <<<"$e")" = "$tytul" ] || [ "$(jq -r .todo <<<"$e")" = true ] ||
+      die "$E_ODMOWA" "ID $id jest już użyte przez #$(jq -r .nr <<<"$e") o innym tytule, a zadanie nie jest w status:todo; ID muszą być unikalne w projekcie"
   done
 
   ms="$(jq -c '[.[].milestone // empty] | unique' <<<"$lista")"
@@ -217,12 +250,6 @@ task_create() {
   for id in $kolejnosc; do
     z="$(jq -c --arg i "$id" '.[] | select(.id == $i)' <<<"$lista")"
     nr="$(jq -r --arg i "$id" '[.[] | select(.id == $i)] | min_by(.nr).nr // ""' <<<"$istn")"
-    if [ -n "$nr" ]; then
-      juz="$(jq -c --arg i "$id" '. + [$i]' <<<"$juz")"
-      mapa="$(jq -c --arg i "$id" --argjson n "$nr" '. + {($i): $n}' <<<"$mapa")"
-      info "$id: istnieje jako #$nr"
-      continue
-    fi
     tresc="$(tmp_plik)"
     jq -r --argjson mapa "$mapa" "$JQ_TRESC" <<<"$z" >"$tresc"
     etyk="$(jq -r '["status:todo", "runner:local", "wykonawca:claude", "typ:\(.typ // "feature")"]
@@ -230,6 +257,17 @@ task_create() {
       + (if .db_migracja then ["db:migracja"] else [] end)
       + (if .widoczne == false then ["widoczne:nie"] else [] end)
       + (if (.waga // "") != "" then ["sev:\(.waga)"] else [] end) | join(",")' <<<"$z")"
+    if [ -n "$nr" ]; then
+      mapa="$(jq -c --arg i "$id" --argjson n "$nr" '. + {($i): $n}' <<<"$mapa")"
+      if aktualizuj_issue "$(jq -c --arg i "$id" '[.[] | select(.id == $i)] | min_by(.nr)' <<<"$istn")" "$z" "$tresc" "$etyk"; then
+        akt="$(jq -c --arg i "$id" '. + [$i]' <<<"$akt")"
+        info "$id: #$nr $([ "$DRY" -eq 1 ] && echo "zostanie zaktualizowane" || echo "zaktualizowano") według pliku"
+      else
+        juz="$(jq -c --arg i "$id" '. + [$i]' <<<"$juz")"
+        info "$id: istnieje jako #$nr"
+      fi
+      continue
+    fi
     utw="$(jq -c --arg i "$id" '. + [$i]' <<<"$utw")"
     if [ "$DRY" -eq 1 ]; then
       mapa="$(jq -c --arg i "$id" '. + {($i): null}' <<<"$mapa")"
@@ -258,8 +296,8 @@ task_create() {
     aktualizuj_mape "$wiersze"
     uruchom_sync_status || true
   fi
-  wynik_json "$(jq -nc --argjson m "$mapa" --argjson u "$utw" --argjson j "$juz" --argjson ms "$ms_nowe" \
-    '{mapa:$m, utworzone:$u, istniejace:$j, milestone_utworzone:$ms, indeks:"docs/06-zadania/index.md"}')"
+  wynik_json "$(jq -nc --argjson m "$mapa" --argjson u "$utw" --argjson j "$juz" --argjson a "$akt" --argjson ms "$ms_nowe" \
+    '{mapa:$m, utworzone:$u, istniejace:$j, zaktualizowane:$a, milestone_utworzone:$ms, indeks:"docs/06-zadania/index.md"}')"
 }
 
 # =========================================================================================
@@ -341,7 +379,10 @@ polecenie_workera() {
 # Warstwy skilli workera (plugin/warstwy-skilli.yaml, lib/zadania.sh): bazowe + kategoria + stack +
 # skille z zadania + skille projektu (.claude/skills w worktree, zawsze). Kategoria, stack i skille są
 # w znaczniku shctl:warstwy w treści issue (task create). Skill bez SKILL.md w pluginie (także
-# skills/techniczne/), projekcie ani ~/.claude/skills jest pomijany z ostrzeżeniem, a dispatch idzie dalej.
+# skills/techniczne/), projekcie ani ~/.claude/skills jest pomijany, a dispatch idzie dalej. Brak skilla
+# warstwy kategorii albo stacku (np. sh-kat-ci, sh-stack-node; odłożone do B7) trafia tylko do pola
+# skille_brak, bez ostrzeżenia przy każdym zadaniu: orkiestrator zbiera je raz w raporcie przebiegu.
+# Ostrzeżenie zostaje dla skilla wskazanego wprost w polu skille zadania.
 SKILLE_W='{"skille":[],"brak":[]}'
 
 skill_istnieje() {
@@ -370,7 +411,11 @@ skille_workera() {
   while IFS= read -r n; do
     [ -n "$n" ] || continue
     if skill_istnieje "$kat" "$n"; then ok="$(jq -c --arg n "$n" '. + [$n]' <<<"$ok")"
-    else brak="$(jq -c --arg n "$n" '. + [$n]' <<<"$brak")"; uwaga "brak skilla $n (warstwy skilli); worker go nie wczyta"; fi
+    else
+      brak="$(jq -c --arg n "$n" '. + [$n]' <<<"$brak")"
+      ! jq -e --arg n "$n" '(.skille // []) | index($n) != null' <<<"$w" >/dev/null ||
+        uwaga "brak skilla $n z pola skille zadania; worker go nie wczyta"
+    fi
   done < <(jq -r 'reduce .[] as $s ([]; if index([$s]) then . else . + [$s] end) | .[]' <<<"$lista")
   SKILLE_W="$(jq -nc --argjson s "$ok" --argjson b "$brak" '{skille:$s, brak:$b}')"
 }
@@ -950,8 +995,7 @@ task_close() {
     die "$E_ODMOWA" "task close działa na main; $ROOT_G jest na innej gałęzi"
 
   if [ "$prst" = OPEN ]; then
-    ci="$(gh pr view "$prn" --repo "$SLUG" --json statusCheckRollup | jq -r "$JQ_CI"' ci')" ||
-      die "$E_WYKONANIE" "nie można odczytać CI PR #$prn"
+    ci="$(ci_pr "$prn" "$head")" || die "$E_WYKONANIE" "nie można odczytać CI PR #$prn"
     if [ "$ci" != pass ] && [ "$(mergeable_pr "$prn")" = CONFLICTING ]; then
       die "$E_ODMOWA" "$(komunikat_konfliktu "$prn" "$(jq -r .headRefName <<<"$pr")")"
     fi
@@ -1228,6 +1272,82 @@ task_cancel() {
 }
 
 # =========================================================================================
+# task deps NR [--usun #X]... [--dodaj #X]...
+# =========================================================================================
+
+# Zależności zadania w polu strukturalnym (pierwsza niepusta linia „### Zależności”, JQ_ZALEZNOSCI).
+# Zmiana bez ręcznej edycji issue (sh-dryrun, przebieg 5: #82 czekało na anulowane #79): linia listy
+# dostaje nową wartość („#1, #2” albo „brak”), a notatki pod nią zostają. Bez opcji: tylko odczyt.
+przepisz_zaleznosci() {
+  LINIA="$1" awk '
+    function nowa_linia(l,   r) {
+      if (l ~ /^[ \t]*(brak|-|—)[ \t]*$/) return ENVIRON["LINIA"]
+      if (match(l, /^[ \t]*(#[0-9]+[ \t]*,?[ \t]*)+/)) {
+        r = substr(l, RSTART + RLENGTH)
+        return ENVIRON["LINIA"] (r == "" ? "" : " " r)
+      }
+      return ""
+    }
+    s == 1 && /^[ \t]*$/ { print; next }
+    s == 1 {
+      s = 2
+      n = nowa_linia($0)
+      if (n != "") { print n; next }
+      print ENVIRON["LINIA"]; print ""
+      if (/^### /) { print; next }
+    }
+    /^### Zale/ && !s { s = 1 }
+    { print }
+    END {
+      if (!s) { print ""; print "### Zależności"; print ""; print ENVIRON["LINIA"] }
+      else if (s == 1) { print ENVIRON["LINIA"] }
+    }'
+}
+
+task_deps() {
+  local nr j obecne nowe usun='[]' dodaj='[]' n linia plik zmiana=false body
+  local -a reszta=()
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --usun | --dodaj)
+        n="$(numer "$(wartosc "$@" | sed 's/^#//')")"
+        if [ "$1" = --usun ]; then usun="$(jq -c --argjson n "$n" '. + [$n]' <<<"$usun")"
+        else dodaj="$(jq -c --argjson n "$n" '. + [$n]' <<<"$dodaj")"; fi
+        shift 2
+        ;;
+      *) reszta+=("$1"); shift ;;
+    esac
+  done
+  argument_nr ${reszta[@]+"${reszta[@]}"}
+  nr="$NR_ARG"
+  zadania_init
+  j="$(issue_json "$nr")"
+  obecne="$(jq -c "$JQ_ZALEZNOSCI"' zaleznosci' <<<"$j")"
+  ! jq -e --argjson n "$nr" 'index($n) != null' <<<"$dodaj" >/dev/null || die "$E_UZYCIE" "#$nr nie może zależeć od siebie"
+  for n in $(jq -r '.[]' <<<"$dodaj"); do issue_json "$n" >/dev/null; done
+  nowe="$(jq -c --argjson u "$usun" --argjson d "$dodaj" '(. - $u) + $d | unique' <<<"$obecne")"
+  if [ "$nowe" != "$obecne" ]; then
+    zmiana=true
+    linia="$(jq -r 'if length == 0 then "brak" else map("#\(.)") | join(", ") end' <<<"$nowe")"
+    krok "zależności #$nr: $(jq -r 'if length == 0 then "brak" else map("#\(.)") | join(", ") end' <<<"$obecne") -> $linia"
+    if [ "$DRY" -eq 0 ]; then
+      plik="$(tmp_plik)"
+      jq -r '.body // ""' <<<"$j" | przepisz_zaleznosci "$linia" >"$plik"
+      body="$(jq -n --rawfile b "$plik" '{body:$b}')"
+      [ "$(jq -c "$JQ_ZALEZNOSCI"' zaleznosci' <<<"$body")" = "$nowe" ] ||
+        die "$E_WYKONANIE" "nie można przepisać sekcji Zależności #$nr; popraw issue ręcznie"
+      gh issue edit "$nr" --repo "$SLUG" --body-file "$plik" >/dev/null || die "$E_WYKONANIE" "nie można zmienić zależności #$nr"
+      gh issue comment "$nr" --repo "$SLUG" --body "Zależności: $linia (shctl task deps)." >/dev/null ||
+        uwaga "komentarz o zmianie zależności #$nr nie powstał"
+      odswiez_projekt || true
+    fi
+  fi
+  info "#$nr: zależności $(jq -r 'if length == 0 then "brak" else map("#\(.)") | join(", ") end' <<<"$nowe")$([ "$zmiana" = true ] || echo " (bez zmian)")"
+  wynik_json "$(jq -nc --argjson n "$nr" --argjson z "$nowe" --argjson p "$obecne" --argjson m "$zmiana" --argjson k "$KROKI" \
+    '{nr:$n, zaleznosci:$z, poprzednie:$p, zmiana:$m, kroki:$k}')"
+}
+
+# =========================================================================================
 # task wait NR [--timeout SEKUNDY]
 # =========================================================================================
 
@@ -1236,10 +1356,28 @@ task_cancel() {
 # Po poleceniu (dispatch albo iter zapisują .polecenie w stanie zadania) liczy się tylko nowa tura:
 # agent przeszedł w working (zapamiętane jako .tura), a potem idle, albo w PR jest commit nowszy niż
 # polecenie. Raport z poprzedniej iteracji ani panel idle przed podjęciem polecenia nie kończą czekania.
+# Gotowe dopiero, gdy PR ma commit po poleceniu, który zmienia raport T-NR.md, a agent już nie pracuje:
+# pierwszy commit (kod bez raportu albo szkic raportu dopisywany później) nie kończy czekania
+# (sh-dryrun, przebieg 5, #75: drugi head i drugie review).
 # Wynik: gotowe (PR z raportem), idle, blocked, brak_agenta, brak_panelu, pracuje (limit czasu) albo
 # bez_tury (limit czasu, a agent nie podjął polecenia).
+
+# Czy któryś commit PR z datą od POLECENIA zmienia raport zadania. Commity czyta lokalnie (worktree
+# workera dzieli obiekty z repo głównym), a brakujące pobiera z gałęzi PR raz.
+raport_po_poleceniu() {
+  local nr="$1" pol="$2" pj="$3" br="$4" oid pobrano=0
+  for oid in $(jq -r --arg p "$pol" '(.commits // [])[] | select(($p == "") or ((.committedDate // "") >= $p)) | .oid // empty' <<<"$pj"); do
+    if ! git -C "$ROOT_G" cat-file -e "$oid^{commit}" 2>/dev/null && [ "$pobrano" -eq 0 ]; then
+      pobrano=1
+      z_limitem 120 git -C "$ROOT_G" fetch -q origin "$br" 2>/dev/null || true
+    fi
+    git -C "$ROOT_G" diff-tree --no-commit-id --name-only -r --root "$oid" 2>/dev/null |
+      grep -qxF "docs/07-realizacja/T-$nr.md" && return 0
+  done
+  return 1
+}
 task_wait() {
-  local nr timeout=600 t=0 label pr prn="" raport=false st="" p a krok_s start_s pol tura nowy pj
+  local nr timeout=600 t=0 label pr prn="" raport=false raport_nowy=false st="" p a krok_s start_s pol tura nowy pj
   local -a reszta=()
   while [ $# -gt 0 ]; do
     case "$1" in
@@ -1261,6 +1399,7 @@ task_wait() {
     pr="$(pr_zadania "$nr")"
     prn=""
     raport=false
+    raport_nowy=false
     nowy=false
     if [ -n "$pr" ] && [ "$(jq -r .state <<<"$pr")" = OPEN ]; then
       prn="$(jq -r .number <<<"$pr")"
@@ -1269,12 +1408,14 @@ task_wait() {
       # Daty ISO 8601 w UTC porównujemy jako tekst.
       [ -n "$pol" ] && jq -e --arg p "$pol" '[(.commits // [])[] | .committedDate // ""] | max // "" | . >= $p' <<<"$pj" >/dev/null &&
         nowy=true
+      [ "$raport" = false ] || ! raport_po_poleceniu "$nr" "$pol" "$pj" "$(jq -r .headRefName <<<"$pr")" || raport_nowy=true
     fi
     [ -n "$pol" ] || nowy=true
-    if [ "$raport" = true ] && [ "$nowy" = true ]; then st=gotowe; break; fi
     p="$(jq -c --arg l "$label" '[.[] | select(.label == $l)][0] // null' <<<"$(panele_herdr)")"
-    if [ "$p" = null ]; then st=brak_panelu; break; fi
     a="$(jq -r '.agent_status // ""' <<<"$p")"
+    # Raport po poleceniu i agent, który już nie pracuje (albo go nie ma): koniec tury z PR.
+    if [ "$raport_nowy" = true ] && [ "$nowy" = true ] && [ "$a" != working ] && [ "$a" != blocked ]; then st=gotowe; break; fi
+    if [ "$p" = null ]; then st=brak_panelu; break; fi
     case "$(jq -r '.agent // ""' <<<"$p")/$a" in
       /*) st=brak_agenta; break ;;
       */working)
@@ -1315,8 +1456,8 @@ task_wait() {
   esac
   info "#$nr: $st po ${t} s; dalej: $krok_s"
   wynik_json "$(jq -nc --argjson n "$nr" --arg s "$st" --arg p "$prn" --argjson r "$raport" --argjson t "$t" --arg k "$krok_s" \
-    --arg pol "$pol" --argjson nc "$nowy" \
-    '{nr:$n, stan:$s, pr:(if $p == "" then null else ($p | tonumber) end), raport:$r, czekano_s:$t,
+    --arg pol "$pol" --argjson nc "$nowy" --argjson rn "$raport_nowy" \
+    '{nr:$n, stan:$s, pr:(if $p == "" then null else ($p | tonumber) end), raport:$r, raport_po_poleceniu:$rn, czekano_s:$t,
       polecenie:(if $pol == "" then null else $pol end), nowy_commit:$nc,
       limit_czasu:($s == "pracuje" or $s == "bez_tury"), nastepny_krok:$k}')"
 }
@@ -1337,7 +1478,7 @@ komenda_main() {
       continue
     fi
     case "$poprz" in
-      --projekt | --plik | --testy | --powod | --timeout) reszta+=("$a") ;;
+      --projekt | --plik | --testy | --powod | --timeout | --usun | --dodaj) reszta+=("$a") ;;
       *)
         if [ "$a" = --anuluj ]; then ANULUJ=1
         elif [ "$a" = --odbior ]; then ODBIOR=1
@@ -1362,6 +1503,7 @@ komenda_main() {
       task_cancel "$@"
       ;;
     wait) task_wait "$@" ;;
-    *) die "$E_UZYCIE" "użycie: shctl task create|ready|dispatch|iter|close [--anuluj]|resume-check|wait (shctl --help)" ;;
+    deps) task_deps "$@" ;;
+    *) die "$E_UZYCIE" "użycie: shctl task create|ready|dispatch|iter|close [--anuluj]|resume-check|wait|deps (shctl --help)" ;;
   esac
 }

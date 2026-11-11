@@ -20,7 +20,7 @@ gotowe() { jq -r '[.wynik.gotowe[].nr] | join(",")' <<<"$output"; }
   echo "$output $stderr"
   [ "$status" -eq 0 ]
   [ "$(gotowe)" = "1,2" ]
-  [ "$(jq -r '.wynik.zablokowane[] | "\(.nr):\(.powody[0])"' <<<"$output" | tr '\n' ';')" = "3:zależność #1 otwarta;6:zależność #7 anulowana;" ]
+  [ "$(jq -r '.wynik.zablokowane[] | "\(.nr):\(.powody[0] | split(":")[0])"' <<<"$output" | tr '\n' ';')" = "3:zależność #1 otwarta;6:zależność #7 anulowana;" ]
   [ "$(jq -r .wynik.mozna_dispatch <<<"$output")" = true ]
 }
 
@@ -137,8 +137,10 @@ gotowe() { jq -r '[.wynik.gotowe[].nr] | join(",")' <<<"$output"; }
   SHCTL_READY_PAUZA=1 run --separate-stderr "$SHCTL" task ready --czekaj --timeout 2 --json
   [ "$(jq -r '.wynik.limit_czasu, .wynik.mozna_dispatch' <<<"$output" | tr '\n' ' ')" = "true false " ]
   zamknij_issue 1
-  SHCTL_READY_PAUZA=1 run --separate-stderr "$SHCTL" task ready --czekaj --timeout 600 --json
-  [ "$(jq -r '.wynik.limit_czasu, .wynik.czekano_s' <<<"$output" | tr '\n' ' ')" = "false 0 " ]
+  # Pauza 5 s: wynik bez czekania to czekano_s < 5 (sama ocena może przejść granicę sekundy).
+  SHCTL_READY_PAUZA=5 run --separate-stderr "$SHCTL" task ready --czekaj --timeout 600 --json
+  [ "$(jq -r '.wynik.limit_czasu' <<<"$output")" = false ]
+  [ "$(jq -r '.wynik.czekano_s' <<<"$output")" -lt 5 ]
 }
 
 @test "ready i dispatch: niekompletna lista startowa wstrzymuje realizacje" {
@@ -154,4 +156,99 @@ gotowe() { jq -r '[.wynik.gotowe[].nr] | join(",")' <<<"$output"; }
   run --separate-stderr "$SHCTL" task ready --json
   [ "$(jq -r '[.wynik.blokady[] | select(.rodzaj == "lista_startowa")] | length' <<<"$output")" = 0 ]
   [ "$(gotowe)" = "1" ]
+}
+
+@test "ready: pola - [ ] w komentarzu HTML listy startowej nie blokuja (dryrun 5)" {
+  issue 1 "Gotowe" "status:todo"
+  mkdir -p docs/00-intake
+  printf '# Lista startowa\n\n<!-- Przykład:\n- [ ] konto Vercel\n- [ ] klucz testowy\n-->\n<!-- - [ ] w jednej linii --> - [x] konto GitHub\n\n- [x] repo\n' >docs/00-intake/lista-startowa.md
+  run --separate-stderr "$SHCTL" task ready --json
+  echo "$output $stderr"
+  [ "$(jq -r '[.wynik.blokady[] | select(.rodzaj == "lista_startowa")] | length' <<<"$output")" = 0 ]
+  [ "$(gotowe)" = 1 ]
+  # Pole poza komentarzem po komentarzu w tej samej linii nadal się liczy.
+  printf '<!-- x --> - [ ] po komentarzu\n' >>docs/00-intake/lista-startowa.md
+  run --separate-stderr "$SHCTL" task ready --json
+  [[ "$(jq -r '.wynik.blokady[] | select(.rodzaj == "lista_startowa") | .opis' <<<"$output")" == "lista startowa: 1 pozycji"* ]] || false
+}
+
+@test "ready: zaleznosci tylko z pola strukturalnego, nie z notatek ani innych sekcji" {
+  issue 1 "Otwarte" "status:todo"
+  issue 2 "Notatka pod lista" "status:todo" "$(zal "brak
+
+Uwaga: wcześniej #1, usunięte po decyzji E-001.")"
+  issue 3 "Lista z notatka w linii" "status:todo" "$(zal "#5 (po #1)")"
+  issue 4 "Wzmianka w celu" "status:todo" "### Cel
+
+Jak w #1.
+
+### Zależności
+
+brak"
+  issue 5 "Done" ""
+  zamknij_issue 5
+  run --separate-stderr "$SHCTL" task ready --json
+  echo "$output $stderr"
+  [ "$(gotowe | tr ',' '\n' | sort -n | paste -sd, -)" = "1,2,3,4" ]
+}
+
+@test "ready i deps: anulowana zaleznosc blokuje z propozycja, task deps --usun odblokowuje" {
+  issue 7 "Anulowane" ""
+  zamknij_issue 7 NOT_PLANNED
+  issue 8 "Zależne" "status:todo" "$(zal "#7, #9")"
+  issue 9 "Done" ""
+  zamknij_issue 9
+  run --separate-stderr "$SHCTL" task ready
+  echo "$output $stderr"
+  [[ "$output" == *"#8: zależność #7 anulowana: zadanie zablokowane; usuń zależność (shctl task deps 8 --usun #7) albo eskaluj"* ]] || false
+  run --separate-stderr "$SHCTL" task deps 8 --json
+  [ "$(jq -c .wynik.zaleznosci <<<"$output")" = "[7,9]" ]
+  [ "$(jq -r .wynik.zmiana <<<"$output")" = false ]
+  run --separate-stderr "$SHCTL" task deps "#8" --usun "#7" --json
+  echo "$output $stderr"
+  [ "$status" -eq 0 ]
+  [ "$(jq -c '.wynik | [.poprzednie, .zaleznosci, .zmiana]' <<<"$output")" = "[[7,9],[9],true]" ]
+  body="$(jq -r '.[] | select(.number == 8) | .body' "$GH_ATRAPA/issues.json")"
+  [[ "$body" == *"### Zależności"$'\n\n'"#9"$'\n\n'"### Typ"* ]] || false
+  jq -r '.[] | select(.number == 8) | .comments[].body' "$GH_ATRAPA/issues.json" | grep -qF "Zależności: #9 (shctl task deps)."
+  run --separate-stderr "$SHCTL" task ready --json
+  [[ ",$(gotowe)," == *",8,"* ]] || false
+  # Powtórka bez zmian; ostatnia zależność daje „brak”.
+  run --separate-stderr "$SHCTL" task deps 8 --usun 7 --json
+  [ "$(jq -r .wynik.zmiana <<<"$output")" = false ]
+  "$SHCTL" task deps 8 --usun 9 >/dev/null
+  body="$(jq -r '.[] | select(.number == 8) | .body' "$GH_ATRAPA/issues.json")"
+  [[ "$body" == *"### Zależności"$'\n\n'"brak"$'\n\n'"### Typ"* ]] || false
+}
+
+@test "deps: --dodaj tworzy sekcje, gdy jej brak, i odrzuca zaleznosc od siebie" {
+  issue 3 "Bez sekcji" "status:todo" "### Cel
+
+x"
+  issue 4 "Inne" "status:todo"
+  run --separate-stderr "$SHCTL" task deps 3 --dodaj 3
+  [ "$status" -eq 2 ]
+  run --separate-stderr "$SHCTL" task deps 3 --dodaj 99
+  [ "$status" -eq 3 ]
+  run --separate-stderr "$SHCTL" task deps 3 --dodaj 4 --json
+  echo "$output $stderr"
+  [ "$(jq -c .wynik.zaleznosci <<<"$output")" = "[4]" ]
+  run --separate-stderr "$SHCTL" task ready --json
+  [ "$(jq -r '.wynik.zablokowane[] | select(.nr == 3) | .powody[0]' <<<"$output")" = "zależność #4 otwarta" ]
+}
+
+@test "ready: najpierw zadania na sciezce krytycznej (najdluzszy lancuch zaleznosci)" {
+  issue 1 "Samodzielne" "status:todo"
+  issue 2 "Krótki łańcuch" "status:todo"
+  issue 3 "Długi łańcuch" "status:todo"
+  issue 4 "Po #2" "status:todo" "$(zal '#2')"
+  issue 5 "Po #3" "status:todo" "$(zal '#3')"
+  issue 6 "Po #5" "status:todo" "$(zal '#5')"
+  issue 7 "Po #6 i #4" "status:todo" "$(zal '#6, #4')"
+  printf -- '---\nmax_local: 5\n---\n' >"$SH_DIR/konfiguracja.md"
+  sed -i.bak 's/^max_local: 1/max_local: 5/' docs/konfiguracja.md
+  run --separate-stderr "$SHCTL" task ready --json
+  echo "$output $stderr"
+  [ "$(gotowe)" = "3,2,1" ]
+  [ "$(jq -r '[.wynik.gotowe[].sciezka] | join(",")' <<<"$output")" = "4,3,1" ]
 }

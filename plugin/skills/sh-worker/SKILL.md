@@ -94,8 +94,17 @@ shctl escalate --dotyczy "#NR" --powod "..." --potrzebne "..." --opcje "A;B"
    uwagach” raportu i pracujesz dalej. Przeczytaj `AGENTS.md`, specyfikację, architekturę i pliki z
    „Zakresu”. Zapisz kryteria z issue jako listę do odhaczenia; kryterium podpięcia funkcji do punktu
    wejścia (trasa, nawigacja, eksport) sprawdzasz testem, który wchodzi od tego punktu.
-4. Zrób `git fetch origin`, a gdy gałąź jest za `main`: `git merge --no-edit origin/main`. Nie
-   rebase'ujesz: `rebase --continue` wymaga edytora, a `git -c` jest zablokowane.
+4. Zrób `git fetch origin`. Gdy gałąź jest za `main`, aktualizujesz ją bez lokalnego `git merge`:
+   ten działa w sandboxie, a sandbox nie pozwala zapisać plików wspólnych (`docs/Projekt.md`,
+   `docs/metryki.md`, `CHANGELOG.md` itd., zablokowanych w profilu), więc merge commita z `main`, który
+   je zmienia, pada w połowie i zostawia połowiczny stan (sh-dryrun T-78, T-80).
+   - PR istnieje: `gh pr update-branch NR_PR` (merge po stronie GitHuba), potem
+     `git pull --no-rebase origin task/NR-slug`.
+   - PR jeszcze nie ma: `git pull --no-rebase origin main` (`git pull` działa poza sandboxem).
+   - Konflikt (`gh pr update-branch` odmawia): `git pull --no-rebase origin main`, rozwiąż konflikt
+     w plikach zadania, `git add PLIKI`, `git commit --no-edit`, push.
+   Nie rebase'ujesz: `rebase --continue` wymaga edytora, a `git -c` jest zablokowane. Nie robisz
+   `git merge origin/main`.
 5. Dla każdego kryterium napisz najpierw test, który je sprawdza, potem kod. Zostajesz w plikach z
    „Zakresu”; plik spoza listy zmieniasz tylko, gdy bez niego kryterium jest niewykonalne, i zapisujesz
    to w „Decyzjach”.
@@ -123,8 +132,8 @@ shctl escalate --dotyczy "#NR" --powod "..." --potrzebne "..." --opcje "A;B"
     najwyżej 2 razy (commit zmieniający tylko raport nie jest próbą naprawy). Po drugiej nieudanej naprawie kończysz: przyczynę i wyjście CI opisujesz w
     „Ryzykach”, a dalej decyduje orkiestrator (review albo eskalacja). Nie zmieniasz testów ani CI
     tylko po to, żeby było zielone. Gdy `gh pr checks` nie pokazuje żadnych checków, a PR ma konflikt
-    z main: `git merge --no-edit origin/main`, rozwiąż konflikt w zakresie zadania, `git add PLIKI`,
-    `git commit --no-edit`, testy, push.
+    z main: `git pull --no-rebase origin main`, rozwiąż konflikt w zakresie zadania, `git add PLIKI`,
+    `git commit --no-edit`, testy, push (krok 4).
 13. Sprawdź „DoD” i zakończ odpowiedzią dla orkiestratora: numer PR, stan CI, otwarte ryzyka. Dalej
     orkiestrator uruchamia `shctl review run`.
 
@@ -152,7 +161,8 @@ w prostej formie. Odmowa nie pyta, tylko kosztuje wywołanie. Dlatego:
 | Zamiast (odmowa) | Tak (osobne wywołania) |
 |---|---|
 | `git add a.ts T-14.md && git commit -m "…" && git push` | `git add a.ts T-14.md` · `git commit -q -m "#14: dodaj koszyk" -m "Co-Authored-By: …"` · `git push -u origin task/14-koszyk` |
-| `git -c core.editor=true rebase --continue` | `git merge --no-edit origin/main` · po konflikcie `git add PLIK` · `git commit --no-edit` |
+| `git -c core.editor=true rebase --continue` | `gh pr update-branch 31` · `git pull --no-rebase origin task/14-koszyk`; przy konflikcie `git pull --no-rebase origin main` · `git add PLIK` · `git commit --no-edit` |
+| `git merge origin/main` (pada w sandboxie na plikach wspólnych) | jak wyżej: `gh pr update-branch` i `git pull` |
 | `until gh pr checks 31 \| grep -q .; do sleep 20; done` | `gh pr checks 31 --watch` |
 | `for r in 1 2; do gh run view $r --json conclusion; done` | `gh run view 1 --json conclusion` · `gh run view 2 --json conclusion` |
 | `cd docs/00-intake/zrodla && sed -n 15,40p a.html` | Read `docs/00-intake/zrodla/a.html` (offset 15, limit 25) |
