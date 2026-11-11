@@ -1,8 +1,15 @@
 Użycie: shctl metryki serwer [--probki N] [--co SEKUNDY]
+        shctl metryki skille [--projekt NAZWA]
 
 Obciążenie Maca do metryk przebiegu: load (1, 5, 15 min), swap (zajęty i całkowity, MB), wolne
 miejsce na dysku z SH_DIR (GB) i liczba rdzeni. Bez projektu, tylko odczyt. Orkiestrator woła ją
 zamiast sysctl i df: shctl działa poza sandboxem sesji SH, a sysctl w sandboxie jest zablokowany.
+Odczyty w LC_ALL=C (sysctl w polskim locale daje przecinek dziesiętny, np. „6,50”).
 
 --probki N   N próbek co --co sekund (domyślnie 1 próbka, co 30 s); wynik to ostatnia próbka i
              load_m1 {srednia, maks} ze wszystkich
+
+skille: brakujące skille warstw kategorii i stacku, które task dispatch zebrał w bieżącym
+przebiegu (stan/NAZWA.json; reset-dryrun czyści). Wynik: brak (lista), zadania (skill -> numery
+zadań) i linia do raportu przebiegu, np. „Brakujące skille warstw (zbiorczo, 2): sh-kat-ci (#97);
+sh-stack-node (#97, #98)”.

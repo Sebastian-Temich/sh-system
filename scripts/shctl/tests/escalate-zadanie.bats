@@ -7,7 +7,7 @@ setup() {
   zadanie_w_toku 12
 }
 
-esk() { "$SHCTL" escalate --dotyczy "#$1" --powod "$2" --potrzebne "decyzja" --json; }
+esk() { "$SHCTL" escalate --dotyczy "#$1" --powod "$2" --sytuacja "stan testowy" --sprawdzono "nic poza testem" --potrzebne "decyzja" --json; }
 
 @test "escalate z worktree: plik w glownej kopii na main, nie w worktree" {
   cd "$SH_DIR/wt/demo/12"

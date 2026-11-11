@@ -28,6 +28,17 @@ setup() {
   [ "$(jq -r .wynik.swap.used_mb <<<"$output")" = 1536 ]
 }
 
+@test "metryki serwer: polskie locale z przecinkiem dziesietnym (sysctl 6,50) nie psuje odczytu" {
+  # Atrapa sama w pl_PL daje przecinki; bez LC_ALL=C w shctl jq kończył się kodem 5 (przebieg 6).
+  LC_ALL=pl_PL.UTF-8 run --separate-stderr sysctl -n vm.loadavg
+  [ "$output" = "{ 1,50 2,00 2,50 }" ]
+  LC_ALL=pl_PL.UTF-8 LANG=pl_PL.UTF-8 SYSCTL_LOAD="6.50 6.64 8.69" SYSCTL_SWAP=1.50G \
+    run --separate-stderr "$SHCTL" metryki serwer --json
+  echo "$output $stderr"
+  [ "$status" -eq 0 ]
+  [ "$(jq -c '.wynik | [.load.m1, .load.m5, .load.m15, .swap.used_mb, .swap.total_mb, .dysk.wolne_gb]' <<<"$output")" = "[6.5,6.64,8.69,1536,4096,18]" ]
+}
+
 @test "metryki serwer: bledy uzycia i zablokowany sysctl" {
   run --separate-stderr "$SHCTL" metryki serwer --probki 0
   [ "$status" -eq 2 ]

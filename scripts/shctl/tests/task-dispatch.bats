@@ -149,10 +149,25 @@ WT() { echo "$SH_DIR/wt/demo/$1"; }
   echo "$output $stderr"
   [ "$status" -eq 0 ]
   [ "$(jq -r '.wynik.skille | join(",")' <<<"$output")" = "sh-baza,sh-kat-frontend,sh-stack-nextjs,projekt-ui" ]
-  [ "$(jq -r '.wynik.skille_brak | join(",")' <<<"$output")" = "sh-stack-supabase,sh-dodatkowy" ]
-  # Brak skilla stacku bez ostrzeżenia przy dispatchu (zbiorczo w raporcie); brak skilla z pola skille z ostrzeżeniem.
-  [[ "$stderr" != *"sh-stack-supabase"* ]] || false
+  # skille_brak tylko dla skilla z pola skille (z ostrzeżeniem); brak skilla stacku ani w wyniku, ani w
+  # komunikatach dispatchu, tylko w stanie projektu do zbiorczej linii raportu (shctl metryki skille).
+  [ "$(jq -r '.wynik.skille_brak | join(",")' <<<"$output")" = "sh-dodatkowy" ]
+  [[ "$stderr$output" != *"sh-stack-supabase"* ]] || false
   [[ "$stderr" == *"brak skilla sh-dodatkowy z pola skille zadania"* ]] || false
+  [ "$(jq -c '.skille_warstw_brak' "$SH_DIR/stan/demo.json")" = '{"sh-stack-supabase":[12]}' ]
+  # Drugie zadanie z tym samym brakiem (slot #12 zwolniony): jedna zbiorcza linia z numerami zadań.
+  jq 'map(select(.label != "worker:demo:12"))' "$HERDR_ATRAPA/panele.json" >"$T/x" && mv "$T/x" "$HERDR_ATRAPA/panele.json"
+  w="$(jq -nc '{kategoria:"ci", stack:["supabase"]}' | base64 | tr -d '\n')"
+  issue 13 "CI" "status:todo" "$(printf '### Cel\n\nx\n\n<!-- shctl:warstwy %s -->\n' "$w")"
+  run --separate-stderr "$SHCTL" task dispatch 13 --json
+  [ "$status" -eq 0 ]
+  [ "$(jq -r '.wynik.skille_brak | length' <<<"$output")" -eq 0 ]
+  [[ "$stderr" != *"brak skilla"* ]] || false
+  run --separate-stderr "$SHCTL" metryki skille --json
+  echo "$output $stderr"
+  [ "$status" -eq 0 ]
+  [ "$(jq -c .wynik.brak <<<"$output")" = '["sh-kat-ci","sh-stack-supabase"]' ]
+  [ "$(jq -r .wynik.linia <<<"$output")" = "Brakujące skille warstw (zbiorczo, 2): sh-kat-ci (#13); sh-stack-supabase (#12, #13)" ]
   grep -q "Zrealizuj issue #12 skillem sh-worker. Przed pracą wczytaj skille: sh-baza, sh-kat-frontend, sh-stack-nextjs, projekt-ui." "$CLAUDE_ATRAPA/calls"
 }
 

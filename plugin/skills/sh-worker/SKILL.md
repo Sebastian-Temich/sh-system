@@ -66,8 +66,8 @@ to w raporcie.
 ## Komendy shctl
 
 ```sh
-shctl escalate --dotyczy "#NR" --typ pytanie --powod "..." --potrzebne "..." --opcje "A;B"
-shctl escalate --dotyczy "#NR" --powod "..." --potrzebne "..." --opcje "A;B"
+shctl escalate --dotyczy "#NR" --typ pytanie --powod "..." --sytuacja "..." --sprawdzono "..." --potrzebne "..." --opcje "A;B"
+shctl escalate --dotyczy "#NR" --powod "..." --sytuacja "..." --sprawdzono "..." --potrzebne "..." --opcje "A;B"
 ```
 
 - `escalate --typ pytanie`: niejasność UX albo reguły biznesowej (sekcja „Pytania”). Nie zmienia
@@ -190,7 +190,7 @@ Przy niejasności UX (stan ekranu, komunikat, kolejność kroków, zachowanie pr
 biznesowej, której nie rozstrzyga karta, issue, design ani `decyzje.md`, nie zgadujesz i nie piszesz
 decyzji w raporcie:
 
-1. `shctl escalate --dotyczy "#NR" --typ pytanie --powod "W-NN: KRÓTKO CO NIEJASNE" --potrzebne "PYTANIE"
+1. `shctl escalate --dotyczy "#NR" --typ pytanie --powod "W-NN: KRÓTKO CO NIEJASNE" --sytuacja "..." --sprawdzono "..." --potrzebne "PYTANIE"
    --opcje "A (proponowana);B"`. Jedno wywołanie na jedno pytanie; propozycję dajesz pierwszą.
 2. Pracujesz dalej nad częściami niezależnymi (inne kryteria, testy, reszta przebiegu). Miejsce zależne
    od odpowiedzi zostawiasz z testem oznaczonym `skip` z numerem E-NNN, bez wymyślonej treści.
@@ -295,7 +295,19 @@ spoza issue); widzisz ryzyko bezpieczeństwa lub prawne; znajdujesz sekret w rep
 PASS eskaluje `shctl task iter`, nie ty.
 
 ```sh
-shctl escalate --dotyczy "#NR" --powod "..." --potrzebne "..." --opcje "A;B"
+shctl escalate --dotyczy "#NR" --powod "..." --sytuacja "..." --sprawdzono "..." --potrzebne "..." --opcje "A;B"
+```
+
+`--sytuacja` i `--sprawdzono` są wymagane i niepuste (shctl odmawia, kod 2): właściciel decyduje z
+samego pliku E-NNN.md, bez dopytywania. Sytuacja: co robisz, co się dzieje i gdzie (kryterium, plik,
+test, PR). Sprawdzono: co już przeczytałeś lub próbowałeś i z jakim wynikiem. Przykład:
+
+```sh
+shctl escalate --dotyczy "#102" --powod "sprzeczne wymagania: kursNBP bez sieci vs kryterium 2" \
+  --sytuacja "Kryterium 2 issue #102 wymaga kursu z API NBP w teście jednostkowym; ADR-001 zabrania sieci w testach, ADR-002 każe wstrzykiwać źródło kursu. Test src/kursNBP.test.ts nie może spełnić obu." \
+  --sprawdzono "Karta W-05 i ADR-001/ADR-002 (bez wyjątku dla testów); decyzje.md (brak wpisu); atrapa źródła kursu spełnia ADR, ale nie kryterium 2 (test czerwony)." \
+  --potrzebne "Które wymaganie obowiązuje dla #102" \
+  --opcje "A: zmiana kryterium 2 na atrapę źródła (zgodnie z ADR);B: wyjątek od ADR-001 dla tego testu;C: anulowanie #102"
 ```
 
 Nie prosisz o wartość sekretu w treści eskalacji i nie zapisujesz jej nigdzie: właściciel wpisuje ją

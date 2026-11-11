@@ -47,6 +47,8 @@ stage_iter() {
   if [ "$cel" -gt "$maks" ]; then
     info "$etap: FAIL w iteracji $maks, eskalacja"
     set -- escalate --projekt "$PROJEKT" --dotyczy "$etap" --powod "$maks iteracje review etapu bez PASS" \
+      --sytuacja "PR #$prn etapu $etap: review FAIL w iteracji $maks/$maks (commit ${head:0:7}); limit iteracji wyczerpany." \
+      --sprawdzono "$maks review etapu w PR #$prn (komentarze „Review …: FAIL”) i $((maks - 1)) poprawki; zgłoszenia 🔴/🟡 ostatniego review nadal otwarte." \
       --potrzebne "decyzja: dalsze poprawki poza limitem, zmiana zakresu etapu albo inne rozwiązanie (PR #$prn)" --json
     [ "$DRY" -eq 0 ] || set -- "$@" --dry-run
     wyn="$("$SHCTL_DIR/shctl" "$@")" || die "$E_WYKONANIE" "shctl escalate nie powiódł się: $(jq -r '.blad // ""' <<<"$wyn" 2>/dev/null)"

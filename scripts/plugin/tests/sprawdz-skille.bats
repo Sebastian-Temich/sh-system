@@ -51,6 +51,30 @@ sprawdz() { run --separate-stderr bash "$REPO/scripts/plugin/sprawdz-skille.sh" 
   [[ "$stderr" == *"nieznana komenda shctl: eskaluj"* ]] || false
 }
 
+@test "escalate bez --sytuacja i --sprawdzono oraz herdr agent prompt w bloku kodu" {
+  sed -i.bak 's/ --sytuacja "..." --sprawdzono "..."//' "$S/SKILL.md"
+  printf '\n```sh\nherdr agent prompt worker:demo:12 "x"\n```\n' >>"$S/SKILL.md"
+  sprawdz
+  [ "$status" -eq 1 ]
+  [[ "$stderr" == *"shctl escalate bez --sytuacja i --sprawdzono"* ]] || false
+  [[ "$stderr" == *"herdr agent prompt w bloku kodu"* ]] || false
+}
+
+@test "regula z przebiegu 6: przyklad eskalacji w sh-worker, polecenie i repo opis w orkiestratorze, pliki wspolne w sh-plan" {
+  w="$REPO/plugin/skills/sh-worker/SKILL.md"
+  o="$REPO/plugin/skills/sh-orkiestrator/SKILL.md"
+  p="$REPO/plugin/skills/sh-plan/SKILL.md"
+  # Przykład eskalacji z wypełnionymi sekcjami (wiele linii z \).
+  grep -q '^  --sytuacja "Kryterium' "$w"
+  grep -q '^  --sprawdzono "Karta' "$w"
+  grep -qF 'shctl task polecenie NR "TEKST" --json --projekt NAZWA' "$o"
+  grep -qF 'shctl metryki skille --json --projekt NAZWA' "$o"
+  grep -qF 'wstawiasz wypisaną komendę `gh repo edit …` do' "$o"
+  grep -qF 'bez osobnego pytania' "$o"
+  grep -qF '**Pliki wspólne dla wielu zadań**' "$p"
+  grep -qF '`src/index.test.ts`' "$p"
+}
+
 @test "name rozny od katalogu, brak triggerow, brak trybu" {
   sed -i.bak -e 's/^name: sh-test$/name: sh-inny/' -e 's/^description: .*/description: Bez triggerów./' \
     -e '/^### Tryb M$/d' "$S/SKILL.md"

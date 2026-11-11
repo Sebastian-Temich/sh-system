@@ -2,15 +2,19 @@
 # dysk, rdzenie). Orkiestrator woła ją zamiast sysctl i df: shctl działa poza sandboxem sesji SH
 # (sandbox.excludedCommands), a sysctl w sandboxie orkiestratora jest zablokowany (sh-dryrun, przebieg 5).
 # Bez projektu; tylko odczyt.
+# shctl metryki skille [--projekt NAZWA]: brakujące skille warstw kategorii i stacku zebrane przez
+# task dispatch w bieżącym przebiegu (stan projektu), do jednej zbiorczej linii raportu przebiegu.
 # shellcheck shell=bash
 
 # Jedna próbka: {czas, load:{m1,m5,m15}, swap:{total_mb,used_mb}, dysk:{sciezka,wolne_gb}, rdzenie}.
+# Odczyty w LC_ALL=C: sysctl w polskim locale daje „6,50”, czego jq nie parsuje (sh-dryrun, przebieg 6:
+# kod 5 przy każdym wywołaniu). Przecinek zamieniany na kropkę także na wypadek locale bez efektu.
 probka() {
   local load swap dysk rdz
-  load="$(sysctl -n vm.loadavg 2>/dev/null | tr -d '{}' || true)"
-  swap="$(sysctl -n vm.swapusage 2>/dev/null || true)"
-  rdz="$(sysctl -n hw.ncpu 2>/dev/null || true)"
-  dysk="$(df -Pk "$SH_DIR" 2>/dev/null | LC_ALL=C awk 'NR == 2 { printf "%.1f", $4 / 1048576 }')"
+  load="$(LC_ALL=C sysctl -n vm.loadavg 2>/dev/null | tr -d '{}' | tr , . || true)"
+  swap="$(LC_ALL=C sysctl -n vm.swapusage 2>/dev/null | tr , . || true)"
+  rdz="$(LC_ALL=C sysctl -n hw.ncpu 2>/dev/null || true)"
+  dysk="$(LC_ALL=C df -Pk "$SH_DIR" 2>/dev/null | LC_ALL=C awk 'NR == 2 { printf "%.1f", $4 / 1048576 }')"
   [ -n "$load" ] || die "$E_WYKONANIE" "sysctl vm.loadavg nie działa (shctl w sandboxie? wywołaj prostą komendą shctl)"
   jq -nc --arg c "$(date -u +%Y-%m-%dT%H:%M:%SZ)" --arg l "$load" --arg s "$swap" --arg d "$dysk" --arg r "$rdz" --arg k "$SH_DIR" '
     def mb: if . == null then null else (.v | tonumber) * ({"K": (1 / 1024), "M": 1, "G": 1024}[.j] // 1) | . * 10 | round / 10 end;
@@ -50,9 +54,30 @@ metryki_serwer() {
   wynik_json "$wynik"
 }
 
+# Zbiorcza informacja o brakujących skillach warstw (sh-dryrun, przebieg 6: zgłaszane przy każdym
+# zadaniu). Dispatch zapisuje {skill: [NR...]} w stan/PROJEKT.json; reset-dryrun czyści.
+metryki_skille() {
+  local f wynik
+  while [ $# -gt 0 ]; do opcja_wspolna "$@"; shift "$ZJEDZONE"; done
+  znajdz_projekt
+  f="$STAN/$PROJEKT.json"
+  if [ -f "$f" ]; then
+    wynik="$(jq -c '(.skille_warstw_brak // {}) as $b
+      | {brak: ($b | keys), zadania: $b,
+         linia: (if ($b | length) == 0 then "Skille warstw: wszystkie dostępne"
+                 else "Brakujące skille warstw (zbiorczo, \($b | length)): "
+                   + ([$b | to_entries | sort_by(.key)[] | "\(.key) (\(.value | map("#\(.)") | join(", ")))"] | join("; ")) end)}' "$f")"
+  else
+    wynik='{"brak":[],"zadania":{},"linia":"Skille warstw: wszystkie dostępne"}'
+  fi
+  info "$(jq -r .linia <<<"$wynik")"
+  wynik_json "$wynik"
+}
+
 komenda_main() {
   case "${1:-}" in
     serwer) shift; metryki_serwer "$@" ;;
-    *) die "$E_UZYCIE" "użycie: shctl metryki serwer [--probki N] [--co SEKUNDY]" ;;
+    skille) shift; metryki_skille "$@" ;;
+    *) die "$E_UZYCIE" "użycie: shctl metryki serwer [--probki N] [--co SEKUNDY] | shctl metryki skille [--projekt NAZWA]" ;;
   esac
 }

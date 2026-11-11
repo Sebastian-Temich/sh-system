@@ -277,7 +277,7 @@ dajesz zgłoszenie 🔴 z opisem zaczynającym się „ESKALACJA: ” i piszesz,
 wywołuje wtedy:
 
 ```sh
-shctl escalate --dotyczy "#NR" --powod "..." --potrzebne "..." --opcje "A;B"
+shctl escalate --dotyczy "#NR" --powod "..." --sytuacja "..." --sprawdzono "..." --potrzebne "..." --opcje "A;B"
 ```
 
 (albo `--dotyczy ETAP` w review etapu). Trzecią iterację bez PASS eskaluje `shctl task iter`. Wartości

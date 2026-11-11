@@ -380,10 +380,12 @@ polecenie_workera() {
 # skille z zadania + skille projektu (.claude/skills w worktree, zawsze). Kategoria, stack i skille są
 # w znaczniku shctl:warstwy w treści issue (task create). Skill bez SKILL.md w pluginie (także
 # skills/techniczne/), projekcie ani ~/.claude/skills jest pomijany, a dispatch idzie dalej. Brak skilla
-# warstwy kategorii albo stacku (np. sh-kat-ci, sh-stack-node; odłożone do B7) trafia tylko do pola
-# skille_brak, bez ostrzeżenia przy każdym zadaniu: orkiestrator zbiera je raz w raporcie przebiegu.
-# Ostrzeżenie zostaje dla skilla wskazanego wprost w polu skille zadania.
-SKILLE_W='{"skille":[],"brak":[]}'
+# warstwy kategorii albo stacku (np. sh-kat-ci, sh-stack-node; odłożone do B7) nie pojawia się w wyniku
+# dispatchu: trafia do stanu projektu (.skille_warstw_brak: skill → numery zadań), a orkiestrator podaje
+# go raz, zbiorczo, w raporcie przebiegu (shctl metryki skille). W przebiegu 6 pole skille_brak przy
+# każdym dispatchu kończyło się zgłoszeniem przy każdym zadaniu. skille_brak i ostrzeżenie zostają dla
+# skilla wskazanego wprost w polu skille zadania.
+SKILLE_W='{"skille":[],"brak":[],"brak_warstw":[]}'
 
 skill_istnieje() {
   local n="${2##*:}" d
@@ -396,7 +398,7 @@ skill_istnieje() {
 
 # Ustawia SKILLE_W {skille, brak} dla issue (JSON) i worktree workera.
 skille_workera() {
-  local j="$1" kat="$2" w mapa lista n ok='[]' brak='[]' d
+  local j="$1" kat="$2" w mapa lista n ok='[]' brak='[]' brak_w='[]' d
   w="$(warstwy_issue "$j")"
   mapa="$(mapa_warstw)"
   lista="$(jq -c --argjson m "$mapa" '
@@ -411,13 +413,14 @@ skille_workera() {
   while IFS= read -r n; do
     [ -n "$n" ] || continue
     if skill_istnieje "$kat" "$n"; then ok="$(jq -c --arg n "$n" '. + [$n]' <<<"$ok")"
-    else
+    elif jq -e --arg n "$n" '(.skille // []) | index($n) != null' <<<"$w" >/dev/null; then
       brak="$(jq -c --arg n "$n" '. + [$n]' <<<"$brak")"
-      ! jq -e --arg n "$n" '(.skille // []) | index($n) != null' <<<"$w" >/dev/null ||
-        uwaga "brak skilla $n z pola skille zadania; worker go nie wczyta"
+      uwaga "brak skilla $n z pola skille zadania; worker go nie wczyta"
+    else
+      brak_w="$(jq -c --arg n "$n" '. + [$n]' <<<"$brak_w")"
     fi
   done < <(jq -r 'reduce .[] as $s ([]; if index([$s]) then . else . + [$s] end) | .[]' <<<"$lista")
-  SKILLE_W="$(jq -nc --argjson s "$ok" --argjson b "$brak" '{skille:$s, brak:$b}')"
+  SKILLE_W="$(jq -nc --argjson s "$ok" --argjson b "$brak" --argjson bw "$brak_w" '{skille:$s, brak:$b, brak_warstw:$bw}')"
 }
 
 # Dopisek do polecenia workera: skille do wczytania przed pracą. Skille techniczne
@@ -436,6 +439,23 @@ z_skillami() {
   [ -z "$s" ] || wynik="$wynik Przed pracą wczytaj skille: $s."
   [ -z "$t" ] || wynik="$wynik Przeczytaj skille techniczne (przy sprzeczności wygrywa projekt, potem stack, kategoria, bazowe): $t."
   printf '%s' "$wynik"
+}
+
+# Brakujące skille warstw w stanie projektu: {skill: [NR, ...]}; zbiorczo przez shctl metryki skille.
+zapisz_brak_warstw() {
+  local nr="$1" lista="$2" f t
+  [ "$DRY" -eq 0 ] || return 0
+  [ "$(jq -r 'length' <<<"$lista")" -gt 0 ] || return 0
+  f="$(plik_stanu)"
+  mkdir -p "$STAN"
+  zablokuj "$f.lock"
+  t="$(tmp_plik)"
+  if [ -f "$f" ]; then cp "$f" "$t"; else jq -n --arg p "$PROJEKT" '{projekt:$p, zadania:{}}' >"$t"; fi
+  jq --argjson n "$nr" --argjson l "$lista" '
+    .skille_warstw_brak = (reduce $l[] as $s ((.skille_warstw_brak // {}); .[$s] = ((.[$s] // []) + [$n] | unique)))' "$t" >"$t.n"
+  mv "$t.n" "$f"
+  rm -f "$t"
+  odblokuj "$f.lock"
 }
 
 galaz_zadania() {
@@ -564,6 +584,7 @@ task_dispatch() {
   [ "$zaufanie" = false ] || krok "zaufanie folderu Claude Code dla $ROOT_G (~/.claude.json)"
   skille_workera "$j" "$kat"
   krok "skille: $(jq -r '(.skille | if length == 0 then "brak" else join(", ") end) + (if (.brak | length) > 0 then " (brak: " + (.brak | join(", ")) + ")" else "" end)' <<<"$SKILLE_W")"
+  zapisz_brak_warstw "$nr" "$(jq -c .brak_warstw <<<"$SKILLE_W")"
   mci="$(ci_main)"
   msg="Zrealizuj issue #$nr skillem sh-worker."
   if [ "$(jq -r .stan <<<"$mci")" = czerwone ]; then
@@ -611,6 +632,71 @@ task_dispatch() {
       skille:$sk.skille, skille_brak:$sk.brak, zaufanie_dopisane:$zf, main_ci:$mci, zmiana:($z == 1), kroki:$k}')"
 }
 
+# Wysyłka polecenia do workera zadania: panel znaleziony po etykiecie worker:PROJEKT:NR (po eskalacji
+# eskalacja:PROJEKT:NR), tekst przez herdr pane run. Bez panelu, przy istniejącym worktree: nowy panel
+# z claude i poleceniem jako pierwszą wiadomością. Wynik: identyfikator panelu w PANEL_WYSLANY.
+# herdr agent prompt nie zna etykiet (worker:sh-dryrun:98 → agent_not_found), stąd shctl, nie herdr wprost.
+PANEL_WYSLANY=""
+wyslij_do_workera() {
+  local nr="$1" j="$2" label="$3" kat="$4" msg="$5" panele pane
+  panele="$(panele_herdr)"
+  pane="$(panel_po_etykiecie "$panele" "$label")"
+  [ -n "$pane" ] || pane="$(panel_po_etykiecie "$panele" "eskalacja:${label#worker:}")"
+  if [ -n "$pane" ]; then
+    herdr pane run "$pane" "$msg" >/dev/null || die "$E_WYKONANIE" "nie można wysłać polecenia do panelu $pane"
+  else
+    worktree_tego_repo "$kat" || die "$E_ODMOWA" "brak panelu $label i worktree $kat; sprawdź shctl task resume-check $nr"
+    zaufaj_projektowi >/dev/null
+    skille_workera "$j" "$kat"
+    pane="$(otworz_panel "$label" "$kat")"
+    herdr pane run "$pane" "$(polecenie_workera "$kat" "$(z_skillami "$msg")")" >/dev/null ||
+      die "$E_WYKONANIE" "nie można uruchomić claude w panelu $pane"
+  fi
+  PANEL_WYSLANY="$pane"
+}
+
+# =========================================================================================
+# task polecenie NR "tekst"
+# =========================================================================================
+
+# Dowolne polecenie orkiestratora dla workera w toku (naprawa CI, aktualizacja gałęzi, dokończenie
+# raportu). Zapisuje czas polecenia w stanie (.polecenie, .tura false), więc task wait czeka na nową
+# turę zamiast wracać od razu (sh-dryrun, przebieg 6). Licznik iteracji review się nie zmienia.
+task_polecenie() {
+  local nr j label kat msg="" pol pane="" a
+  local -a poz=()
+  # Pozycyjne: NR i treść; opcje wspólne (--projekt, --json, --dry-run) w dowolnym miejscu.
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      -*) opcja_wspolna "$@"; shift "$ZJEDZONE" ;;
+      *) poz+=("$1"); shift ;;
+    esac
+  done
+  [ "${#poz[@]}" -eq 2 ] || die "$E_UZYCIE" "użycie: shctl task polecenie NR \"tekst\""
+  argument_nr "${poz[0]}"
+  nr="$NR_ARG"
+  a="${poz[1]}"
+  msg="$(printf '%s' "$a" | tr '\r\n' '  ' | sed 's/^ *//; s/ *$//')"
+  [ -n "$msg" ] || die "$E_UZYCIE" "brak treści: shctl task polecenie NR \"tekst\""
+  zadania_init
+  j="$(issue_json "$nr")"
+  [ "$(jq -r .state <<<"$j")" = OPEN ] || die "$E_ODMOWA" "issue #$nr jest zamknięte"
+  label="$(etykieta_workera "$nr")"
+  kat="$WT/$nr"
+  msg="Polecenie orkiestratora do zadania #$nr: $msg"
+  krok "polecenie dla $label"
+  pol="$(teraz_utc)"
+  if [ "$DRY" -eq 0 ]; then
+    herdr_dziala
+    wyslij_do_workera "$nr" "$j" "$label" "$kat" "$msg"
+    pane="$PANEL_WYSLANY"
+    stan_zapisz "$nr" "$(jq -nc --arg p "$pane" --arg l "$label" --arg t "$pol" '{panel:$p, label:$l, uruchomiono:true, polecenie:$t, tura:false}')"
+  fi
+  info "#$nr: polecenie wysłane do $label${pane:+ ($pane)}; dalej: shctl task wait $nr"
+  wynik_json "$(jq -nc --argjson n "$nr" --arg p "$pane" --arg l "$label" --arg m "$msg" --arg t "$pol" \
+    '{nr:$n, panel:(if $p == "" then null else $p end), label:$l, polecenie:$m, czas:$t, nastepny_krok:"shctl task wait \($n)"}')"
+}
+
 # =========================================================================================
 # task iter NR
 # =========================================================================================
@@ -647,6 +733,8 @@ task_iter() {
   if [ "$cel" -gt "$MAKS_ITERACJI" ]; then
     info "#$nr: FAIL w iteracji $MAKS_ITERACJI, eskalacja"
     set -- escalate --projekt "$PROJEKT" --dotyczy "#$nr" --powod "$MAKS_ITERACJI iteracje bez PASS" \
+      --sytuacja "PR #$prn zadania #$nr: review FAIL w iteracji $MAKS_ITERACJI/$MAKS_ITERACJI (commit ${head:0:7}); limit iteracji wyczerpany." \
+      --sprawdzono "$MAKS_ITERACJI review w PR #$prn (komentarze „Review …: FAIL”) i $((MAKS_ITERACJI - 1)) poprawki workera; zgłoszenia 🔴/🟡 ostatniego review nadal otwarte." \
       --potrzebne "decyzja: dalsze poprawki poza limitem, zmiana zakresu albo anulowanie zadania (PR #$prn)" --json
     [ "$DRY" -eq 0 ] || set -- "$@" --dry-run
     wyn="$("$SHCTL_DIR/shctl" "$@")" || die "$E_WYKONANIE" "shctl escalate nie powiódł się: $(jq -r '.blad // ""' <<<"$wyn" 2>/dev/null)"
@@ -666,18 +754,9 @@ task_iter() {
     stan_zapisz "$nr" "$(jq -nc --arg h "$head" --argjson c "$cel" '{iter_review:$h, iter_cel:$c, iter_wyslano:false}')"
     zmien_etykiety "$nr" "$j" "iter:$cel" "$(jq -r --arg c "iter:$cel" '[.labels[].name | select(startswith("iter:") and . != $c)] | join(" ")' <<<"$j")"
     ustaw_status "$nr" "$(issue_json "$nr")" status:in-progress
-    pane="$(panel_po_etykiecie "$(panele_herdr)" "$label")"
     pol="$(teraz_utc)"
-    if [ -n "$pane" ]; then
-      herdr pane run "$pane" "$msg" >/dev/null || die "$E_WYKONANIE" "nie można wysłać polecenia do panelu $pane"
-    else
-      worktree_tego_repo "$kat" || die "$E_ODMOWA" "brak panelu $label i worktree $kat; sprawdź shctl task resume-check $nr"
-      zaufaj_projektowi >/dev/null
-      skille_workera "$j" "$kat"
-      pane="$(otworz_panel "$label" "$kat")"
-      herdr pane run "$pane" "$(polecenie_workera "$kat" "$(z_skillami "$msg")")" >/dev/null ||
-        die "$E_WYKONANIE" "nie można uruchomić claude w panelu $pane"
-    fi
+    wyslij_do_workera "$nr" "$j" "$label" "$kat" "$msg"
+    pane="$PANEL_WYSLANY"
     stan_zapisz "$nr" "$(jq -nc --arg p "$pane" --arg l "$label" --argjson c "$cel" --arg t "$pol" '{panel:$p, label:$l, iteracja:$c, iter_wyslano:true, uruchomiono:true, polecenie:$t, tura:false}')"
   fi
   if [ "$zmiana" -eq 1 ]; then info "#$nr: iteracja $cel, polecenie wysłane do $label"; else info "#$nr: iteracja $cel już wysłana"; fi
@@ -741,18 +820,9 @@ task_iter_odbior() {
       herdr_dziala
       ustaw_status "$nr" "$(issue_json "$nr")" status:in-progress
       stan_zapisz "$nr" "$(jq -nc --arg h "$head" '{odbior_head:$h}')"
-      pane="$(panel_po_etykiecie "$(panele_herdr)" "$label")"
       pol="$(teraz_utc)"
-      if [ -n "$pane" ]; then
-        herdr pane run "$pane" "$msg" >/dev/null || die "$E_WYKONANIE" "nie można wysłać polecenia do panelu $pane"
-      else
-        worktree_tego_repo "$kat" || die "$E_ODMOWA" "brak panelu $label i worktree $kat; sprawdź shctl task resume-check $nr"
-        zaufaj_projektowi >/dev/null
-        skille_workera "$j" "$kat"
-        pane="$(otworz_panel "$label" "$kat")"
-        herdr pane run "$pane" "$(polecenie_workera "$kat" "$(z_skillami "$msg")")" >/dev/null ||
-          die "$E_WYKONANIE" "nie można uruchomić claude w panelu $pane"
-      fi
+      wyslij_do_workera "$nr" "$j" "$label" "$kat" "$msg"
+      pane="$PANEL_WYSLANY"
       stan_zapisz "$nr" "$(jq -c --arg k "$kryt" --arg p "$pane" --arg l "$label" --arg t "$pol" \
         '{odbior_wyslane:(((. // {}).odbior_wyslane // []) + [$k]), panel:$p, label:$l, uruchomiono:true, polecenie:$t, tura:false}' <<<"$stan")"
     fi
@@ -1448,11 +1518,11 @@ task_wait() {
   t=$(($(date +%s) - start_s))
   case "$st" in
     gotowe) krok_s="shctl pr check $prn --czekaj" ;;
-    idle) krok_s="agent czeka bez PR z raportem po poleceniu: polecenie dokończenia (herdr agent prompt)" ;;
+    idle) krok_s="agent czeka bez PR z raportem po poleceniu: shctl task polecenie $nr \"dokończ …\", potem shctl task wait $nr" ;;
     blocked) krok_s="agent pyta albo czeka na zgodę: herdr agent read, pytanie do właściciela w statusie" ;;
     brak_agenta | brak_panelu) krok_s="shctl task resume-check $nr, potem shctl task dispatch $nr" ;;
     pracuje) krok_s="worker pracuje: ponów shctl task wait $nr" ;;
-    bez_tury) krok_s="agent nie podjął polecenia: herdr agent read; gdy czeka na wejście, herdr agent prompt" ;;
+    bez_tury) krok_s="agent nie podjął polecenia: herdr agent read; gdy czeka na wejście, shctl task polecenie $nr \"…\"" ;;
   esac
   info "#$nr: $st po ${t} s; dalej: $krok_s"
   wynik_json "$(jq -nc --argjson n "$nr" --arg s "$st" --arg p "$prn" --argjson r "$raport" --argjson t "$t" --arg k "$krok_s" \
@@ -1504,6 +1574,7 @@ komenda_main() {
       ;;
     wait) task_wait "$@" ;;
     deps) task_deps "$@" ;;
-    *) die "$E_UZYCIE" "użycie: shctl task create|ready|dispatch|iter|close [--anuluj]|resume-check|wait|deps (shctl --help)" ;;
+    polecenie) task_polecenie "$@" ;;
+    *) die "$E_UZYCIE" "użycie: shctl task create|ready|dispatch|iter|close [--anuluj]|resume-check|wait|deps|polecenie (shctl --help)" ;;
   esac
 }

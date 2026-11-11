@@ -163,7 +163,7 @@ sprawdz_srodowisko() {
     lokalny="$(git -C "$repo" config --local --get core.hooksPath 2>/dev/null || true)"
     [ -z "$lokalny" ] || wpis "hooki $(basename "$repo")" uwaga "lokalny core.hooksPath ($lokalny) wyłącza globalny pre-push"
   done
-  wolne="$(df -g "$HOME" 2>/dev/null | awk 'NR == 2 { print $4 }' || true)"
+  wolne="$(LC_ALL=C df -g "$HOME" 2>/dev/null | LC_ALL=C awk 'NR == 2 { print $4 }' || true)"
   if [ -n "$wolne" ]; then
     if [ "$wolne" -ge "$min" ]; then wpis "dysk" ok "wolne $wolne GB"; else wpis "dysk" uwaga "wolne $wolne GB, minimum $min GB"; fi
   fi
