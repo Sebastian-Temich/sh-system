@@ -161,3 +161,17 @@ zaznacz() { sed -i.bak 's/^- \[ \]/- [x]/' "$(dod "$1")"; rm -f "$(dod "$1").bak
   [ "$status" -eq 2 ]
   [[ "$stderr" == *"wersja_procesu='9'"* ]] || false
 }
+
+@test "stage review odswieza widok raz, takze przy powtorce bez zmiany statusu (dryrun 5)" {
+  "$SHCTL" stage start 08-qa >/dev/null
+  : >"$T/sync.calls"
+  run "$SHCTL" stage review 08-qa
+  [ "$status" -eq 0 ]
+  [ "$(grep -c -- '--repo test-owner/demo' "$T/sync.calls")" -eq 1 ]
+  run "$SHCTL" stage review 08-qa
+  [ "$status" -eq 0 ]
+  [ "$(grep -c -- '--repo test-owner/demo' "$T/sync.calls")" -eq 2 ]
+  : >"$T/sync.calls"
+  run "$SHCTL" stage review 08-qa --dry-run
+  [ ! -s "$T/sync.calls" ]
+}

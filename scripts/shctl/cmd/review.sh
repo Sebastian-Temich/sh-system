@@ -640,8 +640,9 @@ review_run() {
     koniec_review
   fi
 
-  # PASS może oznaczać „Czeka na Ciebie” (akceptacja etapu, odbiór zlecenia S).
-  [ "$ponownie" = true ] || odswiez_projekt || true
+  # PASS może oznaczać „Czeka na Ciebie” (akceptacja etapu, odbiór zlecenia S). Także przy powtórce
+  # dla tego samego commita: widok mógł nie zdążyć po pierwszym wywołaniu.
+  odswiez_projekt || true
   info "PR #$prn: $(jq -r .werdykt <<<"$WYNIK") ($(jq -r '.zgloszenia | length' <<<"$WYNIK") zgłoszeń)"
   wynik_json "$(jq -c --argjson p "$prn" --arg n "$nr" --arg e "$etap" --arg h "$head" --argjson r "$ponownie" '
     {pr:$p, nr:(if $n == "" then null else ($n | tonumber) end), etap:(if $e == "" then null else $e end),

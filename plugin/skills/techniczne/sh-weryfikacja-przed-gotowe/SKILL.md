@@ -1,6 +1,6 @@
 ---
 name: sh-weryfikacja-przed-gotowe
-description: Skill techniczny bazowy. Dowody przed słowem „gotowe” - każde kryterium issue sprawdzone komendą albo testem, lint, typy, testy jednostkowe i build lokalnie po scaleniu z main, E2E i Lighthouse w CI odczytane z logów. Użyj, gdy kończysz zadanie, zanim napiszesz raport, otworzysz PR albo odpowiesz „zrobione”, oraz po merge'u origin/main do gałęzi zadania.
+description: Skill techniczny bazowy. Dowody przed słowem „gotowe” - każde kryterium issue sprawdzone komendą albo testem, lint, typy, testy jednostkowe i build lokalnie po scaleniu z main, E2E i Lighthouse w CI odczytane z logów. Użyj, gdy kończysz zadanie, zanim napiszesz raport, otworzysz PR albo odpowiesz „zrobione”, oraz po aktualizacji gałęzi zadania o main (gh pr update-branch, git pull).
 ---
 
 # Weryfikacja przed „gotowe”
@@ -16,7 +16,7 @@ raporcie albo PR pada dopiero po komendzie, której wynik to potwierdza. Bez wyn
 1. 🔴 Każde kryterium z issue ma dowód: nazwę testu albo komendę z wynikiem w raporcie `T-NR.md`.
 2. 🔴 Test sprawdza dokładnie to, co mówi kryterium: ten sam adres, ten sam element, ta sama
    wartość progu. Zamiennik (inny URL, inny selektor, luźniejszy próg) to kryterium niespełnione.
-3. 🔴 Po `git merge origin/main` lint, typy, testy jednostkowe i build uruchomione ponownie;
+3. 🔴 Po aktualizacji gałęzi o main (`gh pr update-branch` i `git pull`) lint, typy, testy jednostkowe i build uruchomione ponownie;
    konflikt w pliku konfiguracji rozwiązany semantycznie, nie przez zostawienie obu wersji.
 4. 🟡 Lokalnie zielone: lint, typy, testy jednostkowe, build (komendy z „Stack (kontrakt)”).
 5. 🟡 E2E i Lighthouse: wynik z CI (job i numer runu), nie z założenia. Czerwony job przeczytany
@@ -55,7 +55,7 @@ Dobrze (raport):
 
 ```text
 - W-09/K1 „/404 w layoucie”: e2e/layout.spec.ts „/404 to strona 404.astro w layoucie”, CI e2e run 123 zielony.
-- Po merge'u origin/main: pnpm lint, pnpm typecheck, pnpm test (128), pnpm build zielone.
+- Po aktualizacji gałęzi o main: pnpm lint, pnpm typecheck, pnpm test (128), pnpm build zielone.
 - Lighthouse: niesprawdzone lokalnie (sandbox); pomiar na stagingu po merge'u (QA).
 ```
 

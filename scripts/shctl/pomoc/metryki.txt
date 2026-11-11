@@ -1,0 +1,8 @@
+Użycie: shctl metryki serwer [--probki N] [--co SEKUNDY]
+
+Obciążenie Maca do metryk przebiegu: load (1, 5, 15 min), swap (zajęty i całkowity, MB), wolne
+miejsce na dysku z SH_DIR (GB) i liczba rdzeni. Bez projektu, tylko odczyt. Orkiestrator woła ją
+zamiast sysctl i df: shctl działa poza sandboxem sesji SH, a sysctl w sandboxie jest zablokowany.
+
+--probki N   N próbek co --co sekund (domyślnie 1 próbka, co 30 s); wynik to ostatnia próbka i
+             load_m1 {srednia, maks} ze wszystkich

@@ -1,7 +1,8 @@
 # shctl pr check PR [--czekaj] [--timeout SEKUNDY]: stan PR przed czekaniem na CI (docs/shctl.md, „pr”).
 # Najpierw konflikt z main: przy CONFLICTING GitHub nie uruchamia workflowów pull_request, więc
 # czekanie na CI nie ma sensu i shctl zgłasza konflikt wprost (kod 4). Potem wynik CI; z --czekaj
-# czeka, aż CI się rozstrzygnie. Dla PR zadania liczy czerwone commity: po 2 nieudanych naprawach
+# czeka, aż CI się rozstrzygnie: pass dopiero, gdy wszystkie joby i biegi workflow commita są zakończone
+# (ci_pr w lib/zadania.sh). Dla PR zadania liczy czerwone commity: po 2 nieudanych naprawach
 # workera zadanie idzie do review albo eskalacji (proces.md, „Etapy trybu M”, „Realizacja”). Commit zmieniający
 # tylko raport zadania nie jest próbą naprawy.
 # shellcheck shell=bash
@@ -68,8 +69,7 @@ pr_check() {
   while :; do
     m="$(mergeable_pr "$prn")"
     [ "$m" != CONFLICTING ] || die "$E_ODMOWA" "$(komunikat_konfliktu "$prn" "$br")"
-    ci="$(gh pr view "$prn" --repo "$SLUG" --json statusCheckRollup | jq -r "$JQ_CI"' ci')" ||
-      die "$E_WYKONANIE" "nie można odczytać CI PR #$prn"
+    ci="$(ci_pr "$prn" "$head")" || die "$E_WYKONANIE" "nie można odczytać CI PR #$prn"
     [ "$czekaj" -eq 1 ] || break
     case "$ci" in
       pass | fail) break ;;

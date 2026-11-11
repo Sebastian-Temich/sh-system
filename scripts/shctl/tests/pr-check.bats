@@ -81,3 +81,41 @@ ustaw_pr() { jq --argjson n "$1" "map(if .number == \$n then $2 else . end)" "$G
   run --separate-stderr "$SHCTL" pr check 20 --json
   [ "$(jq -r '.wynik.czerwone_commity, .wynik.nieudane_naprawy_ci, .wynik.limit_napraw_ci' <<<"$output" | tr '\n' ' ')" = "3 1 false " ]
 }
+
+# Bieg workflow commita PR: biegi HEAD STATUS [WNIOSEK]
+biegi() {
+  jq -n --arg h "$1" --arg s "$2" --arg c "${3:-}" \
+    '[{workflowName:"CI", headBranch:"task/12", headSha:$h, status:"completed", conclusion:"success", createdAt:"2026-11-10T22:00:00Z"},
+      {workflowName:"CI e2e", headBranch:"task/12", headSha:$h, status:$s, conclusion:(if $c == "" then null else $c end), createdAt:"2026-11-10T22:00:01Z"}]' \
+    >"$GH_ATRAPA/runs.json"
+}
+
+@test "pr check: job e2e w toku poza rollupem to pending, nie pass (dryrun 5, PR #83)" {
+  h="$(jq -r '.[] | select(.number == 20) | .headRefOid' "$GH_ATRAPA/prs.json")"
+  biegi "$h" in_progress
+  run --separate-stderr "$SHCTL" pr check 20 --czekaj --timeout 0 --json
+  echo "$output $stderr"
+  [ "$status" -eq 0 ]
+  [ "$(jq -r .wynik.ci <<<"$output")" = pending ]
+  [[ "$(jq -r .wynik.nastepny_krok <<<"$output")" == "CI w toku"* ]] || false
+  grep -q "^run list --repo test-owner/demo --commit $h" "$GH_ATRAPA/calls"
+  # Wszystkie biegi zakończone: pass.
+  biegi "$h" completed success
+  run --separate-stderr "$SHCTL" pr check 20 --json
+  [ "$(jq -r .wynik.ci <<<"$output")" = pass ]
+  # Zakończony z błędem poza rollupem: fail.
+  biegi "$h" completed failure
+  run --separate-stderr "$SHCTL" pr check 20 --json
+  [ "$(jq -r .wynik.ci <<<"$output")" = fail ]
+}
+
+@test "task close: odmowa, gdy bieg workflow commita jest w toku" {
+  wynik_codex PASS '[]'
+  "$SHCTL" review run 20 >/dev/null
+  h="$(jq -r '.[] | select(.number == 20) | .headRefOid' "$GH_ATRAPA/prs.json")"
+  biegi "$h" queued
+  run --separate-stderr "$SHCTL" task close 12
+  echo "$output $stderr"
+  [ "$status" -eq 4 ]
+  [[ "$stderr" == *"CI PR #20: pending"* ]] || false
+}

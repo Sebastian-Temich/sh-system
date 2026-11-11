@@ -19,11 +19,13 @@ Użycie: shctl KOMENDA [argumenty] [--dry-run] [--json] [--projekt NAZWA]
   task close NR [--odbior] [--anuluj [--powod "..."]]   (task cancel NR: alias do następnej wersji)
   task resume-check NR [--testy "..."] [--bez-testow]
   task wait NR [--timeout SEKUNDY]
+  task deps NR [--usun #X] [--dodaj #X]
   pr check PR [--czekaj] [--timeout SEKUNDY]
   review run PR [--timeout SEKUNDY]
   reset-dryrun
   template update [--baseline] [--force]
   sprzataj
+  metryki serwer [--probki N] [--co SEKUNDY]
 
 Opcje wspólne (w dowolnym miejscu po nazwie komendy):
   --dry-run        pokazuje, co by się stało; nie zapisuje, nie zmienia GitHuba, nie powiadamia

@@ -120,11 +120,68 @@ tresc() { jq -r --argjson n "$1" '.[] | select(.number == $n) | .body' "$GH_ATRA
   [ ! -s "$GH_ATRAPA/issues.json" ] || [ "$(jq length "$GH_ATRAPA/issues.json")" -eq 0 ]
 }
 
-@test "create: ID uzyte z innym tytulem to odmowa" {
-  "$SHCTL" task create --plik "$T/zadania.yaml"
+@test "create: ID uzyte z innym tytulem przez zadanie w toku albo zamkniete to odmowa" {
+  "$SHCTL" task create --plik "$T/zadania.yaml" --json >"$T/pierwszy"
+  t1="$(jq -r .wynik.mapa.T1 "$T/pierwszy")"
+  jq --argjson n "$t1" 'map(if .number == $n then .labels = [{name:"status:in-progress"}] else . end)' "$GH_ATRAPA/issues.json" >"$T/i" &&
+    mv "$T/i" "$GH_ATRAPA/issues.json"
   sed -i.bak 's/Schemat bazy/Inny tytuł/' "$T/zadania.yaml"
   run --separate-stderr "$SHCTL" task create --plik "$T/zadania.yaml"
   [ "$status" -eq 4 ]
+  [[ "$stderr" == *"ID T1 jest już użyte przez #$t1 o innym tytule, a zadanie nie jest w status:todo"* ]] || false
+}
+
+@test "create: istniejace issue todo o tym samym ID aktualizowane, bez duplikatow (dryrun 5)" {
+  "$SHCTL" task create --plik "$T/zadania.yaml" --json >"$T/pierwszy"
+  t1="$(jq -r .wynik.mapa.T1 "$T/pierwszy")"
+  t2="$(jq -r .wynik.mapa.T2 "$T/pierwszy")"
+  cat >"$T/zadania.yaml" <<'YAML'
+zadania:
+  - id: T1
+    tytul: Schemat bazy z kartami funkcji
+    cel: Tabela users i sessions.
+    kryteria: [migracja tworzy tabele users i sessions]
+    db_migracja: false
+    typ: feature
+  - id: T2
+    tytul: Formularz logowania
+    cel: Użytkownik loguje się e-mailem.
+    kryteria:
+      - formularz waliduje e-mail
+      - błędne hasło pokazuje komunikat
+    pliki: [src/login.ts]
+    testy: pnpm test login
+    zaleznosci: [T1]
+    typ: feature
+    tryb: M
+    milestone: M1 Szkielet
+  - id: T3
+    tytul: Dokumentacja
+    cel: Opis logowania.
+    kryteria: [README opisuje logowanie]
+    typ: docs
+    zaleznosci: [T2, "#40"]
+  - id: T4
+    tytul: Nowe zadanie
+    cel: x
+    kryteria: [y]
+YAML
+  run --separate-stderr "$SHCTL" task create --plik "$T/zadania.yaml" --dry-run --json
+  [ "$(jq -c '.wynik | [.zaktualizowane, .utworzone]' <<<"$output")" = '[["T1"],["T4"]]' ]
+  ! grep -q '^issue edit' "$GH_ATRAPA/calls" || false
+  run --separate-stderr "$SHCTL" task create --plik "$T/zadania.yaml" --json
+  echo "$output $stderr"
+  [ "$status" -eq 0 ]
+  [ "$(jq -c '.wynik | [.zaktualizowane, .utworzone, .istniejace]' <<<"$output")" = '[["T1"],["T4"],["T2","T3"]]' ]
+  [ "$(jq -r .wynik.mapa.T1 <<<"$output")" = "$t1" ]
+  [ "$(jq length "$GH_ATRAPA/issues.json")" -eq 4 ]
+  [ "$(jq -r --argjson n "$t1" '.[] | select(.number == $n) | [.title, (.milestone.title // "-")] | join("|")' "$GH_ATRAPA/issues.json")" = "Schemat bazy z kartami funkcji|-" ]
+  [[ "$(tresc "$t1")" == *"migracja tworzy tabele users i sessions"*"<!-- shctl:id=T1 -->"* ]] || false
+  [ "$(etykiety "$t1")" = "runner:local,status:todo,typ:feature,wykonawca:claude" ]
+  # Powtórka: nic do zmiany.
+  run --separate-stderr "$SHCTL" task create --plik "$T/zadania.yaml" --json
+  [ "$(jq -c '.wynik.zaktualizowane' <<<"$output")" = '[]' ]
+  [ "$(jq length "$GH_ATRAPA/issues.json")" -eq 4 ]
 }
 
 @test "create --dry-run: bez zmian na GitHubie i w plikach" {

@@ -59,8 +59,9 @@ stage_iter() {
     ostrzez_gdy_nie_main
     stan_etapu_zapisz "$etap" "$(jq -nc --arg h "$head" --argjson c "$cel" '{iter_review:$h, iter_cel:$c}')"
     yq -i --front-matter=process ".iteracja = $cel" "$ROOT/docs/$etap/DoD.md"
-    case "$(fm_get "$ROOT/docs/$etap/DoD.md" status)" in review | in-progress) zmien_status_etapu "$etap" in-progress ;; esac
+    case "$(fm_get "$ROOT/docs/$etap/DoD.md" status)" in review | in-progress) fm_set "$ROOT/docs/$etap/DoD.md" status in-progress ;; esac
     dopisz_dziennik "- $(dzis) \`$etap\`: iteracja $cel (FAIL review PR #$prn)"
+    odswiez_projekt || true
   fi
   info "$PROJEKT: $etap: iteracja $cel$([ "$zmiana" -eq 1 ] && echo ", status in-progress" || echo " już podbita")"
   wynik_json "$(jq -nc --arg e "$etap" --argjson p "$prn" --argjson c "$cel" --argjson z "$zmiana" '{etap:$e, pr:$p, iteracja:$c, eskalowano:false, zmiana:($z == 1)}')"
@@ -94,10 +95,13 @@ komenda_main() {
   [ "$cel" = "$obecny" ] || zmiana=1
   if [ "$DRY" -eq 0 ] && { [ "$zmiana" -eq 1 ] || [ -n "$notatka" ]; }; then
     ostrzez_gdy_nie_main
-    [ "$zmiana" -eq 0 ] || zmien_status_etapu "$etap" "$cel"
+    [ "$zmiana" -eq 0 ] || fm_set "$ROOT/docs/$etap/DoD.md" status "$cel"
     linia="- $(dzis) \`$etap\`: $cel"
     dopisz_dziennik "$linia${notatka:+, $(komorka "$notatka")}"
   fi
+  # Widok projektu po każdej akcji etapu, także powtórce bez zmiany statusu (sh-dryrun, przebieg 5:
+  # Projekt.md nieodświeżony po stage review 00-intake i 08-qa). Jedno odświeżenie po dzienniku.
+  [ "$DRY" -eq 1 ] || odswiez_projekt || true
   info "$PROJEKT: $etap: $obecny -> $cel"
   wynik_json "$(jq -nc --arg p "$PROJEKT" --arg e "$etap" --arg o "$obecny" --arg c "$cel" --argjson z "$zmiana" \
     '{projekt:$p, etap:$e, poprzedni:$o, status:$c, zmiana:($z == 1)}')"
