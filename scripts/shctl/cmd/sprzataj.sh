@@ -8,11 +8,15 @@
 
 WT_KATALOGI="$SH_DIR/wt-system $SH_DIR/wt"
 
-# owner/repo z adresu origin (https albo ssh GitHuba); pusto, gdy to nie GitHub.
+# owner/repo z adresu origin (https albo ssh GitHuba); pusto, gdy to nie GitHub albo repo nie ma
+# origin (np. lokalne sh-test). git config bez klucza kończy się kodem 1, który przy pipefail
+# przerywał całe sprzątanie, stąd || true.
 slug_repo() {
-  git -C "$1" config --get remote.origin.url 2>/dev/null |
+  { git -C "$1" config --get remote.origin.url 2>/dev/null || true; } |
     sed -nE 's#^(https://github\.com/|git@github\.com:)([^/]+/[^/]+)$#\2#p' | sed 's/\.git$//'
 }
+
+ma_origin() { git -C "$1" config --get remote.origin.url >/dev/null 2>&1; }
 
 # Stan PR gałęzi: „STAN<TAB>headRefOid” ostatniego PR albo pusto (brak PR).
 pr_galezi() {
@@ -64,6 +68,7 @@ komenda_main() {
     br="$(git -C "$kat" symbolic-ref --short -q HEAD || true)"
     [ -n "$br" ] || { pomin "$kat" "odłączony HEAD"; continue; }
     slug="$(slug_repo "$repo")"
+    ma_origin "$repo" || { pomin "$kat" "repo bez origin"; continue; }
     [ -n "$slug" ] || { pomin "$kat" "origin poza GitHubem"; continue; }
     pr="$(pr_galezi "$slug" "$br")"
     st="${pr%%	*}"
@@ -81,6 +86,7 @@ komenda_main() {
     repo="${k%/}"
     [ -d "$repo/.git" ] || continue
     slug="$(slug_repo "$repo")"
+    ma_origin "$repo" || { pomin "$repo" "repo bez origin"; continue; }
     [ -n "$slug" ] || continue
     [ "$DRY" -eq 1 ] || git -C "$repo" worktree prune
     while IFS= read -r br; do

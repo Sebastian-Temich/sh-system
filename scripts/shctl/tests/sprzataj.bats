@@ -67,6 +67,27 @@ sprzataj() { run --separate-stderr "$SHCTL" sprzataj --json "$@"; }
   [ "$(git -C "$P" symbolic-ref --short HEAD)" = main ]
 }
 
+@test "sprzataj: repo bez origin (sh-test) pominiete z ostrzezeniem, reszta posprzatana" {
+  git init -q -b main "$SH_DIR/projekty/sh-test"
+  git -C "$SH_DIR/projekty/sh-test" commit -q --allow-empty -m start
+  git -C "$SH_DIR/projekty/sh-test" branch task/1-x
+  git -C "$SH_DIR/projekty/sh-test" worktree add -q "$SH_DIR/wt/sh-test/1" task/1-x
+  worktree "$SYS" "$SH_DIR/wt-system/a" sh-lite-a
+  pr_atrapa test-owner/sh-system sh-lite-a MERGED "$(sha "$SYS" sh-lite-a)"
+
+  sprzataj
+  echo "$output $stderr"
+  [ "$status" -eq 0 ]
+  [ ! -e "$SH_DIR/wt-system/a" ]
+  ! git -C "$SYS" rev-parse -q --verify refs/heads/sh-lite-a || false
+  [ -d "$SH_DIR/wt/sh-test/1" ]
+  git -C "$SH_DIR/projekty/sh-test" rev-parse -q --verify refs/heads/task/1-x
+  [ "$(jq -r '[.wynik.pominiete[] | select(.powod == "repo bez origin")] | length' <<<"$output")" -eq 2 ]
+  run --separate-stderr "$SHCTL" sprzataj --dry-run
+  [ "$status" -eq 0 ]
+  [[ "$output$stderr" == *"pominięto $SH_DIR/projekty/sh-test: repo bez origin"* ]] || false
+}
+
 @test "sprzataj --dry-run niczego nie usuwa" {
   worktree "$SYS" "$SH_DIR/wt-system/a" sh-lite-a
   pr_atrapa test-owner/sh-system sh-lite-a MERGED "$(sha "$SYS" sh-lite-a)"

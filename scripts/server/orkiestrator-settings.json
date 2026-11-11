@@ -19,7 +19,6 @@
       "Bash(herdr agent read *)",
       "Bash(herdr agent wait *)",
       "Bash(herdr agent explain *)",
-      "Bash(herdr agent prompt *)",
       "Bash(herdr pane list)",
       "Bash(herdr pane list *)",
       "Bash(herdr pane get *)",
