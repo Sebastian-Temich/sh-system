@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-11-11 (SH-lite F10: ostatnie porządki po migracji iskt-www)
+
+- `orkiestrator-settings.json`: bez reguły `Bash(herdr agent prompt *)`. Polecenia dla workera tylko przez `shctl task polecenie NR "tekst"` (F9c); odczyt paneli (`herdr agent read|get|wait`, `herdr pane read`) zostaje. Test w `orkiestrator-settings.bats`.
+- `shctl sprzataj`: repo bez `origin` (np. lokalne `sh-test`) nie przerywa skryptu (`git config` bez klucza dawał kod 1 przy `pipefail`); repo i jego worktree trafiają do pominiętych z powodem „repo bez origin”, a sprzątanie reszty trwa.
+
 ## 2026-11-11 (SH-lite F9c: drobne poprawki z przebiegu 6 sh-dryrun)
 
 - `shctl metryki serwer`: odczyty `sysctl` i `df` w `LC_ALL=C` (polskie locale dawało „6,50” i kod 5 z jq przy każdym wywołaniu); także `df` w `doctor` i sprawdzaniu dysku przy dispatchu.

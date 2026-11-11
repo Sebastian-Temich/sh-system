@@ -154,6 +154,17 @@ dozwolone() {
   done
 }
 
+@test "polecenia dla workera tylko przez shctl task polecenie, bez herdr agent prompt (SH-lite F10)" {
+  [ "$(jq -r '[.permissions.allow[] | select(test("herdr agent prompt"))] | length' "$S")" -eq 0 ]
+  ! dozwolone 'herdr agent prompt worker:demo:12 "popraw testy"' || false
+  dozwolone 'shctl task polecenie 12 "popraw testy"'
+  dozwolone '/Users/Shared/sh/bin/shctl task polecenie 12 "popraw testy" --projekt demo'
+  ! pasuje 'shctl task polecenie 12 "popraw testy"' || false
+  # Odczyt paneli zostaje (task wait i podglad pracy workera).
+  dozwolone 'herdr agent read worker:demo:12'
+  dozwolone 'herdr pane read p1'
+}
+
 @test "hook gh-plik-hook.sh na Bash: plik tresci gh tylko z /Users/Shared/sh (gh poza sandboxem)" {
   jq -e '.hooks.PreToolUse | any(.matcher == "Bash" and (.hooks[0].command == "/Users/Shared/sh/bin/gh-plik-hook.sh || exit 2"))' "$S" >/dev/null
 }
