@@ -197,7 +197,7 @@ komenda_main() {
     fi
     if [ -f "$(plik_stanu)" ]; then
       t="$(tmp_plik)"
-      jq '.zadania = {} | del(.etapy)' "$(plik_stanu)" >"$t" && mv "$t" "$(plik_stanu)"
+      jq '.zadania = {} | del(.etapy) | del(.skille_warstw_brak)' "$(plik_stanu)" >"$t" && mv "$t" "$(plik_stanu)"
     fi
     rm -rf "$STAN/review/$PROJEKT-"*
     if [ -n "$plik_rel" ]; then

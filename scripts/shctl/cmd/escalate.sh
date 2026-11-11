@@ -1,5 +1,7 @@
-# shctl escalate --dotyczy "#NR|ETAP" --powod --potrzebne [--opcje "A;B"] [--priorytet high] [--akceptacja]
-#   [--typ blokada|pytanie]
+# shctl escalate --dotyczy "#NR|ETAP" --powod --sytuacja --sprawdzono --potrzebne [--opcje "A;B"]
+#   [--priorytet high] [--akceptacja] [--typ blokada|pytanie]
+# --sytuacja i --sprawdzono są wymagane i niepuste: właściciel decyduje z samego pliku E-NNN.md, a puste
+# sekcje „Sytuacja” i „Co już sprawdzono” (sh-dryrun, przebieg 6, E-001) zmuszały do dopytywania.
 # --typ pytanie: pytanie workera o UX albo regułę biznesową (sh-worker nie zgaduje). Nie zmienia statusu
 # issue ani etapu, nie zwalnia slotu (worker kontynuuje niezależne części), nie liczy się jako iteracja
 # ani eskalacja w metryki.md; powiadomienie „Pytanie E-NNN: PROJEKT”, domyślny priorytet default.
@@ -86,6 +88,7 @@ status_z_etykiet() {
 
 utworz_plik() {
   local plik="$1" id="$2" dotyczy="$3" powod="$4" potrzebne="$5" opcje="$6" priorytet="$7" poprz="$8" typ="$9"
+  local sytuacja="${10}" sprawdzono="${11}"
   local szablon="$ROOT/docs/_szablony/eskalacja.md" linia_celu lista="" o rest t
   [ -f "$szablon" ] || die "$E_BRAK" "brak docs/_szablony/eskalacja.md"
   case "$dotyczy" in
@@ -110,6 +113,8 @@ utworz_plik() {
   fm_set "$plik" poprzedni_status "$poprz"
   fm_set "$plik" data "$(dzis)"
   fm_set "$plik" otwarto "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  ustaw_sekcje "$plik" "Sytuacja" "$sytuacja"
+  ustaw_sekcje "$plik" "Co już sprawdzono" "$sprawdzono"
   ustaw_sekcje "$plik" "Czego potrzeba od właściciela" "$potrzebne"
   if [ -n "$opcje" ]; then
     rest="$opcje;"
@@ -123,13 +128,15 @@ utworz_plik() {
 }
 
 otworz() {
-  local dotyczy="" powod="" potrzebne="" opcje="" priorytet="" typ=blokada id plik poprz="" nr="" etap="" slug="" nowa=0 url=""
+  local dotyczy="" powod="" potrzebne="" opcje="" sytuacja="" sprawdzono="" priorytet="" typ=blokada id plik poprz="" nr="" etap="" slug="" nowa=0 url=""
   local akceptacja=0 tytul tresc
   while [ $# -gt 0 ]; do
     case "$1" in
       --dotyczy) dotyczy="$(wartosc "$@")"; shift 2 ;;
       --powod) powod="$(wartosc "$@")"; shift 2 ;;
       --potrzebne) potrzebne="$(wartosc "$@")"; shift 2 ;;
+      --sytuacja) sytuacja="$(wartosc "$@")"; shift 2 ;;
+      --sprawdzono) sprawdzono="$(wartosc "$@")"; shift 2 ;;
       --opcje) opcje="$(wartosc "$@")"; shift 2 ;;
       --priorytet) priorytet="$(wartosc "$@")"; shift 2 ;;
       --akceptacja) akceptacja=1; shift ;;
@@ -138,7 +145,12 @@ otworz() {
     esac
   done
   [ -n "$dotyczy" ] && [ -n "$powod" ] && [ -n "$potrzebne" ] ||
-    die "$E_UZYCIE" "wymagane: --dotyczy, --powod, --potrzebne"
+    die "$E_UZYCIE" "wymagane: --dotyczy, --powod, --sytuacja, --sprawdzono, --potrzebne"
+  # Same spacje to też pusta sekcja: odmowa, zanim powstanie plik.
+  [ -n "${sytuacja//[[:space:]]/}" ] ||
+    die "$E_UZYCIE" "--sytuacja pusta: opisz stan (co robisz, co się dzieje, gdzie: plik, test, PR), sekcja „Sytuacja”"
+  [ -n "${sprawdzono//[[:space:]]/}" ] ||
+    die "$E_UZYCIE" "--sprawdzono puste: wypisz, co już sprawdzono lub próbowano i z jakim wynikiem, sekcja „Co już sprawdzono”"
   case "$typ" in blokada | pytanie) ;; *) die "$E_UZYCIE" "--typ: blokada albo pytanie, jest: $typ" ;; esac
   [ "$typ" = blokada ] || [ "$akceptacja" -eq 0 ] || die "$E_UZYCIE" "--akceptacja tylko z --typ blokada"
   if [ -z "$priorytet" ]; then
@@ -186,7 +198,7 @@ otworz() {
         poprz="$(fm_get "$ROOT/docs/$etap/DoD.md" status)"
         [ "$poprz" != escalated ] || poprz=in-progress
       fi
-      utworz_plik "$plik" "$id" "$dotyczy" "$powod" "$potrzebne" "$opcje" "$priorytet" "$poprz" "$typ"
+      utworz_plik "$plik" "$id" "$dotyczy" "$powod" "$potrzebne" "$opcje" "$priorytet" "$poprz" "$typ" "$sytuacja" "$sprawdzono"
     fi
     # Istniejąca eskalacja zachowuje swój typ (powtórka tej samej komendy).
     typ="$(fm_get "$plik" typ)"

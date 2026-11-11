@@ -87,7 +87,7 @@ Tryb S:
 ```sh
 shctl task create --plik /Users/Shared/sh/stan/zlecenia/NAZWA-RRRRMMDD-slug.yaml --dry-run
 shctl task create --plik /Users/Shared/sh/stan/zlecenia/NAZWA-RRRRMMDD-slug.yaml
-shctl escalate --dotyczy 00-intake --powod "..." --potrzebne "..." --opcje "A;B"
+shctl escalate --dotyczy 00-intake --powod "..." --sytuacja "..." --sprawdzono "..." --potrzebne "..." --opcje "A;B"
 ```
 
 - `task create`: tylko w trybie S, najpierw z `--dry-run`. Kod 2 to błąd w pliku YAML: popraw go. Kod 4
@@ -379,7 +379,7 @@ sekretu, dostępu albo płatnej usługi już na etapie specyfikacji; decyzja jes
 ryzyko bezpieczeństwa lub prawne (np. dane szczególnych kategorii).
 
 ```sh
-shctl escalate --dotyczy 00-intake --powod "..." --potrzebne "..." --opcje "A;B"
+shctl escalate --dotyczy 00-intake --powod "..." --sytuacja "..." --sprawdzono "..." --potrzebne "..." --opcje "A;B"
 ```
 
 W trybie S, po założeniu issue, `--dotyczy "#NR"`. Po eskalacji piszesz dalej części specyfikacji,

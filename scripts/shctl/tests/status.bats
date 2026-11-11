@@ -27,7 +27,7 @@ JSON
 
 @test "pokazuje etap, eskalacje i wstrzymania" {
   "$SHCTL" stage start 04-plan
-  "$SHCTL" escalate --dotyczy 04-plan --powod "spór" --potrzebne x
+  "$SHCTL" escalate --dotyczy 04-plan --powod "spór" --sytuacja "stan testowy" --sprawdzono "nic poza testem" --potrzebne x
   printf '# Limity\n\n| Wykonawca | Do kiedy |\n|---|---|\n| claude | 18:00 |\n\n- codex do 20:00\n' >"$SH_DIR/limity.md"
   run "$SHCTL" status show
   [ "$status" -eq 0 ]

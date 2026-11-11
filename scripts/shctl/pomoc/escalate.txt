@@ -1,4 +1,5 @@
-Użycie: shctl escalate --dotyczy "#NR|ETAP" --powod "..." --potrzebne "..." [--opcje "A;B"]
+Użycie: shctl escalate --dotyczy "#NR|ETAP" --powod "..." --sytuacja "..." --sprawdzono "..."
+                       --potrzebne "..." [--opcje "A;B"]
                        [--priorytet high] [--akceptacja] [--typ blokada|pytanie]
         shctl escalate close E-NNN --odpowiedz "..."
 
@@ -8,6 +9,9 @@ Ciebie”) i notify.sh (domyślnie high). Numeracja E-NNN jest jedna dla projekt
 worktree zapisuje plik w głównej kopii projektu (musi stać na main); commit robi orkiestrator.
 Eskalacja zadania zwalnia slot: panel worker:NAZWA:NR dostaje etykietę eskalacja:NAZWA:NR.
 
+  --sytuacja         wymagane, niepuste: sekcja „Sytuacja” (co się dzieje i gdzie: plik, test, PR)
+  --sprawdzono       wymagane, niepuste: sekcja „Co już sprawdzono” (co przeczytano, co próbowano,
+                     z jakim wynikiem); brak albo same spacje: kod 2, bez pliku i powiadomienia
   --akceptacja       decyzja do akceptacji właściciela (np. podniesienie trybu); powiadomienie
                      „Czeka na Twoją akceptację: NAZWA / podniesienie trybu”
   --typ pytanie      pytanie workera o UX albo regułę biznesową spoza karty funkcji i issue: bez

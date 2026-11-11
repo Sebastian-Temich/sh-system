@@ -73,7 +73,7 @@ Faza 2, na `main` po merge'u (commit robi orkiestrator):
 ```sh
 shctl task create --plik docs/08-qa/zadania-MN.yaml --dry-run --json
 shctl task create --plik docs/08-qa/zadania-MN.yaml --json
-shctl escalate --dotyczy 08-qa --powod "..." --potrzebne "..." --opcje "A;B"
+shctl escalate --dotyczy 08-qa --powod "..." --sytuacja "..." --sprawdzono "..." --potrzebne "..." --opcje "A;B"
 ```
 
 - `task create --dry-run`: po każdej zmianie pliku błędów. Kod 2 to błąd w pliku: popraw i powtórz.
@@ -253,7 +253,7 @@ ryzyko bezpieczeństwa lub prawne, które wykracza poza naprawę w issue (np. wy
 środowisko nie daje się uruchomić z przyczyn spoza projektu (Docker, brak miejsca na dysku).
 
 ```sh
-shctl escalate --dotyczy 08-qa --powod "..." --potrzebne "..." --opcje "A;B"
+shctl escalate --dotyczy 08-qa --powod "..." --sytuacja "..." --sprawdzono "..." --potrzebne "..." --opcje "A;B"
 ```
 
 Po eskalacji kończysz części QA, które od niej nie zależą, i opisujesz brak w raporcie. Wartości

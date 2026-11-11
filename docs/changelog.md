@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-11-11 (SH-lite F9c: drobne poprawki z przebiegu 6 sh-dryrun)
+
+- `shctl metryki serwer`: odczyty `sysctl` i `df` w `LC_ALL=C` (polskie locale dawało „6,50” i kod 5 z jq przy każdym wywołaniu); także `df` w `doctor` i sprawdzaniu dysku przy dispatchu.
+- Nowa komenda `shctl task polecenie NR "tekst"`: polecenie orkiestratora dla workera w toku. Sama znajduje panel (`worker:NAZWA:NR`, po eskalacji `eskalacja:NAZWA:NR`; `herdr agent prompt worker:…` dawał `agent_not_found`) i zapisuje czas polecenia, więc `task wait` czeka potem na nową turę. `task iter` i `task iter --odbior` używają tej samej wysyłki. `sh-orkiestrator` nie używa już `herdr agent prompt`.
+- `shctl escalate`: `--sytuacja` i `--sprawdzono` wymagane i niepuste (kod 2, bez pliku i powiadomienia), wypełniają sekcje „Sytuacja” i „Co już sprawdzono”. Eskalacje `task iter` i `stage iter` po limicie iteracji wypełniają je same. Przykład w `sh-worker`, wywołania we wszystkich skillach; `sprawdz-skille.sh` sprawdza oba pola i brak `herdr agent prompt` w blokach kodu.
+- `shctl task dispatch`: `skille_brak` i ostrzeżenie tylko dla skilla z pola `skille` zadania. Brakujące skille warstw kategorii i stacku nie pojawiają się w wyniku ani komunikatach dispatchu; trafiają do stanu projektu, a `shctl metryki skille` daje jedną zbiorczą linię do raportu przebiegu (`reset-dryrun` czyści).
+- `sh-plan`: plik wspólny dla wielu zadań (np. test szkieletu `src/index.test.ts`) ma jednego właściciela albo zadania dostają osobne pliki testów per funkcja (konflikt PR #107 w przebiegu 6); reguła w kroku 12, DoD i kryteriach review.
+- `sh-orkiestrator`: na checkpointach specyfikacji, planu i odbioru komenda z `shctl repo opis … --dry-run` jest punktem „Opis repo” pytania checkpointu i wykonuje się po akceptacji checkpointu, bez osobnego pytania.
+
 ## 2026-11-11 (SH-lite F9b: poprawki z przebiegu 5 sh-dryrun)
 
 - `shctl reset-dryrun`: w projekcie z `wersja_procesu: 2` (z konfiguracji tagu) nie zakłada issue z baseline; zadania powstają z `zadania.yaml` po etapie 06. Numer przebiegu to numer ostatniej sekcji „Przebieg dryrun” w `metryki.md` + 1. Po dopisaniu sekcji odświeża `Projekt.md` (liczy tylko zadania bieżącego przebiegu).

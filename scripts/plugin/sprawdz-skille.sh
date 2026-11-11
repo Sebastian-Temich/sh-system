@@ -116,6 +116,19 @@ for f in "$REPO"/plugin/skills/*/SKILL.md; do
     grep -qx -- "$k" <<<"$KOMENDY" || blad "$wz: nieznana komenda shctl: $k"
   done
 
+  # Wywołania w blokach kodu (linie z \ na końcu sklejone): escalate z wymaganymi --sytuacja i
+  # --sprawdzono (shctl odmawia bez nich), polecenie dla workera przez shctl task polecenie, nie herdr
+  # agent prompt (nie zna etykiet worker:NAZWA:NR; sh-dryrun, przebieg 6).
+  kod="$(awk '/^```/ { w = !w; next } w { if (sub(/\\$/, "")) { b = b $0; next } print b $0; b = "" }' "$f")"
+  while IFS= read -r l; do
+    case "$l" in
+      *"shctl escalate --dotyczy"*)
+        case "$l" in *--sytuacja*--sprawdzono* | *--sprawdzono*--sytuacja*) ;;
+          *) blad "$wz: shctl escalate bez --sytuacja i --sprawdzono: ${l:0:80}" ;; esac ;;
+    esac
+    case "$l" in *"herdr agent prompt"*) blad "$wz: herdr agent prompt w bloku kodu (użyj shctl task polecenie NR)" ;; esac
+  done <<<"$kod"
+
   [ "$(blok_zasad "$f")" = "$WZOR_ZASAD" ] || blad "$wz: blok Zasady wspólne różni się od kontraktu"
   grep -q '<!-- zasady-wspolne:start -->' <<<"$(sekcja "$f" "Zasady wspólne")" || blad "$wz: blok zasad poza sekcją Zasady wspólne"
 done

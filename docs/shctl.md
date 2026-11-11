@@ -20,7 +20,7 @@ Użycie: shctl KOMENDA [argumenty] [--dry-run] [--json] [--projekt NAZWA]
   stage start|review|done|escalate ETAP [--notatka "..."]
   stage iter ETAP
   decision add --co "..." --dlaczego "..." --cofniecie "..." [--rola ROLA]
-  escalate --dotyczy "#NR|ETAP" --powod "..." --potrzebne "..." [--opcje "A;B"] [--priorytet high] [--akceptacja] [--typ blokada|pytanie]
+  escalate --dotyczy "#NR|ETAP" --powod "..." --sytuacja "..." --sprawdzono "..." --potrzebne "..." [--opcje "A;B"] [--priorytet high] [--akceptacja] [--typ blokada|pytanie]
   escalate close E-NNN --odpowiedz "..."
   status show
   stop-all
@@ -35,12 +35,14 @@ Użycie: shctl KOMENDA [argumenty] [--dry-run] [--json] [--projekt NAZWA]
   task resume-check NR [--testy "..."] [--bez-testow]
   task wait NR [--timeout SEKUNDY]
   task deps NR [--usun #X] [--dodaj #X]
+  task polecenie NR "tekst"
   pr check PR [--czekaj] [--timeout SEKUNDY]
   review run PR [--timeout SEKUNDY]
   reset-dryrun
   template update [--baseline] [--force]
   sprzataj
   metryki serwer [--probki N] [--co SEKUNDY]
+  metryki skille
 
 Opcje wspólne (w dowolnym miejscu po nazwie komendy):
   --dry-run        pokazuje, co by się stało; nie zapisuje, nie zmienia GitHuba, nie powiadamia
@@ -144,7 +146,8 @@ Wynik JSON: wiersz, dodano.
 ## escalate
 
 ```text
-Użycie: shctl escalate --dotyczy "#NR|ETAP" --powod "..." --potrzebne "..." [--opcje "A;B"]
+Użycie: shctl escalate --dotyczy "#NR|ETAP" --powod "..." --sytuacja "..." --sprawdzono "..."
+                       --potrzebne "..." [--opcje "A;B"]
                        [--priorytet high] [--akceptacja] [--typ blokada|pytanie]
         shctl escalate close E-NNN --odpowiedz "..."
 
@@ -154,6 +157,9 @@ Ciebie”) i notify.sh (domyślnie high). Numeracja E-NNN jest jedna dla projekt
 worktree zapisuje plik w głównej kopii projektu (musi stać na main); commit robi orkiestrator.
 Eskalacja zadania zwalnia slot: panel worker:NAZWA:NR dostaje etykietę eskalacja:NAZWA:NR.
 
+  --sytuacja         wymagane, niepuste: sekcja „Sytuacja” (co się dzieje i gdzie: plik, test, PR)
+  --sprawdzono       wymagane, niepuste: sekcja „Co już sprawdzono” (co przeczytano, co próbowano,
+                     z jakim wynikiem); brak albo same spacje: kod 2, bez pliku i powiadomienia
   --akceptacja       decyzja do akceptacji właściciela (np. podniesienie trybu); powiadomienie
                      „Czeka na Twoją akceptację: NAZWA / podniesienie trybu”
   --typ pytanie      pytanie workera o UX albo regułę biznesową spoza karty funkcji i issue: bez
@@ -266,6 +272,7 @@ Użycie: shctl task create --plik zadania.yaml
         shctl task close NR [--odbior] [--anuluj [--powod "..."]]
         shctl task resume-check NR [--testy "..."] [--bez-testow]
         shctl task deps NR [--usun #X]... [--dodaj #X]...
+        shctl task polecenie NR "tekst"
 
 Cykl zadania: create -> ready -> dispatch -> wait (PR z raportem) -> pr check --czekaj ->
 review run -> przy FAIL iter i znów review run -> close. Po przerwie: resume-check.
@@ -323,11 +330,16 @@ resume-check: stan po przerwie (status, iteracja, panel, gałąź, HEAD, niezaco
 deps: zależności zadania z pola strukturalnego; --usun i --dodaj przepisują linię listy („#1, #2”
   albo „brak”, notatki pod nią zostają), dodają komentarz w issue i odświeżają widok. Bez opcji
   tylko odczyt. Zależność od siebie: kod 2; nieistniejące issue: kod 3.
+polecenie: dowolne polecenie orkiestratora dla workera w toku (naprawa CI, konflikt, dokończenie,
+  odpowiedź na pytanie). Panel po etykiecie worker:NAZWA:NR (po eskalacji eskalacja:NAZWA:NR), bez
+  panelu przy istniejącym worktree: nowy panel z claude. Zapisuje czas polecenia, więc task wait NR
+  czeka potem na nową turę. Zamiast herdr agent prompt (nie zna etykiet: agent_not_found).
+  Licznik iteracji bez zmian. Pusta treść albo brak: kod 2; zamknięte issue: kod 4.
 
 Warstwy skilli workera (plugin/warstwy-skilli.yaml): bazowe, kategoria (sh-kat-NAZWA), stack
-(sh-stack-NAZWA), skille z zadania, skille projektu (.claude/skills). Brakujący skill: pole
-skille_brak; ostrzeżenie tylko dla skilla z pola skille zadania (brakujące skille kategorii i stacku
-orkiestrator podaje raz, zbiorczo, w raporcie przebiegu). Skille techniczne (plugin/skills/techniczne) idą do polecenia jako ścieżki do
+(sh-stack-NAZWA), skille z zadania, skille projektu (.claude/skills). Brakujący skill z pola
+skille zadania: pole skille_brak i ostrzeżenie. Brakujący skill kategorii albo stacku: bez
+komunikatu przy dispatchu, tylko w stanie projektu; raz, zbiorczo, przez shctl metryki skille. Skille techniczne (plugin/skills/techniczne) idą do polecenia jako ścieżki do
 przeczytania; przy sprzeczności wygrywa projekt, potem stack, kategoria, bazowe.
 
 Z docs/konfiguracja.md: max_local (tylko obniża limit z /Users/Shared/sh/konfiguracja.md),
@@ -446,11 +458,18 @@ Wynik JSON: worktree, galezie, pominiete.
 
 ```text
 Użycie: shctl metryki serwer [--probki N] [--co SEKUNDY]
+        shctl metryki skille [--projekt NAZWA]
 
 Obciążenie Maca do metryk przebiegu: load (1, 5, 15 min), swap (zajęty i całkowity, MB), wolne
 miejsce na dysku z SH_DIR (GB) i liczba rdzeni. Bez projektu, tylko odczyt. Orkiestrator woła ją
 zamiast sysctl i df: shctl działa poza sandboxem sesji SH, a sysctl w sandboxie jest zablokowany.
+Odczyty w LC_ALL=C (sysctl w polskim locale daje przecinek dziesiętny, np. „6,50”).
 
 --probki N   N próbek co --co sekund (domyślnie 1 próbka, co 30 s); wynik to ostatnia próbka i
              load_m1 {srednia, maks} ze wszystkich
+
+skille: brakujące skille warstw kategorii i stacku, które task dispatch zebrał w bieżącym
+przebiegu (stan/NAZWA.json; reset-dryrun czyści). Wynik: brak (lista), zadania (skill -> numery
+zadań) i linia do raportu przebiegu, np. „Brakujące skille warstw (zbiorczo, 2): sh-kat-ci (#97);
+sh-stack-node (#97, #98)”.
 ```

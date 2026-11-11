@@ -5,7 +5,7 @@ Użycie: shctl KOMENDA [argumenty] [--dry-run] [--json] [--projekt NAZWA]
   stage start|review|done|escalate ETAP [--notatka "..."]
   stage iter ETAP
   decision add --co "..." --dlaczego "..." --cofniecie "..." [--rola ROLA]
-  escalate --dotyczy "#NR|ETAP" --powod "..." --potrzebne "..." [--opcje "A;B"] [--priorytet high] [--akceptacja] [--typ blokada|pytanie]
+  escalate --dotyczy "#NR|ETAP" --powod "..." --sytuacja "..." --sprawdzono "..." --potrzebne "..." [--opcje "A;B"] [--priorytet high] [--akceptacja] [--typ blokada|pytanie]
   escalate close E-NNN --odpowiedz "..."
   status show
   stop-all
@@ -20,12 +20,14 @@ Użycie: shctl KOMENDA [argumenty] [--dry-run] [--json] [--projekt NAZWA]
   task resume-check NR [--testy "..."] [--bez-testow]
   task wait NR [--timeout SEKUNDY]
   task deps NR [--usun #X] [--dodaj #X]
+  task polecenie NR "tekst"
   pr check PR [--czekaj] [--timeout SEKUNDY]
   review run PR [--timeout SEKUNDY]
   reset-dryrun
   template update [--baseline] [--force]
   sprzataj
   metryki serwer [--probki N] [--co SEKUNDY]
+  metryki skille
 
 Opcje wspólne (w dowolnym miejscu po nazwie komendy):
   --dry-run        pokazuje, co by się stało; nie zapisuje, nie zmienia GitHuba, nie powiadamia

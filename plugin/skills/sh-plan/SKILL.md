@@ -88,7 +88,7 @@ Po merge'u PR zadań, na `main` (commit robi orkiestrator):
 shctl doctor --json
 shctl task create --plik docs/06-zadania/zadania.yaml --dry-run --json
 shctl task create --plik docs/06-zadania/zadania.yaml --json
-shctl escalate --dotyczy 04-plan --powod "..." --potrzebne "..." --opcje "A;B"
+shctl escalate --dotyczy 04-plan --powod "..." --sytuacja "..." --sprawdzono "..." --potrzebne "..." --opcje "A;B"
 ```
 
 - `doctor --json`: raz w etapie `04-plan`, przed „Gotowością środowiska”. Stan `blad` nie zatrzymuje
@@ -141,7 +141,8 @@ Etap `06-zadania` (po akceptacji planu i merge'u PR `stage/04-plan`):
     `origin/main` jak w kroku 2. Zapisz rewizję planu i czas UTC w komentarzu na górze pliku.
 11. Rozpisz `T1` szkielet według „Zadania szkieletu”, potem zadania kamieni według „Zasad zadań”. Każde
     zależy od `T1`, wprost albo przez inne; ostatnie to dokumentacja wydania (`typ: docs`).
-12. Sprawdź nakładanie plików (pary ze wspólną ścieżką dostają zależność albo łączysz zadania) i
+12. Sprawdź nakładanie plików (pary ze wspólną ścieżką dostają zależność albo łączysz zadania; plik
+    wspólny dla wielu zadań ma jednego właściciela według „Plików wspólnych dla wielu zadań”) i
     pokrycie: każde `W-NN` i każda funkcja z tabeli punktów wejścia mają zadanie z kryterium podpięcia,
     a każde kryterium `W-NN/Kn` z kart jest w kryteriach dokładnie jednego zadania.
 13. Kryteria kart niesprawdzalne testem (np. „e-mail dochodzi do skrzynki”, ocena wyglądu, krok w
@@ -229,6 +230,15 @@ nadaje shctl.
   wersja przed merge'em (build lokalny, test, job `e2e`), a wersję po merge'u przypisujesz do QA
   kamienia: scenariusz w planie z dopiskiem „(QA po merge'u)”, który `sh-qa` sprawdza w `qa-staging`.
 - **Pliki:** pełna lista ścieżek i katalogów zadania. `package.json` i lockfile nie są wspólnym plikiem.
+- **Pliki wspólne dla wielu zadań** (plik, który zmieniłoby kilka zadań, np. test szkieletu
+  `src/index.test.ts`, punkt wejścia `src/index.ts`, wspólny router, plik tłumaczeń): plik ma jednego
+  właściciela. Albo przypisujesz go do jednego zadania (jest tylko w jego `pliki`, a pozostałe zadania
+  od niego zależą i go nie zmieniają), albo każde zadanie dostaje własny plik: test per funkcja
+  (`src/slugify.test.ts`, `src/formatPLN.test.ts`) zamiast dopisywania do testu szkieletu. Kryterium
+  zadania funkcji nie każe zmieniać pliku innego zadania. Szkielet pisze test dymny, który nie zależy od
+  eksportów dodawanych później (np. sprawdza, że moduł się ładuje), a zbiorcze eksporty dostaje jedno
+  zadanie punktu wejścia na końcu kamienia (sh-dryrun, przebieg 6: #99 zmieniało `src/index.test.ts`
+  szkieletu i miało konflikt w PR #107).
 - **Testy:** jedna komenda zawężona do zadania, do ok. 30 min.
 - **Baza:** `db_migracja: true` dla migracji, resetu, seedu i zmiany `supabase/config.toml`; kryterium
   `supabase db reset` od zera i zgodność wstecz.
@@ -295,7 +305,8 @@ dokumentację architektoniczną wydania. W etapie A tego nie robisz.
 - [ ] Żadne zadanie workera nie ma kryterium sprawdzalnego dopiero po merge'u; takie są scenariuszami QA
 - [ ] Każde zadanie ma kategorię i stack, cel z „Poza zakresem”, 2–6 sprawdzalnych kryteriów, pliki,
   testy, kamień i typ
-- [ ] Wspólne pliki mają zależność; migracje mają `db_migracja: true`
+- [ ] Wspólne pliki mają zależność; plik wspólny dla wielu zadań (np. test szkieletu) jest w `pliki`
+  jednego zadania albo zadania mają osobne pliki testów; migracje mają `db_migracja: true`
 - [ ] PR-y etapów otwarte z worktree etapu, bez przełączania gałęzi w głównym klonie
 - [ ] Po merge'u: issue przez `shctl task create`, tabela pokazana właścicielowi
 - [ ] Brak sekretów w dokumentach, pliku zadań, issue, PR i logach
@@ -310,7 +321,8 @@ dokumentację architektoniczną wydania. W etapie A tego nie robisz.
   routingu lub nawigacji; zadanie z funkcją bez karty `W-NN` albo bez jej kryteriów `W-NN/Kn`; kryterium
   karty bez zadania; kryterium niesprawdzalne testem bez wpisu w „Kryteriach do potwierdzenia”; zadanie z UI bez konkretnych plików designu; funkcja pocięta na warstwy w
   osobnych zadaniach; kamień warstwowy; brak kategorii lub stacku; kryterium niesprawdzalne; wspólne
-  pliki bez zależności; mniej niż 5 albo więcej niż 10 scenariuszy odbioru; brak zakresu autoryzacji
+  pliki bez zależności; plik wspólny (np. `src/index.test.ts`) w `pliki` kilku zadań albo kryterium
+  każące zmieniać plik innego zadania; mniej niż 5 albo więcej niż 10 scenariuszy odbioru; brak zakresu autoryzacji
   lub następnego kroku; issue założone ręcznie przez `gh`.
 - ⚪ drobne: styl, nazewnictwo, długość architektury, kolejność pól.
 
@@ -323,7 +335,7 @@ wymaga sekretu, dostępu albo płatnej usługi spoza specyfikacji; decyzja jest 
 ryzyko bezpieczeństwa lub prawne bez rozwiązania w ADR; po podziale wychodzi więcej niż 15 zadań.
 
 ```sh
-shctl escalate --dotyczy 04-plan --powod "..." --potrzebne "..." --opcje "A;B"
+shctl escalate --dotyczy 04-plan --powod "..." --sytuacja "..." --sprawdzono "..." --potrzebne "..." --opcje "A;B"
 ```
 
 Po eskalacji kończysz części, które od niej nie zależą.

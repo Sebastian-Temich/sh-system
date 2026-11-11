@@ -4,7 +4,7 @@ load helper
 setup() { wspolny_setup; projekt_demo; printf 'status:in-progress' >"$T/issue-etykieta"; }
 
 E1=docs/07-realizacja/escalations/E-001.md
-esk() { "$SHCTL" escalate --dotyczy "#7" --powod "brak klucza" --potrzebne "klucz API" "$@"; }
+esk() { "$SHCTL" escalate --dotyczy "#7" --powod "brak klucza" --sytuacja "stan testowy" --sprawdzono "nic poza testem" --potrzebne "klucz API" "$@"; }
 
 @test "issue: plik, etykieta, odswiezenie Projekt.md, powiadomienie" {
   run esk --opcje "A;B"
@@ -21,6 +21,30 @@ esk() { "$SHCTL" escalate --dotyczy "#7" --powod "brak klucza" --potrzebne "kluc
   grep -q '^high Eskalacja E-001: demo' "$T/notified"
 }
 
+@test "sekcje Sytuacja i Co juz sprawdzono wypelnione z --sytuacja i --sprawdzono" {
+  run "$SHCTL" escalate --dotyczy "#7" --powod "brak klucza" --sytuacja "Integracja NBP wymaga klucza; test src/nbp.test.ts czerwony" \
+    --sprawdzono "docs/konfiguracja.md bez klucza; .env.example tylko nazwa zmiennej" --potrzebne "klucz API"
+  [ "$status" -eq 0 ]
+  [ "$(awk '/^## Sytuacja$/ { n = 1; next } /^## / { n = 0 } n && NF' "$E1")" = "Integracja NBP wymaga klucza; test src/nbp.test.ts czerwony" ]
+  [ "$(awk '/^## Co już sprawdzono$/ { n = 1; next } /^## / { n = 0 } n && NF' "$E1")" = "docs/konfiguracja.md bez klucza; .env.example tylko nazwa zmiennej" ]
+}
+
+@test "odmowa bez sytuacji albo sprawdzonego, takze pustych, bez pliku i powiadomienia" {
+  run --separate-stderr "$SHCTL" escalate --dotyczy "#7" --powod p --potrzebne x --json
+  [ "$status" -eq 2 ]
+  [[ "$(jq -r .blad <<<"$output")" == *"--sytuacja pusta"* ]] || false
+  run --separate-stderr "$SHCTL" escalate --dotyczy "#7" --powod p --sytuacja "  " --sprawdzono "c" --potrzebne x --json
+  [ "$status" -eq 2 ]
+  [[ "$(jq -r .blad <<<"$output")" == *"--sytuacja pusta"* ]] || false
+  run --separate-stderr "$SHCTL" escalate --dotyczy "#7" --powod p --sytuacja s --sprawdzono "" --potrzebne x --json
+  [ "$status" -eq 2 ]
+  [[ "$(jq -r .blad <<<"$output")" == *"--sprawdzono puste"* ]] || false
+  run --separate-stderr "$SHCTL" escalate --dotyczy "#7" --typ pytanie --powod p --potrzebne x
+  [ "$status" -eq 2 ]
+  [ ! -e "$E1" ]
+  [ ! -s "$T/notified" ]
+}
+
 @test "powtorka nie tworzy drugiej i nie powiadamia ponownie" {
   esk
   run esk --json
@@ -31,7 +55,7 @@ esk() { "$SHCTL" escalate --dotyczy "#7" --powod "brak klucza" --potrzebne "kluc
 
 @test "inny powod dostaje kolejny numer" {
   esk
-  run "$SHCTL" escalate --dotyczy "#7" --powod "inny" --potrzebne x --json
+  run "$SHCTL" escalate --dotyczy "#7" --powod "inny" --sytuacja "stan testowy" --sprawdzono "nic poza testem" --potrzebne x --json
   [ "$(jq -r .wynik.id <<<"$output")" = E-002 ]
 }
 
@@ -48,7 +72,7 @@ esk() { "$SHCTL" escalate --dotyczy "#7" --powod "brak klucza" --potrzebne "kluc
 
 @test "etap: status DoD i powrot po zamknieciu" {
   "$SHCTL" stage start 04-plan
-  run "$SHCTL" escalate --dotyczy 04-plan --powod "sprzeczność" --potrzebne "decyzja"
+  run "$SHCTL" escalate --dotyczy 04-plan --powod "sprzeczność" --sytuacja "stan testowy" --sprawdzono "nic poza testem" --potrzebne "decyzja"
   [ "$status" -eq 0 ]
   [ "$(fm docs/04-plan/DoD.md status)" = escalated ]
   grep -qx 'Etap: 04-plan' "$E1"
@@ -69,7 +93,7 @@ esk() { "$SHCTL" escalate --dotyczy "#7" --powod "brak klucza" --potrzebne "kluc
 
 @test "close przy drugiej otwartej eskalacji zostawia etykiete" {
   esk
-  "$SHCTL" escalate --dotyczy "#7" --powod "drugi" --potrzebne x
+  "$SHCTL" escalate --dotyczy "#7" --powod "drugi" --sytuacja "stan testowy" --sprawdzono "nic poza testem" --potrzebne x
   : >"$T/gh.calls"
   "$SHCTL" escalate close E-001 --odpowiedz OK
   ! grep -q 'issue edit' "$T/gh.calls" || false
@@ -103,9 +127,9 @@ esk() { "$SHCTL" escalate --dotyczy "#7" --powod "brak klucza" --potrzebne "kluc
 }
 
 @test "bledne argumenty: kod 2" {
-  run --separate-stderr "$SHCTL" escalate --dotyczy "#x" --powod a --potrzebne b
+  run --separate-stderr "$SHCTL" escalate --dotyczy "#x" --powod a --sytuacja "stan testowy" --sprawdzono "nic poza testem" --potrzebne b
   [ "$status" -eq 2 ]
-  run --separate-stderr "$SHCTL" escalate --dotyczy 04-plan --powod a --potrzebne b --priorytet zly
+  run --separate-stderr "$SHCTL" escalate --dotyczy 04-plan --powod a --sytuacja "stan testowy" --sprawdzono "nic poza testem" --potrzebne b --priorytet zly
   [ "$status" -eq 2 ]
   run --separate-stderr "$SHCTL" escalate close E-1 --odpowiedz x
   [ "$status" -eq 2 ]
@@ -117,7 +141,7 @@ esk() { "$SHCTL" escalate --dotyczy "#7" --powod "brak klucza" --potrzebne "kluc
 }
 
 @test "--akceptacja: powiadomienie o akceptacji zamiast eskalacji" {
-  run "$SHCTL" escalate --dotyczy "#7" --powod "propozycja S do M: zmiana modelu danych" --potrzebne "decyzja" --akceptacja
+  run "$SHCTL" escalate --dotyczy "#7" --powod "propozycja S do M: zmiana modelu danych" --sytuacja "stan testowy" --sprawdzono "nic poza testem" --potrzebne "decyzja" --akceptacja
   [ "$status" -eq 0 ]
   grep -q '^high Czeka na Twoją akceptację: demo / podniesienie trybu E-001, #7: propozycja S do M: zmiana modelu danych ' "$T/notified"
   ! grep -q 'Eskalacja E-001' "$T/notified" || false

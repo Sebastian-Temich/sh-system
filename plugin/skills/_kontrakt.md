@@ -111,7 +111,7 @@ Trzy podsekcje, zawsze wszystkie:
 
 - Kiedy: tylko sytuacje z `proces.md` („Eskalacje i pytania”) istotne dla roli.
 - Jak: dokładne wywołanie
-  `shctl escalate --dotyczy "#NR" --powod "..." --potrzebne "..." --opcje "A;B"` (albo
+  `shctl escalate --dotyczy "#NR" --powod "..." --sytuacja "..." --sprawdzono "..." --potrzebne "..." --opcje "A;B"` (albo
   `--dotyczy ETAP`), potem co skill robi dalej (zadania niezależne trwają).
 
 ## 10. Zasady wspólne

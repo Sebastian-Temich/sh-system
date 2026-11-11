@@ -264,7 +264,7 @@ wstrzymanie_silnika() {
 }
 
 wolne_gb() {
-  df -Pk "$1" 2>/dev/null | awk 'NR == 2 { printf "%d", $4 / 1048576 }'
+  LC_ALL=C df -Pk "$1" 2>/dev/null | LC_ALL=C awk 'NR == 2 { printf "%d", $4 / 1048576 }'
 }
 
 # Powiadomienie o braku miejsca raz dziennie; znika, gdy miejsce wróci.

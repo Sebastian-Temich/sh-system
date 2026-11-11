@@ -26,6 +26,7 @@ otwarte() { jq -r '[.[] | select(.state == "OPEN") | .number] | join(",")' "$GH_
   "$SHCTL" task dispatch 1 >/dev/null
   pr_workera 1 9
   echo zmiana >src/main.txt && git add -A && git commit -qm "po baseline" && git push -q origin main
+  jq '.skille_warstw_brak = {"sh-kat-ci": [1]}' "$SH_DIR/stan/demo.json" >"$T/s" && mv "$T/s" "$SH_DIR/stan/demo.json"
   run --separate-stderr "$SHCTL" reset-dryrun --json
   echo "$output $stderr"
   [ "$status" -eq 0 ]
@@ -41,6 +42,7 @@ otwarte() { jq -r '[.[] | select(.state == "OPEN") | .number] | join(",")' "$GH_
   [ "$(otwarte)" = "10,11" ]
   [ "$(jq -r '.wynik.mapa.D1, .wynik.mapa.D2' <<<"$output" | tr '\n' ' ')" = "10 11 " ]
   [ "$(jq -r '.zadania | length' "$SH_DIR/stan/demo.json")" -eq 0 ]
+  [ "$(jq -r '.skille_warstw_brak // "brak"' "$SH_DIR/stan/demo.json")" = brak ]
   [ -z "$(git status --porcelain)" ]
   [ "$(git rev-parse main)" = "$(git -C "$T/remote.git" rev-parse main)" ]
   [ "$(git log -1 --format=%s main)" = "reset-dryrun: przebieg 1 od baseline ${BASE:0:7}" ]
