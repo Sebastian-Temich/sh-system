@@ -68,15 +68,26 @@ to w raporcie.
 ```sh
 shctl escalate --dotyczy "#NR" --typ pytanie --powod "..." --sytuacja "..." --sprawdzono "..." --potrzebne "..." --opcje "A;B"
 shctl escalate --dotyczy "#NR" --powod "..." --sytuacja "..." --sprawdzono "..." --potrzebne "..." --opcje "A;B"
+shctl db start --projekt NAZWA
+shctl db reset --projekt NAZWA
+shctl db migrate --projekt NAZWA
+shctl db test --projekt NAZWA
+shctl db status --projekt NAZWA
+shctl db stop --projekt NAZWA
 ```
 
 - `escalate --typ pytanie`: niejasność UX albo reguły biznesowej (sekcja „Pytania”). Nie zmienia
   statusu issue, nie zwalnia slotu, nie jest iteracją ani porażką; pracujesz dalej nad częściami
   niezależnymi.
-- `escalate`: tylko w sytuacjach z sekcji „Eskalacja”. To jedyna komenda shctl w profilu workera.
-  Dispatch, iterację, review i zamknięcie wywołuje orkiestrator. Z worktree shctl zapisuje eskalację
+- `escalate`: tylko w sytuacjach z sekcji „Eskalacja”. Obok `db` to jedyna komenda shctl w profilu
+  workera. Dispatch, iterację, review i zamknięcie wywołuje orkiestrator. Z worktree shctl zapisuje eskalację
   w głównej kopii projektu na `main` (jedna numeracja E-NNN), nie w twoim worktree: nie commitujesz
   jej, nie edytujesz `docs/Projekt.md` i nie zakładasz plików `escalations/` na gałęzi zadania.
+- `db`: lokalny Supabase projektu (Docker, poza sandboxem, tylko baza lokalna) do sprawdzenia
+  migracji („Migracje”). Wołasz z worktree zadania, więc baza powstaje z twoich migracji. `start`
+  przed pierwszym użyciem, `reset` odtwarza bazę z migracji i seedów, `migrate` stosuje tylko nowe,
+  `test` uruchamia pgTAP z `supabase/tests/`, `status` podaje adres API i lokalne klucze, `stop` na
+  koniec pracy z bazą. Surowego `supabase` ani `psql` nie uruchamiasz (w sandboxie `EPERM`).
 - Kod 0 to sukces, 1 błąd wykonania (ponów), 2 błędne użycie (popraw wywołanie), 3 brak (sprawdź
   warunki), 4 odmowa (przeczytaj powód, nie obchodź jej).
 
@@ -208,7 +219,9 @@ Pytanie nie jest eskalacją z sekcji „Eskalacja” i nie liczy się w metrykac
   dodajesz (kolumna z wartością domyślną albo dopuszczająca `NULL`, nowa tabela), potem przenosisz
   użycie, a usuwasz lub zawężasz dopiero w kolejnym wydaniu, osobnym zadaniem.
 - Bez `DROP`, `RENAME` i zmiany typu kolumny używanej przez obecny kod w tym samym wydaniu.
-- Sprawdzenie: `supabase db reset` od zera przechodzi, testy po nim są zielone. Wynik w „Testach”.
+- Sprawdzenie lokalne: `shctl db start`, `shctl db reset` (od zera przechodzi), `shctl db test`
+  (pgTAP zielone), potem `shctl db stop`; wynik w „Testach”. CI (job `baza`) sprawdza to drugi raz.
+  Odmowę `shctl db` (kod 4) zapisujesz w „Ryzykach” i zostaje samo CI; nie obchodzisz jej.
 - Nowe tabele z danymi użytkowników mają RLS i testy uprawnień pozytywne i negatywne.
 - Portów w `supabase/config.toml` nie zmieniasz: to blok `blok_portow` (`AGENTS.md`, „Migracje”).
   Wyjątek: zadanie szkieletu po `supabase init` ustawia wszystkie porty na ten blok.
@@ -285,7 +298,7 @@ lokalnego Supabase i `.env.local`. W etapie A tego nie robisz: zawsze Claude, lo
 - [ ] Punkty list kontrolnych skilli technicznych z polecenia startowego spełnione albo opisane w raporcie
 - [ ] Zmiany tylko w plikach z „Zakresu” issue albo z decyzją w raporcie
 - [ ] Brak sekretów w kodzie, docs, raporcie, PR i logach
-- [ ] Migracje zgodne wstecz, w nowych plikach, `supabase db reset` przechodzi (albo brak migracji)
+- [ ] Migracje zgodne wstecz, w nowych plikach, `shctl db reset` i `shctl db test` zielone (albo brak migracji)
 - [ ] Nowe zmienne w `.env.example` bez wartości
 - [ ] Pliki wspólne nietknięte
 - [ ] Projekt przejęty: testy zielone w stanie wyjściowym zielone, zmiana zachowania tylko z kartą

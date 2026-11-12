@@ -8,7 +8,7 @@ operacje na plikach, GitHubie i panelach herdr. Źródło: `scripts/shctl/` (`cm
 `lib/`, `pomoc/` teksty pomocy, `tests/` bats). Symlink `/Users/Shared/sh/bin/shctl` zakłada
 `scripts/server/install.sh`. Zależności: bash 3.2+, gh, jq, yq (mikefarah), git, herdr.
 
-Komendy: [new-project](#new-project), [adopt](#adopt), [repo](#repo), [stage](#stage), [decision](#decision), [escalate](#escalate), [status](#status), [stop-all](#stop-all), [skrzynka](#skrzynka), [obsidian](#obsidian), [doctor](#doctor), [task](#task), [pr](#pr), [review](#review), [reset-dryrun](#reset-dryrun), [template](#template), [sprzataj](#sprzataj), [metryki](#metryki).
+Komendy: [new-project](#new-project), [adopt](#adopt), [repo](#repo), [stage](#stage), [decision](#decision), [escalate](#escalate), [status](#status), [stop-all](#stop-all), [skrzynka](#skrzynka), [obsidian](#obsidian), [doctor](#doctor), [task](#task), [pr](#pr), [review](#review), [reset-dryrun](#reset-dryrun), [template](#template), [sprzataj](#sprzataj), [metryki](#metryki), [db](#db).
 
 ## shctl --help
 
@@ -45,6 +45,7 @@ Użycie: shctl KOMENDA [argumenty] [--dry-run] [--json] [--projekt NAZWA]
   sprzataj
   metryki serwer [--probki N] [--co SEKUNDY]
   metryki skille
+  db start|stop|reset|migrate|test|status
 
 Opcje wspólne (w dowolnym miejscu po nazwie komendy):
   --dry-run        pokazuje, co by się stało; nie zapisuje, nie zmienia GitHuba, nie powiadamia
@@ -60,7 +61,7 @@ JSON: {"ok":true,"komenda":"…","dry_run":false,"wynik":{…}} albo {"ok":false
 Każda komenda jest idempotentna: powtórka niczego nie dubluje, a przerwaną operację dokańcza.
 Każde wywołanie dopisuje linię do /Users/Shared/sh/logs/shctl.log. Commit na main projektu robi
 orkiestrator; shctl commituje sam tylko w new-project, template update, reset-dryrun, skrzynka i adopt
-(szkielet analizy i adaptacja, na swoich gałęziach).
+(szkielet analizy i adaptacja, na swoich gałęziach). shctl db nie zmienia plików projektu.
 
 Zmienne środowiska (testy i inny układ; w nawiasie domyślnie):
   SH_DIR (/Users/Shared/sh), SH_GH_OWNER (Sebastian-Temich), SH_TEMPLATE (sh-template-projekt),
@@ -68,7 +69,7 @@ Zmienne środowiska (testy i inny układ; w nawiasie domyślnie):
   SH_CONFIG), SH_SKRZYNKA_DIR (Skrzynka obok SH_OBSIDIAN_DIR), SH_SYSTEM_DIR ($SH_DIR/sh-system),
   SH_WARSTWY_SKILLI, SH_SKILLE_PLUGINU (sh-system/plugin), SH_CLAUDE_JSON (~/.claude.json),
   CODEX_HOME (~/.codex), SHCTL_REVIEW_TIMEOUT (3600), SHCTL_TEST_TIMEOUT (1800),
-  SHCTL_READY_PAUZA (30), SHCTL_FNM_LIMIT (300), SHCTL_DRYRUN_NAZWA (sh-dryrun).
+  SHCTL_READY_PAUZA (30), SHCTL_FNM_LIMIT (300), SHCTL_DRYRUN_NAZWA (sh-dryrun), SHCTL_DB_TIMEOUT (900).
 
 Dokumentacja: sh-system/docs/shctl.md (generowana z --help: scripts/docs/shctl-md.sh)
 ```
@@ -522,4 +523,37 @@ skille: brakujące skille warstw kategorii i stacku, które task dispatch zebra�
 przebiegu (stan/NAZWA.json; reset-dryrun czyści). Wynik: brak (lista), zadania (skill -> numery
 zadań) i linia do raportu przebiegu, np. „Brakujące skille warstw (zbiorczo, 2): sh-kat-ci (#97);
 sh-stack-node (#97, #98)”.
+```
+
+## db
+
+```text
+Użycie: shctl db start|stop|reset|migrate|test|status [--projekt NAZWA]
+
+Lokalny Supabase (Docker) projektu, tylko baza lokalna. Supabase CLI w sandboxie sesji SH kończy się
+EPERM, a shctl działa poza nim (wyjątek sandboxa), więc worker sprawdza tą komendą migracje i pgTAP
+na żywej bazie; CI (job baza) zostaje drugim sprawdzeniem.
+
+start     uruchamia stack (supabase start); już działający zostawia; potem adresy i klucze jak status
+stop      zatrzymuje stack; dane zostają w wolumenach Dockera
+reset     odtwarza bazę od zera z migracji i seedów (supabase db reset --local); stack musi działać
+migrate   stosuje nowe migracje bez resetu (supabase migration up --local)
+test      testy pgTAP z supabase/tests (supabase test db --local); bez katalogu: uwaga i kod 0
+status    adres API, DB, Studio, Mail i lokalne klucze anon i service_role; dziala:false, gdy stoi
+
+Źródło migracji: worktree projektu, z którego wywołano komendę (np. /Users/Shared/sh/wt/NAZWA/NR),
+inaczej główna kopia /Users/Shared/sh/projekty/NAZWA. Główna kopia i worktree dzielą jeden stack.
+Porty: blok projektu z /Users/Shared/sh/porty.md (API X21, DB X22, Studio X23, Mail X24 ...). CLI
+dostaje kopię roboczą /Users/Shared/sh/stan/db/NAZWA/supabase: config.toml z portami bloku i
+project_id = NAZWA, reszta supabase/ jako dowiązania. Pliki projektu zostają bez zmian.
+
+Odmowa (kod 4): supabase/ powiązany z chmurą (supabase/.temp/project-ref po supabase link), adres API
+spoza bloku projektu, działający stack innego projektu SH (jeden naraz), zajęty port bloku, trwająca
+inna komenda db tego projektu, reset/migrate/test przy zatrzymanym stacku. Kod 3: brak
+supabase/config.toml, bloku w porty.md, supabase albo Dockera.
+Nigdy nie używa poświadczeń chmury: CLI w czystym środowisku (bez SUPABASE_ACCESS_TOKEN i innych
+zmiennych sesji), bez plików .env z supabase/, zawsze z --local, nigdy z --linked ani --db-url.
+Wyjście Supabase CLI idzie na stderr. Limit czasu jednej komendy CLI: SHCTL_DB_TIMEOUT (900 s).
+Wynik JSON: projekt, akcja, zrodlo, workdir, porty, dziala, status {api, db, studio, mail, anon_key,
+service_role_key, publishable_key, secret_key} (start, status), testy (test), komenda (--dry-run).
 ```

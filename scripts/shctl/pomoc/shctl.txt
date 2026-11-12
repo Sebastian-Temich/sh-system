@@ -30,6 +30,7 @@ Użycie: shctl KOMENDA [argumenty] [--dry-run] [--json] [--projekt NAZWA]
   sprzataj
   metryki serwer [--probki N] [--co SEKUNDY]
   metryki skille
+  db start|stop|reset|migrate|test|status
 
 Opcje wspólne (w dowolnym miejscu po nazwie komendy):
   --dry-run        pokazuje, co by się stało; nie zapisuje, nie zmienia GitHuba, nie powiadamia
@@ -45,7 +46,7 @@ JSON: {"ok":true,"komenda":"…","dry_run":false,"wynik":{…}} albo {"ok":false
 Każda komenda jest idempotentna: powtórka niczego nie dubluje, a przerwaną operację dokańcza.
 Każde wywołanie dopisuje linię do /Users/Shared/sh/logs/shctl.log. Commit na main projektu robi
 orkiestrator; shctl commituje sam tylko w new-project, template update, reset-dryrun, skrzynka i adopt
-(szkielet analizy i adaptacja, na swoich gałęziach).
+(szkielet analizy i adaptacja, na swoich gałęziach). shctl db nie zmienia plików projektu.
 
 Zmienne środowiska (testy i inny układ; w nawiasie domyślnie):
   SH_DIR (/Users/Shared/sh), SH_GH_OWNER (Sebastian-Temich), SH_TEMPLATE (sh-template-projekt),
@@ -53,6 +54,6 @@ Zmienne środowiska (testy i inny układ; w nawiasie domyślnie):
   SH_CONFIG), SH_SKRZYNKA_DIR (Skrzynka obok SH_OBSIDIAN_DIR), SH_SYSTEM_DIR ($SH_DIR/sh-system),
   SH_WARSTWY_SKILLI, SH_SKILLE_PLUGINU (sh-system/plugin), SH_CLAUDE_JSON (~/.claude.json),
   CODEX_HOME (~/.codex), SHCTL_REVIEW_TIMEOUT (3600), SHCTL_TEST_TIMEOUT (1800),
-  SHCTL_READY_PAUZA (30), SHCTL_FNM_LIMIT (300), SHCTL_DRYRUN_NAZWA (sh-dryrun).
+  SHCTL_READY_PAUZA (30), SHCTL_FNM_LIMIT (300), SHCTL_DRYRUN_NAZWA (sh-dryrun), SHCTL_DB_TIMEOUT (900).
 
 Dokumentacja: sh-system/docs/shctl.md (generowana z --help: scripts/docs/shctl-md.sh)

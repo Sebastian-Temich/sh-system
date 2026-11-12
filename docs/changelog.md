@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-11-12 (SH-lite B1 krok 3: lokalny Supabase dla agentów)
+
+- Nowa komenda `shctl db start|stop|reset|migrate|test|status --projekt NAZWA`: lokalny Supabase (Docker) projektu, poza sandboxem jak `git push` (Supabase CLI w sandboxie kończy się `EPERM`). Porty z bloku projektu w `porty.md` przez kopię roboczą `stan/db/NAZWA/supabase` (`config.toml` z portami i `project_id = NAZWA`, reszta jako dowiązania), więc pliki projektu, także przejętego przed adaptacją, zostają bez zmian. Źródło migracji: worktree, z którego wywołano komendę, inaczej główna kopia. `reset` odtwarza bazę z migracji i seedów, `test` uruchamia pgTAP, `status` podaje adres API i lokalne klucze.
+- Tylko baza lokalna: odmowa (kod 4) przy `supabase/.temp/project-ref` (powiązanie z chmurą), adresie API spoza bloku, działającym stacku innego projektu SH (jeden naraz), zajętym porcie bloku. CLI w czystym środowisku (`env -i`, bez `SUPABASE_ACCESS_TOKEN`), bez `supabase/.env*`, zawsze `--local`.
+- `sh-worker`, `sh-kat-baza`, `sh-stack-supabase`: worker sprawdza migracje i pgTAP przez `shctl db` z worktree zadania; job CI `baza` zostaje drugim sprawdzeniem. Odmowa `shctl db` trafia do „Ryzyk”, bez obchodzenia. `proces.md`: tabela „Lokalnie / tylko w CI”.
+- `orkiestrator-settings.bats`: test, że `shctl db` jest dozwolone i poza sandboxem, a surowe `supabase` nie. Profil workera w `sh-template-projekt`: `shctl db *` w allow i w wyjątkach sandboxa (osobny PR szablonu).
+
 ## 2026-11-12 (SH-lite B1 krok 2b: poprawki z testu na sh-test-adopt)
 
 - `shctl pr check` i `review run` (i `--projekt`) w projekcie przejętym przed merge'em PR analizy biorą konfigurację i `DoD.md` etapu z worktree `wt/NAZWA/stage-00-analiza` (`konfig_adopt`); wcześniej kończyły się kodem 3 „brak docs/konfiguracja.md”.

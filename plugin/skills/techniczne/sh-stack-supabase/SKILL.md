@@ -1,6 +1,6 @@
 ---
 name: sh-stack-supabase
-description: Skill techniczny stacku Supabase. Pułapki bezpieczeństwa Supabase (RLS w schemacie public, polityki TO authenticated z predykatem własności, user_metadata, widoki security_invoker, SECURITY DEFINER, klucz service_role, Storage), wydajność polityk ((select auth.uid()), indeksy) i praca bez lokalnego Supabase CLI - migracje, pgTAP, lint i advisors w jobie CI baza. Użyj, gdy zadanie ma stack supabase albo dotyka supabase/, klienta supabase-js, auth, Storage lub Edge Functions, i w review takiego PR.
+description: Skill techniczny stacku Supabase. Pułapki bezpieczeństwa Supabase (RLS w schemacie public, polityki TO authenticated z predykatem własności, user_metadata, widoki security_invoker, SECURITY DEFINER, klucz service_role, Storage), wydajność polityk ((select auth.uid()), indeksy) i weryfikacja - migracje i pgTAP na lokalnej bazie przez shctl db, job CI baza (lint, advisors) jako drugie sprawdzenie. Użyj, gdy zadanie ma stack supabase albo dotyka supabase/, klienta supabase-js, auth, Storage lub Edge Functions, i w review takiego PR.
 ---
 <!-- źródło: https://github.com/supabase/agent-skills/tree/c9be0e931b7930f7d02126d04774d904c381e7d7/skills, wersja: c9be0e931b7930f7d02126d04774d904c381e7d7, skopiowano: 2026-11-12, licencja: MIT -->
 
@@ -39,22 +39,27 @@ przetłumaczone.
 9. 🟡 Storage: `upsert` pliku wymaga polityk `insert`, `select` i `update` na `storage.objects`. [S]
 10. 🟡 Pakiety `@supabase/*` w dokładnej wersji z lockfile. [S]
 11. 🟡 Migracje imperatywne w `supabase/migrations/RRRRMMDDGGMMSS_nazwa.sql`, nazwa z bieżącym czasem UTC
-    i większa od ostatniej; bez `supabase/schemas/` (schemat deklaratywny wymaga lokalnej bazy do
-    `db diff`, której worker nie ma).
+    i większa od ostatniej; bez `supabase/schemas/` (schemat deklaratywny wymaga `supabase db diff`,
+    którego `shctl db` nie udostępnia).
 12. ⚪ Typy bazy (`database.types.ts`) zaktualizowane ręcznie zgodnie z migracją w tym samym PR;
     w raporcie, że `supabase gen types` nie był uruchamiany.
 
 ## Weryfikacja: lokalnie i w CI
 
-- Supabase CLI w sandboxie workera nie działa wcale: każda komenda (`init`, `start`, `status`,
-  `migration new`) kończy się `EPERM` przy zapisie `~/.supabase` (test B1, profil workera). Nie
-  uruchamiasz lokalnie `supabase` ani `psql`; nie obchodzisz sandboxa (`HOME`, inne ustawienia).
-- Lokalnie: `pnpm lint`, `pnpm typecheck`, `pnpm test` (klient Supabase w mocku), `pnpm build`; każde
-  w osobnym wywołaniu.
-- Job CI `baza` (zmiany w `supabase/`): `supabase start` (migracje i `seed.sql` na czystej bazie),
-  `supabase test db`, `supabase db lint --local`, `supabase db advisors --local`. Advisors poziomu
-  `ERROR` (np. tabela w `public` bez RLS) czerwienią job; `WARN` i `INFO` (np. funkcja z ruchomym
-  `search_path`, klucz obcy bez indeksu) są tylko w logu.
+- Surowe Supabase CLI w sandboxie workera nie działa (`EPERM` przy zapisie `~/.supabase`, test B1) i
+  go nie uruchamiasz ani nie obchodzisz sandboxa (`HOME`, inne ustawienia). Lokalną bazę daje
+  `shctl db` (poza sandboxem, tylko lokalnie, porty z bloku projektu w `porty.md`), wywoływane z
+  worktree zadania, każde w osobnym wywołaniu:
+  `shctl db start --projekt NAZWA`, `shctl db reset --projekt NAZWA` (migracje i `seed.sql` od zera),
+  `shctl db test --projekt NAZWA` (pgTAP z `supabase/tests/`), `shctl db status --projekt NAZWA`
+  (adres API i lokalne klucze do testów integracyjnych), na koniec `shctl db stop --projekt NAZWA`.
+- Kod 4 z `shctl db` (np. działa stack innego projektu, `supabase/` powiązany z chmurą) to odmowa:
+  nie obchodzisz jej, zapisujesz w „Ryzykach”, a bazę sprawdza wtedy tylko CI.
+- Lokalnie też: `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`; każde w osobnym wywołaniu.
+- Job CI `baza` (zmiany w `supabase/`) to drugie sprawdzenie: `supabase start` (migracje i `seed.sql`
+  na czystej bazie), `supabase test db`, `supabase db lint --local`, `supabase db advisors --local`.
+  Advisors poziomu `ERROR` (np. tabela w `public` bez RLS) czerwienią job; `WARN` i `INFO` (np.
+  funkcja z ruchomym `search_path`, klucz obcy bez indeksu) są tylko w logu.
   Czerwony job: `gh pr checks PR`, potem `gh run view RUN --log-failed`.
 - Ostrzeżenia advisors (`WARN`, `INFO`) z logu joba wpisujesz w raporcie: poprawione albo z powodem.
 
@@ -84,4 +89,4 @@ create view public.moje_notatki with (security_invoker = true) as
   punkty 2 i 8.
 - **SH-lite B1, Supabase CLI w sandboxie workera.** `supabase init`, `start`, `status` i `stop` w
   profilu workera kończyły się `EPERM` na `~/.supabase`, zanim CLI sięgnął do Dockera. Wniosek:
-  sekcja Weryfikacja i job `baza` w CI zamiast lokalnej bazy.
+  job `baza` w CI, a od B1 krok 3 lokalna baza przez `shctl db` poza sandboxem (sekcja Weryfikacja).

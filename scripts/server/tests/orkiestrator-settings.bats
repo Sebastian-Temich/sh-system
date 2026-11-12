@@ -195,3 +195,14 @@ dozwolone() {
 @test "hook gh-plik-hook.sh na Bash: plik tresci gh tylko z /Users/Shared/sh (gh poza sandboxem)" {
   jq -e '.hooks.PreToolUse | any(.matcher == "Bash" and (.hooks[0].command == "/Users/Shared/sh/bin/gh-plik-hook.sh || exit 2"))' "$S" >/dev/null
 }
+
+@test "shctl db (lokalny Supabase) dozwolone i poza sandboxem: Supabase CLI w sandboxie konczy sie EPERM (B1)" {
+  for k in 'shctl db start --projekt app' 'shctl db reset --projekt app' 'shctl db test --projekt app' \
+    'shctl db status --projekt app --json' '/Users/Shared/sh/bin/shctl db stop --projekt app'; do
+    dozwolone "$k" || { echo "nie dozwolone: $k"; false; }
+    ! pasuje "$k" || { echo "zablokowane: $k"; false; }
+  done
+  jq -e '.sandbox.excludedCommands | index("shctl *") and index("/Users/Shared/sh/bin/shctl *")' "$S" >/dev/null
+  # Surowe supabase nie wychodzi z sandboxa: tylko przez shctl db (bez --linked i poświadczeń chmury).
+  [ "$(jq -r '[.sandbox.excludedCommands[] | select(startswith("supabase"))] | length' "$S")" -eq 0 ]
+}

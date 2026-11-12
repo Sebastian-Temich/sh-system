@@ -1,6 +1,6 @@
 ---
 name: sh-kat-baza
-description: Skill techniczny kategorii baza. Lista kontrolna migracji i zapytań Postgres/Supabase - migracje expand/contract, RLS z USING i WITH CHECK, testy polityk dla właściciela i obcego, indeksy pod zapytania i polityki, EXPLAIN przed i po, N+1, transakcje, seedy zamiast danych produkcyjnych. Lokalnie bez bazy, migracje i pgTAP w jobie CI baza. Użyj, gdy zadanie ma kategorię baza albo etykietę db:migracja, zmienia supabase/, i w review PR z migracjami.
+description: Skill techniczny kategorii baza. Lista kontrolna migracji i zapytań Postgres/Supabase - migracje expand/contract, RLS z USING i WITH CHECK, testy polityk dla właściciela i obcego, indeksy pod zapytania i polityki, EXPLAIN przed i po, N+1, transakcje, seedy zamiast danych produkcyjnych. Migracje i pgTAP lokalnie przez shctl db, job CI baza jako drugie sprawdzenie. Użyj, gdy zadanie ma kategorię baza albo etykietę db:migracja, zmienia supabase/, i w review PR z migracjami.
 ---
 
 # Kategoria baza
@@ -42,17 +42,20 @@ definer`, CLI): `sh-stack-supabase`, który przy sprzeczności wygrywa.
 
 ## Weryfikacja: lokalnie i w CI
 
-- Lokalnie bazy nie ma: Supabase CLI w sandboxie workera kończy się `EPERM` (zapis `~/.supabase`,
-  sprawdzone w B1), więc `supabase start`, `db reset` i `test db` nie są uruchamiane, a migracji i
-  testów SQL nie sprawdzasz na żywej bazie. Lokalnie: `pnpm lint`, `pnpm typecheck`, `pnpm test`
-  (kod aplikacji z mockiem klienta), `pnpm build`, każde w osobnym wywołaniu.
-- Bazę testuje job CI `baza` (tylko przy zmianach w `supabase/`): migracje na czystej bazie i seed
-  (`supabase start`), `supabase test db` (pgTAP z `supabase/tests/`), `supabase db lint` i
-  `supabase db advisors` (błąd = czerwony job, np. tabela w `public` bez RLS).
-- Czerwony job: `gh pr checks PR`, potem `gh run view RUN --log-failed`. W raporcie podajesz, że
-  migracje i pgTAP sprawdził CI (numer runu).
-- `explain` z punktu 8 bierzesz z logu CI: test pgTAP albo plik `supabase/tests/` może wypisać plan
-  przez `explain (analyze, buffers)`; przy braku danych opisujesz oczekiwany plan i indeks.
+- Lokalna baza przez `shctl db` z worktree zadania (Supabase CLI w sandboxie kończy się `EPERM`,
+  `shctl` działa poza nim, tylko na bazie lokalnej): `shctl db start --projekt NAZWA`, potem
+  `shctl db reset --projekt NAZWA` (migracje od zera i seed) i `shctl db test --projekt NAZWA`
+  (pgTAP z `supabase/tests/`); na koniec `shctl db stop --projekt NAZWA`. `supabase` ani `psql`
+  wprost nie uruchamiasz. Wynik obu komend wpisujesz w „Testach” raportu.
+- Odmowa `shctl db` (kod 4, np. działa stack innego projektu) to nie powód do obejścia: zapisujesz
+  ją w „Ryzykach”, a migracje sprawdza wtedy tylko CI.
+- Lokalnie też: `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`, każde w osobnym wywołaniu.
+- Job CI `baza` (tylko przy zmianach w `supabase/`) to drugie sprawdzenie: migracje na czystej
+  bazie i seed (`supabase start`), `supabase test db`, `supabase db lint` i `supabase db advisors`
+  (błąd = czerwony job, np. tabela w `public` bez RLS). Czerwony job: `gh pr checks PR`, potem
+  `gh run view RUN --log-failed`. W raporcie podajesz też numer runu CI.
+- `explain` z punktu 8: z testu pgTAP albo pliku `supabase/tests/` przez `explain (analyze, buffers)`,
+  w wyjściu `shctl db test` albo w logu CI; przy braku danych opisujesz oczekiwany plan i indeks.
 - Staging migruje CI po merge'u na main (`STAGING_DB_URL`); worker nie łączy się ze stagingiem.
 
 ## Przykłady
