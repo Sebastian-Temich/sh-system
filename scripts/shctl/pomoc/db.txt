@@ -1,0 +1,28 @@
+Użycie: shctl db start|stop|reset|migrate|test|status [--projekt NAZWA]
+
+Lokalny Supabase (Docker) projektu, tylko baza lokalna. Supabase CLI w sandboxie sesji SH kończy się
+EPERM, a shctl działa poza nim (wyjątek sandboxa), więc worker sprawdza tą komendą migracje i pgTAP
+na żywej bazie; CI (job baza) zostaje drugim sprawdzeniem.
+
+start     uruchamia stack (supabase start); już działający zostawia; potem adresy i klucze jak status
+stop      zatrzymuje stack; dane zostają w wolumenach Dockera
+reset     odtwarza bazę od zera z migracji i seedów (supabase db reset --local); stack musi działać
+migrate   stosuje nowe migracje bez resetu (supabase migration up --local)
+test      testy pgTAP z supabase/tests (supabase test db --local); bez katalogu: uwaga i kod 0
+status    adres API, DB, Studio, Mail i lokalne klucze anon i service_role; dziala:false, gdy stoi
+
+Źródło migracji: worktree projektu, z którego wywołano komendę (np. /Users/Shared/sh/wt/NAZWA/NR),
+inaczej główna kopia /Users/Shared/sh/projekty/NAZWA. Główna kopia i worktree dzielą jeden stack.
+Porty: blok projektu z /Users/Shared/sh/porty.md (API X21, DB X22, Studio X23, Mail X24 ...). CLI
+dostaje kopię roboczą /Users/Shared/sh/stan/db/NAZWA/supabase: config.toml z portami bloku i
+project_id = NAZWA, reszta supabase/ jako dowiązania. Pliki projektu zostają bez zmian.
+
+Odmowa (kod 4): supabase/ powiązany z chmurą (supabase/.temp/project-ref po supabase link), adres API
+spoza bloku projektu, działający stack innego projektu SH (jeden naraz), zajęty port bloku, trwająca
+inna komenda db tego projektu, reset/migrate/test przy zatrzymanym stacku. Kod 3: brak
+supabase/config.toml, bloku w porty.md, supabase albo Dockera.
+Nigdy nie używa poświadczeń chmury: CLI w czystym środowisku (bez SUPABASE_ACCESS_TOKEN i innych
+zmiennych sesji), bez plików .env z supabase/, zawsze z --local, nigdy z --linked ani --db-url.
+Wyjście Supabase CLI idzie na stderr. Limit czasu jednej komendy CLI: SHCTL_DB_TIMEOUT (900 s).
+Wynik JSON: projekt, akcja, zrodlo, workdir, porty, dziala, status {api, db, studio, mail, anon_key,
+service_role_key, publishable_key, secret_key} (start, status), testy (test), komenda (--dry-run).

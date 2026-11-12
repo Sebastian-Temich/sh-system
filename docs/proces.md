@@ -238,12 +238,13 @@ Skill zewnętrzny wchodzi tylko po przeczytaniu i akceptacji właściciela, z ad
 
 Sesje SH (orkiestrator, worker, builder) działają w sandboxie Claude Code (`docs/serwer.md`,
 „Sandbox sesji SH”). Poza sandboxem tylko proste komendy z listy wyjątków: `git push|fetch|pull`, `gh`,
-u orkiestratora `shctl`, `herdr`, `notify.sh` i `git worktree add|remove|prune`. Jedno wywołanie Bash
+u orkiestratora `shctl`, `herdr`, `notify.sh` i `git worktree add|remove|prune`, u workera `shctl escalate`
+i `shctl db`. Jedno wywołanie Bash
 to jedna prosta komenda.
 
 | Lokalnie (worker) | Tylko w CI |
 |---|---|
-| Lint, typy, testy jednostkowe, build, `pnpm install`, bats skryptów | E2E Playwright (przeglądarki nie startują w sandboxie), Lighthouse, job `baza` (Supabase CLI w sandboxie kończy się `EPERM`: migracje na czystej bazie, pgTAP, `db lint`, `db advisors`, tylko przy zmianach w `supabase/`), migracje stagingu, `qa-staging` |
+| Lint, typy, testy jednostkowe, build, `pnpm install`, bats skryptów; migracje od zera i pgTAP na lokalnym Supabase przez `shctl db` (surowe Supabase CLI w sandboxie kończy się `EPERM`) | E2E Playwright (przeglądarki nie startują w sandboxie), Lighthouse, job `baza` jako drugie sprawdzenie (migracje na czystej bazie, pgTAP, `db lint`, `db advisors`, tylko przy zmianach w `supabase/`), migracje stagingu, `qa-staging` |
 
 Worker czyta wynik CI przez `gh run view RUN --log-failed`. Czego agent nie zrobi z sandboxa, robi
 właściciel: `install.sh` (LaunchAgenty), usunięcie gałęzi bez PR, `sudo`, ustawienia systemu, Docker
@@ -268,7 +269,8 @@ Desktop, usunięcie repo testowych.
   zadanie (`task resume-check`) i decyduje: kontynuuj, aktualizacja z `main` i kontynuuj albo iteracja
   od nowa (bez podbicia licznika).
 - `max_local` (domyślnie 2) w `/Users/Shared/sh/konfiguracja.md`; projekt może go tylko obniżyć. Naraz
-  działa jeden stack Supabase projektów SH. Zadania `db:migracja` idą pojedynczo.
+  działa jeden stack Supabase projektów SH (`shctl db start` odmawia, gdy działa stack innego projektu).
+  Zadania `db:migracja` idą pojedynczo.
 
 ## Znane ograniczenia
 
