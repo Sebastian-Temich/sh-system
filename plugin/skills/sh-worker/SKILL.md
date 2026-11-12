@@ -212,6 +212,25 @@ Pytanie nie jest eskalacją z sekcji „Eskalacja” i nie liczy się w metrykac
 - Nowe tabele z danymi użytkowników mają RLS i testy uprawnień pozytywne i negatywne.
 - Portów w `supabase/config.toml` nie zmieniasz: to blok `blok_portow` (`AGENTS.md`, „Migracje”).
   Wyjątek: zadanie szkieletu po `supabase init` ustawia wszystkie porty na ten blok.
+- Migracji nigdy nie wypychasz do chmury (`supabase link`, `db push`, panel): źródłem prawdy są
+  migracje w repo, a zmiany w chmurze wprowadza właściciel na ich podstawie.
+
+### Projekt przejęty
+
+Projekt z `pochodzenie: adopt` w `docs/konfiguracja.md` (`shctl adopt`, proces.md, „Projekty
+przejęte”) ma kod sprzed procesu. Dodatkowo do reszty „Procedury”:
+
+- **Testy zielone w stanie wyjściowym zostają zielone.** Lista w `docs/00-analiza/raport.md` („Testy
+  i CI”) to kontrakt. Test czerwony od początku nie blokuje zadania, ale wpisujesz go do „Ryzyk”.
+- **Zmiana zachowania tylko z kartą „było → ma być”** (sekcja w karcie `F-NN` w
+  `docs/00-analiza/funkcje/` albo `W-NN` w `docs/00-intake/funkcje/`, odnośnik w issue). Bez niej
+  obecne zachowanie zostaje: najpierw test charakteryzujący na starym kodzie (`sh-kat-refaktoryzacja`),
+  a zmianę spoza karty zgłaszasz pytaniem (`--typ pytanie`).
+- **Migracje tylko expand/contract** („Migracje”), także gdy obecny schemat ich nie stosował.
+- **Dane do developmentu tylko z seedów** z danymi fikcyjnymi (`supabase/seed.sql`, `example.com`);
+  nie kopiujesz danych z produkcji ani z chmury i o nie nie prosisz.
+- **Lovable:** synchronizacja z GitHubem zostaje; nie publikujesz w Lovable i nie zmieniasz ustawień
+  projektu Lovable (`AGENTS.md`, „Lovable”). Commit z Lovable na `main` to zwykła zmiana `main`.
 
 ### Raport
 
@@ -269,6 +288,8 @@ lokalnego Supabase i `.env.local`. W etapie A tego nie robisz: zawsze Claude, lo
 - [ ] Migracje zgodne wstecz, w nowych plikach, `supabase db reset` przechodzi (albo brak migracji)
 - [ ] Nowe zmienne w `.env.example` bez wartości
 - [ ] Pliki wspólne nietknięte
+- [ ] Projekt przejęty: testy zielone w stanie wyjściowym zielone, zmiana zachowania tylko z kartą
+  „było → ma być”, dane developmentu z seedów
 - [ ] PR z `Closes #NR` i checklistą szablonu otwarty z gałęzi `task/NR-slug`
 - [ ] W iteracji 2+: poprawione wyłącznie zgłoszenia 🔴 i 🟡 z ostatniego review
 - [ ] Review PASS (zaznacza reviewer, nie ten skill)
@@ -278,6 +299,8 @@ lokalnego Supabase i `.env.local`. W etapie A tego nie robisz: zawsze Claude, lo
 - 🔴 krytyczne: sekret w diffie; niespełnione kryterium akceptacji; migracja niezgodna wstecz albo
   zmiana istniejącej migracji; edycja pliku wspólnego; zmiana konfiguracji produkcji albo
   `deploy-prod`; luka bezpieczeństwa (brak RLS, brak walidacji wejścia, dane osobowe w logach).
+  Projekt przejęty: test zielony w stanie wyjściowym jest czerwony; zmiana zachowania bez karty
+  „było → ma być”; wypchnięcie migracji do chmury albo publikacja w Lovable; dane osobowe w seedzie.
 - 🟡 istotne: kryterium bez testu; błąd logiki; zgadnięta reguła biznesowa albo treść UX spoza karty
   i issue bez pytania (`--typ pytanie`); zmiany poza „Zakresem” bez decyzji w raporcie; w
   iteracji 2+ zmiany poza zgłoszeniami z review; brak raportu albo sekcji raportu; nowa zmienna bez

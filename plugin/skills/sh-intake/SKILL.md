@@ -1,6 +1,6 @@
 ---
 name: sh-intake
-description: Przyjmuje zlecenie właściciela, rozpoznaje typ projektu, proponuje tryb S albo M, zbiera listę startową rzeczy zewnętrznych od właściciela, pisze specyfikację i karty funkcji (przebieg, stany ekranu, dane, reguły, przypadki brzegowe, Given/When/Then) w docs/00-intake na gałęzi stage/00-intake, pyta właściciela tylko o luki w paczkach 5–7 pytań z proponowanymi odpowiedziami, a w trybie S zakłada jedno issue zlecenia z krótką kartą. Użyj, gdy właściciel zleca nowy projekt, funkcję albo poprawkę („nowe zlecenie”, „przyjmij zlecenie”, „intake”, „napisz specyfikację”, „drobna zmiana”), albo gdy trzeba poprawić specyfikację po review etapu lub uwagach właściciela.
+description: Przyjmuje zlecenie właściciela, rozpoznaje typ projektu, proponuje tryb S albo M, zbiera listę startową rzeczy zewnętrznych od właściciela, pisze specyfikację i karty funkcji (przebieg, stany ekranu, dane, reguły, przypadki brzegowe, Given/When/Then) w docs/00-intake na gałęzi stage/00-intake, pyta właściciela tylko o luki w paczkach 5–7 pytań z proponowanymi odpowiedziami, a w trybie S zakłada jedno issue zlecenia z krótką kartą. W trybie adopt analizuje przejęty projekt (etap 00-analiza): raport docs/00-analiza/raport.md z częścią dla właściciela i dla wykonawcy, karty funkcji w stanie obecnym, Lovable, Supabase, RLS, w limicie czasu z konfiguracji. Użyj, gdy właściciel zleca nowy projekt, funkcję albo poprawkę („nowe zlecenie”, „przyjmij zlecenie”, „intake”, „napisz specyfikację”, „drobna zmiana”), albo gdy orkiestrator po shctl adopt poleca „analiza projektu”, „analiza przejętego repo”, albo gdy trzeba poprawić specyfikację lub raport analizy po review etapu lub uwagach właściciela.
 ---
 
 # sh-intake
@@ -75,6 +75,9 @@ Tryb M (gałąź `stage/00-intake`, PR do `main`):
 - `AGENTS.md`: zaakceptowany stack w sekcji „Stack (kontrakt)” (typ projektu, framework)
 - `docs/00-intake/DoD.md`: zaznaczone pola Dokumentacji, Funkcjonalności i Checklist jakości
 
+Tryb adopt (gałąź `stage/00-analiza`, PR do `main`): `docs/00-analiza/raport.md`,
+`docs/00-analiza/funkcje/F-NN.md`, pola w `docs/00-analiza/DoD.md` (procedura w „Tryb adopt”).
+
 Tryb S:
 
 - `/Users/Shared/sh/stan/zlecenia/NAZWA-RRRRMMDD-slug.yaml`: plik zlecenia dla `shctl task create`, poza repo
@@ -138,6 +141,47 @@ shctl escalate --dotyczy 00-intake --powod "..." --sytuacja "..." --sprawdzono "
     `hosting.zaakceptowany: true`, gdy właściciel zaakceptował hosting. Zmiana stacku przy akceptacji
     trafia też do specyfikacji. Nowy commit wraca do review etapu.
 13. Sprawdź „DoD” i przekaż orkiestratorowi PR do merge'a. Następny jest `sh-plan` (etap `04-plan`).
+
+### Tryb adopt (analiza przejętego projektu)
+
+Projekt z `pochodzenie: adopt` w `docs/konfiguracja.md` (`shctl adopt`) zaczyna od etapu `00-analiza`
+zamiast specyfikacji. Pracujesz w worktree `/Users/Shared/sh/wt/NAZWA/stage-00-analiza` (gałąź
+`stage/00-analiza`, szkielet założył `shctl adopt`). Kod aplikacji, konfigurację chmury i ustawienia
+repo tylko czytasz; nie uruchamiasz `supabase link|db push|db pull` i nie prosisz o klucze produkcji.
+
+Wejście: `docs/konfiguracja.md` (`adopt.*`), `docs/00-analiza/wykryj.json` (wynik
+`scripts/adopt/wykryj.sh` przy przejęciu; po zmianach w repo uruchom ponownie
+`bash /Users/Shared/sh/sh-system/scripts/adopt/wykryj.sh .`), `docs/00-analiza/raport.md` (szablon),
+`docs/00-analiza/funkcje/_szablon-karty.md`, `package.json`, `supabase/`, `.github/workflows/`, kod
+źródłowy w zakresie mapy funkcji, `gh run list --branch main --limit 5` i skill `sh-kat-baza`.
+
+1. **Limit czasu.** Zapisz start w UTC i pilnuj `adopt.analiza_do` (`adopt.limit_analizy_min`). Po
+   limicie kończysz bieżący punkt, a resztę wpisujesz do „Nie przeanalizowano” z powodem.
+2. **Stan wyjściowy testów i CI:** ostatnie biegi CI na `main` i komendy testów z `package.json`
+   (lokalnie tylko to, co działa w sandboxie: bez sieci do rejestru pakietów nie instalujesz). Lista
+   zielonych testów w „Testy i CI” to kontrakt dla workerów.
+3. **Zależności:** przestarzałe i podatne z `package.json` i locka (`pnpm outdated`, `pnpm audit` albo
+   `npm …`, gdy działają; inaczej „do sprawdzenia w CI” z nazwą pakietu i wersją).
+4. **Lovable:** pliki i synchronizacja z GitHubem z `wykryj.json` (`lovable`). Synchronizacja zostaje
+   włączona; w ryzykach i w kamieniu zapisz zasadę „bez publikacji w Lovable bez decyzji właściciela”.
+5. **Supabase:** klient (plik, klucz w kodzie czy w env, rola: `anon` jest publiczny z założenia,
+   `service_role` w repo to 🔴 z zaleceniem unieważnienia u dostawcy), `supabase/` (migracje, edge
+   functions, seed), przegląd RLS każdej tabeli według listy `sh-kat-baza` z wagami. Zgodność migracji
+   ze schematem w chmurze oceniasz tylko na zrzucie od właściciela (`supabase db dump --schema-only`
+   wrzucony do skrzynki): bez zrzutu to pytanie w paczce; przy rozjeździe proponujesz migrację
+   wyrównującą i zasadę „źródłem prawdy są migracje w repo, zmiany w chmurze wprowadza właściciel”.
+6. **Mapa funkcji:** karta każdej funkcji użytkowej w stanie obecnym `docs/00-analiza/funkcje/F-NN.md`
+   z `_szablon-karty.md` (sekcja „Było → ma być” zostaje pusta do pierwszego zlecenia zmiany).
+7. **Raport:** wypełnij `raport.md` według szablonu. Część „Dla właściciela” na górze, prostym
+   językiem, bez nazw plików i backticków; pytania jedną paczką 5–7 z proponowaną odpowiedzią i
+   skutkiem; pierwszy kamień milowy z celem, zakresem i szacunkiem. Wartości sekretów, kluczy i danych
+   osobowych nigdy nie trafiają do raportu: tylko plik, linia i rodzaj.
+8. Zaznacz pola Dokumentacji, Funkcjonalności i Checklist jakości w `docs/00-analiza/DoD.md` (bez
+   Checkpointu i frontmattera). Commit `00-analiza: raport`, push i `gh pr create --base main --head
+   stage/00-analiza`; opis PR: alarmy 🔴, pytania, czas analizy względem limitu. Przekaż numer PR
+   orkiestratorowi.
+9. Po checkpoincie pierwsze zlecenie zmiany idzie zwykłą drogą (specyfikacja albo tryb S). Każda karta
+   `W-NN` zmieniająca istniejące zachowanie ma sekcję „Było → ma być” (proces.md, „Projekty przejęte”).
 
 ### Lista startowa
 
@@ -349,6 +393,9 @@ Tryb L jest odłożony. W etapie A tego nie robisz.
 - [ ] Tryb M: pola etapu w `DoD.md` zaznaczone bez Checkpointu, PR z `stage/00-intake` otwarty
 - [ ] Tryb S: issue ma etykietę `tryb:S`, cel z „Poza zakresem” i sprawdzalne kryteria
 - [ ] Brak sekretów w specyfikacji, issue, PR i logach
+- [ ] Tryb adopt: raport z częściami „Dla właściciela” i „Dla wykonawcy”, karty `F-NN`, stan wyjściowy
+  testów, Lovable i Supabase z `wykryj.json`, przegląd RLS, pytanie o zrzut schematu albo wynik
+  porównania; w limicie czasu albo z „Nie przeanalizowano”; bez zmian w kodzie aplikacji
 - [ ] Review PASS (zaznacza reviewer, nie ten skill)
 
 ## Kryteria review
@@ -356,8 +403,10 @@ Tryb L jest odłożony. W etapie A tego nie robisz.
 - 🔴 krytyczne: sekret w specyfikacji lub issue; wymaganie bez kryteriów Given/When/Then; funkcja
   użytkowa bez karty albo karta z luką; tryb S mimo
   obszaru ryzyka albo zmiany modelu danych; obszar ryzyka bez oceny; zlecenie na L przyjęte jako M bez
-  słowa o trybie L.
-- 🟡 istotne: brak „Poza zakresem”, użytkowników albo priorytetów; stack bez alternatywy lub
+  słowa o trybie L. Tryb adopt: wartość sekretu, klucza albo dane osobowe w raporcie; `service_role`
+  w repo bez alarmu 🔴; zmiana w kodzie aplikacji w PR analizy; brak części „Dla właściciela”.
+- 🟡 istotne: tryb adopt: brak stanu wyjściowego testów, przeglądu RLS, kart `F-NN` albo pytania o
+  zrzut schematu; część „Dla właściciela” z nazwami plików lub kodami; brak „Poza zakresem”, użytkowników albo priorytetów; stack bez alternatywy lub
   uzasadnienia; typ projektu bez konsekwencji; brak szacunku poglądowego; stack lub hosting sprzeczny z
   kontraktem `AGENTS.md` bez uzasadnienia; brak kroków ręcznych właściciela przy kontach lub płatnych usługach;
   rzecz zewnętrzna (konto, klucz, domena, limit usługi) bez pozycji w `lista-startowa.md` albo pozycja

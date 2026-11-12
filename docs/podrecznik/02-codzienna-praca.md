@@ -111,6 +111,24 @@ repo na GitHubie: pokazuje dokładną komendę i czeka na Twoją zgodę.
 Kolejne kamienie po akceptacji planu startują same, jeśli mieszczą się w zgodzie. Nowy zakres, płatna
 usługa, dostęp albo podniesienie trybu przychodzi jako eskalacja.
 
+## Przejęcie istniejącego projektu
+
+Napisz orkiestratorowi „przejmij OWNER/REPO jako NAZWA”. Orkiestrator uruchamia `shctl adopt`: klon
+bez sekretów i bez dostępu do produkcji. Repo prywatne zostaje prywatne.
+
+1. Agent analizuje projekt w limicie czasu i pisze raport `docs/00-analiza/raport.md`. Czytasz go w
+   Obsidianie: na górze stan, co działa, czego brakuje, ryzyka, pytania z propozycjami i pierwszy
+   kamień milowy.
+2. Odpowiadasz na pytania numerami. Jeśli projekt używa Supabase, przyda się zrzut schematu z chmury
+   (`supabase db dump --schema-only` na Twoim komputerze) wrzucony do skrzynki: agenci nie mają dostępu
+   do chmury.
+3. Piszesz „akceptuję analizę i kierunek”. Dopiero wtedy przychodzi PR adaptacji: same pliki procesu,
+   bez zmian w kodzie aplikacji. Istniejące CI zostaje.
+4. Repo upubliczniasz tylko na swoje polecenie, po bramce (sekrety w historii, RLS, dane osobowe w
+   seedach). Sekret znaleziony w historii unieważniasz u dostawcy; historii nie przepisujemy.
+
+Projekt z Lovable: synchronizacja z GitHubem zostaje, a agenci nie publikują w Lovable bez Twojej decyzji.
+
 ## Odbiór zlecenia S
 
 1. Push „Czeka na Twoją akceptację: PROJEKT / #NR” z linkiem do PR (review PASS, CI zielone).

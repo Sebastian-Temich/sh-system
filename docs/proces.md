@@ -113,9 +113,55 @@ to issue `typ:qa` z wagą, ⚪ zostają w „Drobnych uwagach” raportu.
 ostatnie zadanie planu i odbiór właściciela na stagingu. Wydanie produkcyjne (`deploy-prod.sh`, tag,
 backup, rollback, runbook) jest odłożone do B2.
 
+## Projekty przejęte (adopt)
+
+Istniejący projekt (np. z Lovable i Supabase) wchodzi do procesu przez `shctl adopt OWNER/REPO
+--nazwa NAZWA --tryb M`, nie przez `new-project`.
+
+1. **Start.** Pełny klon w `projekty/NAZWA` bez plików env i bez dostępu do produkcji, worktree
+   `wt/NAZWA/stage-00-analiza` ze szkieletem etapu (`pochodzenie: adopt` w `konfiguracja.md`, etapy
+   zaczynają się od `00-analiza`). Repo prywatne zostaje prywatne: adopt nie zmienia widoczności ani
+   ustawień repo.
+2. **`00-analiza`** (`sh-intake` w trybie adopt, limit `adopt.limit_analizy_min`): raport
+   `docs/00-analiza/raport.md` dla Obsidiana. Na górze „Dla właściciela” (stan w jednym akapicie, co
+   działa, czego brakuje, ryzyka, pytania paczką z propozycjami, pierwszy kamień milowy), niżej „Dla
+   wykonawcy” (stack i zależności przestarzałe i podatne, architektura, mapa funkcji jako karty
+   `funkcje/F-NN.md` w stanie obecnym, testy i CI, wdrożenie, integracje, nazwy zmiennych env, dług).
+   Fakty mechaniczne daje `scripts/adopt/wykryj.sh`: Lovable i synchronizacja z GitHubem, klient
+   Supabase (klucz w kodzie czy w env, `anon` czy `service_role`; `service_role` w repo to 🔴),
+   `supabase/` (migracje, edge functions, seed), tabele bez RLS, dane osobowe w seedach. Przegląd RLS
+   według `sh-kat-baza`. PR raportu (same `docs/`) merguje się po review PASS i zielonym CI, żeby
+   raport był w Obsidianie.
+3. **Checkpoint:** „akceptuję analizę i kierunek” (`decision add --rola wlasciciel`, pola Checkpointu
+   w `00-analiza/DoD.md`). Dopiero potem `shctl adopt adaptacja`: osobny PR bez zmian w kodzie
+   aplikacji (`AGENTS.md`, `CLAUDE.md`, `docs/` v2, `scripts/`, profile ról, etykiety, workflow `SH` z
+   check-dod i gitleaks obok istniejącego CI). Pierwsze zlecenie po adaptacji idzie zwykłą drogą
+   (`00-intake` albo tryb S).
+
+Zasady stałe projektu przejętego (`sh-worker`, `sh-review`):
+
+- **Testy zielone w stanie wyjściowym zostają zielone.** Lista z raportu analizy („Testy i CI”) to
+  kontrakt; test czerwony od początku nie blokuje, ale jest w raporcie zadania.
+- **Migracje tylko expand/contract** i nigdy nie wypychane do chmury przez agentów (`supabase db
+  push`, `link`, panel). **Źródłem prawdy są migracje w repo**; zmiany w chmurze wprowadza tylko
+  właściciel na ich podstawie.
+- **Rozjazd schematu:** zgodność migracji ze schematem w chmurze sprawdzamy tylko na zrzucie od
+  właściciela (`supabase db dump --schema-only`, pytanie w raporcie; agenci nie mają dostępu do
+  chmury). Przy rozjeździe raport proponuje migrację wyrównującą, a właściciel stosuje ją u siebie.
+- **Dane do developmentu tylko z seedów** z danymi fikcyjnymi, nigdy z produkcji.
+- **Zmiana zachowania tylko z kartą „było → ma być”** (sekcja w karcie funkcji `F-NN` albo `W-NN`);
+  bez niej zadanie zachowuje obecne zachowanie (testy charakteryzujące, `sh-kat-refaktoryzacja`).
+- **Lovable:** synchronizacja z GitHubem zostaje; agenci nie publikują w Lovable bez decyzji
+  właściciela (`AGENTS.md`, „Lovable”, i `Projekt.md`).
+- **Bramka przed upublicznieniem** (`shctl adopt bramka`): gitleaks na całej historii, RLS, brak danych
+  osobowych w seedach i fixture'ach, brak plików env i `service_role` w repo. Sekret w historii to
+  zalecenie unieważnienia u dostawcy, nie przepisywanie historii. Widoczność zmienia tylko `shctl
+  adopt upublicznij`, po decyzji właściciela w `decyzje.md`; `gh repo edit --visibility` jest zabronione.
+
 ## Checkpointy i autoryzacja
 
-- Checkpointy są tylko trzy (M: specyfikacja, plan, odbiór) albo jeden (S: odbiór). Każdy przychodzi
+- Checkpointy są tylko trzy (M: specyfikacja, plan, odbiór) albo jeden (S: odbiór); projekt przejęty
+  ma przed nimi checkpoint analizy („akceptuję analizę i kierunek”). Każdy przychodzi
   po review PASS jako ntfy „Czeka na Twoją akceptację: PROJEKT / ETAP” z linkiem do PR. Coś, co czeka
   ponad 4 h, wraca przypomnieniem (8–22). Przy checkpointach orkiestrator proponuje opis repo
   (`shctl repo opis`).

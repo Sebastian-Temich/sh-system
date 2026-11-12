@@ -20,7 +20,7 @@ obsidian_czy_klon() {
 # Tryb no-cone: cone zostawiłby też pliki z katalogu głównego repo.
 # Wypisuje 1, gdy założono klon, 0, gdy już był.
 obsidian_polacz() {
-  local nazwa="$1" slug="$SH_GH_OWNER/$1" kat
+  local nazwa="$1" slug="${2:-$SH_GH_OWNER/$1}" kat
   kat="$(obsidian_kat "$nazwa")"
   if [ -e "$kat" ]; then
     obsidian_czy_klon "$kat" "$slug" || die "$E_ODMOWA" "$kat istnieje i nie jest klonem $slug"

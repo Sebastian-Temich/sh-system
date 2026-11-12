@@ -8,7 +8,7 @@ operacje na plikach, GitHubie i panelach herdr. Źródło: `scripts/shctl/` (`cm
 `lib/`, `pomoc/` teksty pomocy, `tests/` bats). Symlink `/Users/Shared/sh/bin/shctl` zakłada
 `scripts/server/install.sh`. Zależności: bash 3.2+, gh, jq, yq (mikefarah), git, herdr.
 
-Komendy: [new-project](#new-project), [repo](#repo), [stage](#stage), [decision](#decision), [escalate](#escalate), [status](#status), [stop-all](#stop-all), [skrzynka](#skrzynka), [obsidian](#obsidian), [doctor](#doctor), [task](#task), [pr](#pr), [review](#review), [reset-dryrun](#reset-dryrun), [template](#template), [sprzataj](#sprzataj), [metryki](#metryki).
+Komendy: [new-project](#new-project), [adopt](#adopt), [repo](#repo), [stage](#stage), [decision](#decision), [escalate](#escalate), [status](#status), [stop-all](#stop-all), [skrzynka](#skrzynka), [obsidian](#obsidian), [doctor](#doctor), [task](#task), [pr](#pr), [review](#review), [reset-dryrun](#reset-dryrun), [template](#template), [sprzataj](#sprzataj), [metryki](#metryki).
 
 ## shctl --help
 
@@ -16,6 +16,8 @@ Komendy: [new-project](#new-project), [repo](#repo), [stage](#stage), [decision]
 Użycie: shctl KOMENDA [argumenty] [--dry-run] [--json] [--projekt NAZWA]
 
   new-project NAZWA --opis "krótki opis repo" [--zlecenie "..."] [--tryb S|M] [--prywatny]
+  adopt OWNER/REPO --nazwa NAZWA [--tryb M|S] [--limit-analizy MIN]
+  adopt adaptacja|bramka|upublicznij --projekt NAZWA
   repo opis [--opis "..."] [--topics "a,b"] [--website URL]
   stage start|review|done|escalate ETAP [--notatka "..."]
   stage iter ETAP
@@ -57,7 +59,8 @@ Kody wyjścia:
 JSON: {"ok":true,"komenda":"…","dry_run":false,"wynik":{…}} albo {"ok":false,"kod":N,"blad":"…"}.
 Każda komenda jest idempotentna: powtórka niczego nie dubluje, a przerwaną operację dokańcza.
 Każde wywołanie dopisuje linię do /Users/Shared/sh/logs/shctl.log. Commit na main projektu robi
-orkiestrator; shctl commituje sam tylko w new-project, template update, reset-dryrun i skrzynka.
+orkiestrator; shctl commituje sam tylko w new-project, template update, reset-dryrun, skrzynka i adopt
+(szkielet analizy i adaptacja, na swoich gałęziach).
 
 Zmienne środowiska (testy i inny układ; w nawiasie domyślnie):
   SH_DIR (/Users/Shared/sh), SH_GH_OWNER (Sebastian-Temich), SH_TEMPLATE (sh-template-projekt),
@@ -92,6 +95,51 @@ Obsidiana i skrzynka na materiały (jak obsidian link).
 W trybie S wszystkie etapy dostają status pominiety. Odmowa (kod 4): repo istnieje i nie jest
 projektem SH, katalog jest klonem innego repo, sekret w plikach, --tryb inny niż w projekcie.
 Wynik JSON: repo, katalog, tryb, kroki, porty, obsidian (katalog, skrzynka).
+```
+
+## adopt
+
+```text
+Użycie: shctl adopt OWNER/REPO --nazwa NAZWA [--tryb M|S] [--limit-analizy MIN]
+        shctl adopt adaptacja --projekt NAZWA
+        shctl adopt bramka --projekt NAZWA
+        shctl adopt upublicznij --projekt NAZWA
+
+Przejęcie istniejącego projektu (docs/proces.md, „Projekty przejęte”). Repo prywatne zostaje
+prywatne: adopt nigdy sam nie zmienia widoczności.
+
+Start (OWNER/REPO): pełny klon w /Users/Shared/sh/projekty/NAZWA bez plików env i bez dostępu do
+produkcji, worktree /Users/Shared/sh/wt/NAZWA/stage-00-analiza na gałęzi stage/00-analiza z commitem
+szkieletu etapu: docs/konfiguracja.md (pochodzenie: adopt, adopt.repo, widocznosc, analiza_od,
+analiza_do, limit_analizy_min, lovable, supabase), docs/decyzje.md, docs/00-analiza/ (DoD.md,
+raport.md, wykryj.json z scripts/adopt/wykryj.sh). Blok portów w porty.md, klon docs/ w Obsidianie
+i skrzynka. Bez pushu: PR raportu otwiera sh-intake w trybie adopt. Limit analizy: --limit-analizy,
+inaczej adopt.limit_analizy_min z /Users/Shared/sh/konfiguracja.md, inaczej 120 minut.
+
+  --nazwa            wymagana: nazwa projektu (litery, cyfry, - i _)
+  --tryb             M (domyślnie) albo S: tryb zleceń po adaptacji
+  --limit-analizy    limit czasu analizy w minutach
+
+adaptacja: po merge'u analizy i checkpoincie (wszystkie pola docs/00-analiza/DoD.md zaznaczone i
+wiersz wlasciciel z „analiz” w decyzje.md). Worktree wt/NAZWA/adaptacja na gałęzi adopt/adaptacja,
+brakujące pliki szablonu sh-template-projekt (AGENTS.md, CLAUDE.md, docs/ v2, scripts/,
+.claude/roles/, szablony issue i PR) bez kodu aplikacji i bez CI szablonu; obok istniejącego CI
+workflow .github/workflows/sh.yml (check-dod, gitleaks). Plik projektu różny od szablonu zostaje
+(lista „pominięte” w PR). Projekt z Lovable: sekcja „Lovable” w AGENTS.md. Etykiety, w repo
+prywatnym zmienna SH_RUNS_ON, gitleaks commitu adaptacji, check-dod, push i PR.
+
+bramka: przed upublicznieniem repo. gitleaks na całej historii (sekret = zalecenie unieważnienia u
+dostawcy, bez przepisywania historii), tabele public bez RLS w migracjach, przegląd RLS w raporcie
+analizy, dane osobowe w seedach i fixture'ach, pliki env i klucz service_role w repo. Blokada: kod 4.
+
+upublicznij: tylko z wierszem wlasciciel z „upublicz” w decyzje.md i po bramce bez blokad; gh repo
+edit --visibility public i adopt.widocznosc w konfiguracja.md (commit robi orkiestrator).
+
+Odmowa (kod 4): repo zarchiwizowane albo puste, domyślna gałąź inna niż main, katalog jest klonem
+innego repo, repo ma już docs/konfiguracja.md spoza adopt, brak checkpointu, blokada bramki.
+Brak repo albo dostępu: kod 3.
+Wynik JSON (start): repo, katalog, worktree, galaz, tryb, widocznosc, limit_analizy_min, porty,
+obsidian, lovable, supabase, alarmy, kroki.
 ```
 
 ## repo

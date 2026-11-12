@@ -1,0 +1,56 @@
+# Workflow procesu SH w projekcie przejętym (shctl adopt adaptacja): działa obok istniejącego CI
+# projektu i go nie zastępuje. check-dod sprawdza DoD etapów, gitleaks skanuje historię.
+# Runner: zmienna repo SH_RUNS_ON (repo prywatne: runner serwera); bez niej ubuntu-24.04 GitHuba.
+name: SH
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sh-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  check-dod:
+    runs-on: ${{ fromJSON(vars.SH_RUNS_ON || '"ubuntu-24.04"') }}
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: DoD etapów
+        run: bash scripts/check-dod.sh
+
+  gitleaks:
+    runs-on: ${{ fromJSON(vars.SH_RUNS_ON || '"ubuntu-24.04"') }}
+    timeout-minutes: 5
+    env:
+      GITLEAKS_VERSION: 8.30.1
+      GITLEAKS_SHA256: 551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - name: Instalacja gitleaks
+        run: |
+          archiwum="gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          curl -fsSL -o "$RUNNER_TEMP/$archiwum" \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/${archiwum}"
+          echo "${GITLEAKS_SHA256}  $RUNNER_TEMP/$archiwum" | sha256sum -c -
+          tar -xzf "$RUNNER_TEMP/$archiwum" -C "$RUNNER_TEMP" gitleaks
+      # Projekt przejęty może mieć sekrety w starej historii (zalecenie: unieważnić u dostawcy, nie
+      # przepisywać historii). Na PR skan obejmuje tylko commity PR, żeby stara historia nie
+      # blokowała pracy; pełną historię sprawdza shctl adopt bramka.
+      - name: Skan commitów PR
+        if: github.event_name == 'pull_request'
+        env:
+          BAZA: ${{ github.event.pull_request.base.sha }}
+        run: '"$RUNNER_TEMP/gitleaks" git --redact --no-banner --log-opts="$BAZA..HEAD" .'
+      - name: Skan historii
+        if: github.event_name != 'pull_request'
+        continue-on-error: true
+        run: '"$RUNNER_TEMP/gitleaks" git --redact --no-banner .'

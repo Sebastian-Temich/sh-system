@@ -108,6 +108,33 @@ dozwolone() {
   pasuje 'git -C /Users/Shared/sh/projekty/x switch task/12-a'
 }
 
+@test "worktree dla istniejacej galezi (bez -b): allow w wt/ i wt-system/, poza sandboxem, bez --force i -B" {
+  for r in 'Bash(git worktree add /Users/Shared/sh/wt/*)' 'Bash(git worktree add /Users/Shared/sh/wt-system/*)'; do
+    allow "$r" || { echo "brak allow: $r"; false; }
+  done
+  dozwolone 'git worktree add /Users/Shared/sh/wt/app/stage-00-analiza stage/00-analiza'
+  dozwolone 'git worktree add /Users/Shared/sh/wt-system/b1-adopt sh-lite/b1-adopt'
+  ! dozwolone 'git worktree add /tmp/x stage/00-analiza' || false
+  ! dozwolone 'git worktree add /Users/Shared/sh/projekty/x main' || false
+  for k in 'git worktree add /Users/Shared/sh/wt/x/y main -f' 'git worktree add /Users/Shared/sh/wt/x/y --force main' \
+    'git worktree add /Users/Shared/sh/wt/x/y -B main origin/main' 'git worktree add /Users/Shared/sh/wt/../projekty/x main' \
+    'git -C /Users/Shared/sh/projekty/x worktree add /Users/Shared/sh/wt/x/y main -f'; do
+    pasuje "$k" || { echo "przechodzi: $k"; false; }
+  done
+  for k in 'git worktree add /Users/Shared/sh/wt/app/stage-00-analiza stage/00-analiza' \
+    'git worktree add --no-track -b task/5-x /Users/Shared/sh/wt/app/5 origin/main'; do
+    ! pasuje "$k" || { echo "zablokowane: $k"; false; }
+  done
+  # Ta sama forma co z -b: wzorzec wyjątku sandboxa obejmuje obie.
+  jq -e '.sandbox.excludedCommands | index("git worktree add *")' "$S" >/dev/null
+}
+
+@test "widocznosc repo tylko przez shctl adopt upublicznij: gh repo edit --visibility zabronione" {
+  deny 'Bash(gh repo edit *--visibility*)'
+  pasuje 'gh repo edit acme/app --visibility public --accept-visibility-change-consequences'
+  dozwolone 'shctl adopt upublicznij --projekt app'
+}
+
 @test "reguly bez koncowego :* (Claude Code czyta je doslownie i ignoruje)" {
   [ "$(jq -r '[.permissions.allow[], .permissions.deny[]] | map(select(endswith(":*)"))) | length' "$S")" -eq 0 ]
 }
