@@ -288,7 +288,7 @@ nowy_commit() {
   komentarze 20 | grep -q 'Poziom ryzyko (pliki migracje'
   grep -q '^- Listy kontrolne: sh-kat-baza (pliki migracji)' "$CODEX_ATRAPA/prompt"
   grep -q '^#### sh-kat-baza (pliki migracji)$' "$CODEX_ATRAPA/prompt"
-  grep -q 'polityka `insert` i `update` ma jawne `with check` zgodne z `using`' "$CODEX_ATRAPA/prompt"
+  grep -q 'Każda polityka `insert` ma `with check`' "$CODEX_ATRAPA/prompt"
 }
 
 @test "review: ryzyko z pliku auth, CI i sekretow" {
@@ -339,6 +339,29 @@ nowy_commit() {
   run --separate-stderr "$SHCTL" review run 20 --json
   [ "$status" -eq 0 ]
   [ "$(grep -c -e '^- Listy kontrolne' -e '^### Listy kontrolne (skille' "$CLAUDE_ATRAPA/prompt" || true)" -eq 0 ]
+}
+
+@test "review: listy kontrolne stacku z linii stack i ze znacznika, kategorie backend i refaktoryzacja" {
+  ustaw_tresc() {
+    jq --arg b "$1" 'map(if .number == 12 then .body = $b else . end)' "$GH_ATRAPA/issues.json" >"$T/x" && mv "$T/x" "$GH_ATRAPA/issues.json"
+  }
+  ustaw_tresc $'Endpoint.\n\n### Warstwy skilli\n\n- kategoria: backend\n- stack: astro, supabase\n'
+  run --separate-stderr "$SHCTL" review run 20 --json
+  [ "$status" -eq 0 ]
+  grep -q '^- Listy kontrolne: sh-kat-backend (kategoria backend), sh-stack-astro (stack), sh-stack-supabase (stack)\.' "$CLAUDE_ATRAPA/prompt"
+  grep -q '^#### sh-stack-supabase (stack)$' "$CLAUDE_ATRAPA/prompt"
+  grep -q 'Autoryzacja przy każdym endpoincie' "$CLAUDE_ATRAPA/prompt"
+  nowy_commit src/e.txt
+  w="$(jq -nc '{kategoria:"refaktoryzacja",stack:[]}' | base64 | tr -d '\n')"
+  ustaw_tresc "$(printf '### Warstwy skilli\n\n- kategoria: refaktoryzacja\n- stack: supabase\n\n<!-- shctl:warstwy %s -->\n' "$w")"
+  run --separate-stderr "$SHCTL" review run 20 --json
+  [ "$status" -eq 0 ]
+  grep -q '^- Listy kontrolne: sh-kat-refaktoryzacja (kategoria refaktoryzacja)\.' "$CLAUDE_ATRAPA/prompt"
+  nowy_commit src/f.txt
+  ustaw_tresc $'### Warstwy skilli\n\n- kategoria: frontend\n- stack: -\n'
+  run --separate-stderr "$SHCTL" review run 20 --json
+  [ "$status" -eq 0 ]
+  grep -q '^- Listy kontrolne: sh-kat-frontend (kategoria frontend)\.' "$CLAUDE_ATRAPA/prompt"
 }
 
 @test "review: diff powyzej progu linii to ryzyko" {

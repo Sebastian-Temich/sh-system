@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-11-12 (SH-lite B1 krok 1: skille techniczne przed onboardingiem)
+
+- `sh-kat-baza` pełny (zamiast szkieletu z F7): RLS w `public`, `with check` w `insert` (🔴) i jawne w `update` (🟡) jako osobne punkty, testy pgTAP właściciel/obcy z próbą przepisania `user_id`, expand/contract, indeksy pod polityki, klucze obce i zapytania, `explain` przed i po, N+1, transakcje, seedy tylko z danymi fikcyjnymi; błędy z testów review F6 (sh-dryrun #63, #64).
+- Nowe skille: `sh-kat-backend` (kontrakt API, walidacja na serwerze, spójne błędy, autoryzacja przy każdym endpoincie, idempotencja, timeouty, logi bez danych osobowych, webhooki; przypadki iskt-www T-11, T-16), `sh-kat-refaktoryzacja` (najpierw testy charakteryzujące, małe kroki, zmiana zachowania tylko z kartą funkcji „było → ma być”; iskt-www T-6, T-45), `sh-stack-supabase` (fragmenty `supabase/agent-skills` @ `c9be0e9`, MIT, z adnotacją źródła).
+- `review run`: listy kontrolne także skilli stacku zadania (znacznik `shctl:warstwy` albo linia `- stack:`), np. `sh-stack-supabase`; kategorie `backend` i `refaktoryzacja` dostają listy przez mapę warstw.
+- Sandbox: Supabase CLI w profilu workera kończy się `EPERM` (`~/.supabase`). Skille i `proces.md` mówią wprost, że lokalnie migracji i testów SQL się nie uruchamia; szablon dostaje job CI `baza` (migracje na czystej bazie, pgTAP, `db lint`, `db advisors`), tylko przy zmianach w `supabase/`. `scripts/ci/zakres.sh` (i kopia w szablonie) ma wyjście `baza` i `WZORCE_BAZA`.
+
 ## 2026-11-11 (SH-lite F10: ostatnie porządki po migracji iskt-www)
 
 - `orkiestrator-settings.json`: bez reguły `Bash(herdr agent prompt *)`. Polecenia dla workera tylko przez `shctl task polecenie NR "tekst"` (F9c); odczyt paneli (`herdr agent read|get|wait`, `herdr pane read`) zostaje. Test w `orkiestrator-settings.bats`.

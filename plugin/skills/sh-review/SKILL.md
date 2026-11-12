@@ -181,12 +181,13 @@ werdykcie orkiestrator wywołuje `shctl task iter NR` albo `shctl task close NR`
 ### Listy kontrolne kategorii
 
 Stosujesz, gdy kontekst shctl ma linię „Listy kontrolne: …”. shctl dołącza na końcu promptu sekcję
-„Listy kontrolne (skille techniczne)” z listą kontrolną skilli tej samej kategorii, którą dostał
-worker (`plugin/skills/techniczne/`, np. `sh-kat-frontend`), a przy zmienionych plikach migracji także
-listę `sh-kat-baza`. Przechodzisz każdy punkt na diffie i testach, a w podsumowaniu piszesz, które
+„Listy kontrolne (skille techniczne)” z listą kontrolną skilli tej samej kategorii i stacku, które
+dostał worker (`plugin/skills/techniczne/`, np. `sh-kat-backend`, `sh-stack-supabase`), a przy
+zmienionych plikach migracji także listę `sh-kat-baza`. Przechodzisz każdy punkt na diffie i testach, a w podsumowaniu piszesz, które
 punkty są spełnione. Niespełniony punkt zgłaszasz z wagą podaną przy nim (🔴🟡⚪). Poza Claude Code
-(ręczne review bez kontekstu shctl) czytasz `## Lista kontrolna` skilla kategorii z issue
-(„Warstwy skilli”, `- kategoria:`) w `sh-system/plugin/skills/techniczne/sh-kat-KATEGORIA/SKILL.md`.
+(ręczne review bez kontekstu shctl) czytasz `## Lista kontrolna` skilli kategorii i stacku z issue
+(„Warstwy skilli”, `- kategoria:`, `- stack:`) w `sh-system/plugin/skills/techniczne/sh-kat-KATEGORIA/SKILL.md`
+i `sh-stack-STACK/SKILL.md`.
 
 ### Review etapu
 

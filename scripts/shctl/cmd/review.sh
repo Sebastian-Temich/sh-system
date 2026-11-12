@@ -230,17 +230,22 @@ MD
     awk 'NF { t = 1 } t'
 }
 
-# Listy kontrolne review: skille warstwy kategorii zadania (te same co u workera, kategoria ze
-# znacznika shctl:warstwy albo linii „- kategoria:”), a przy zmienionych plikach migracji także
-# skille kategorii baza. Wynik: linie „NAZWA<TAB>PLIK<TAB>powód” bez powtórzeń, tylko skille z sekcją
+# Listy kontrolne review: skille warstwy kategorii i stacku zadania (te same co u workera, ze
+# znacznika shctl:warstwy albo linii „- kategoria:” i „- stack:”), a przy zmienionych plikach migracji
+# także skille kategorii baza. Wynik: linie „NAZWA<TAB>PLIK<TAB>powód” bez powtórzeń, tylko skille z sekcją
 # „## Lista kontrolna”.
 listy_kontrolne() {
-  local j="$1" ocena="$2" kat n p
+  local j="$1" ocena="$2" kat w st n p
   {
     if [ -n "$j" ]; then
-      kat="$(jq -r '.kategoria // ""' <<<"$(warstwy_issue "$j")")"
+      w="$(warstwy_issue "$j")"
+      kat="$(jq -r '.kategoria // ""' <<<"$w")"
       [ -n "$kat" ] || kat="$(jq -r '.body // "" | capture("(?m)^- kategoria: (?<k>[a-z-]+)").k // ""' <<<"$j")"
       skille_kategorii "$kat" | sed "s/\$/	kategoria $kat/"
+      st="$(jq -c 'if has("stack") then [.stack // empty] | flatten else null end' <<<"$w")"
+      [ "$st" != null ] || st="$(jq -c '.body // "" | [capture("(?m)^- stack: (?<s>[^\n]+)").s // "" | split(",")[]
+        | gsub("^\\s+|\\s+$"; "") | select(. != "" and . != "-")]' <<<"$j")"
+      skille_stacku "$st" | sed "s/\$/	stack/"
     fi
     if jq -e '(.powody // []) | any(startswith("pliki migracje"))' <<<"${ocena:-null}" >/dev/null 2>&1; then
       skille_kategorii baza | sed 's/$/	pliki migracji/'
