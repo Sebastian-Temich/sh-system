@@ -31,6 +31,14 @@ w sandboxie, bez tokenu GitHuba z pęku kluczy: `git push` pyta o login, `gh` da
 | `gh pr view 5 --json body > opis.md` | `gh pr view 5 --json body -q .body`, potem Write `opis.md` |
 | `git -C repo worktree add /Users/Shared/sh/wt-system/x x` | `cd repo` · `git worktree add /Users/Shared/sh/wt-system/x x` |
 
+## Szkice opisów PR i komentarzy
+
+Szkic opisu PR, issue albo komentarza piszesz w scratchpadzie sesji. `gh` działa poza sandboxem i
+hook przyjmuje `--body-file` tylko spod `/Users/Shared/sh`, a wieloliniowe `--body` wypada z wyjątku
+sandboxa (HTTP 401). Do wysłania kopiujesz szkic do `/Users/Shared/sh/wt-system/` (obok worktree, nie
+do niego, żeby nie trafił do commita), wołasz `gh … --body-file` i **zaraz potem** usuwasz plik (`rm`).
+W `wt-system/` i `wt/` zostają same worktree, bez luźnych `*.md`.
+
 ## Worktree
 
 Worktree zakładasz zwykłym `git worktree add` z katalogu repo, tylko w `/Users/Shared/sh/wt/` i
