@@ -103,6 +103,77 @@ nowy_commit() {
   [[ "$(etykiety 12)" != *"status:review"* ]] || false
 }
 
+# PR adaptacji (shctl adopt adaptacja) jak w szkolenia-iskt PR #2: main ma śledzony .env i artefakty
+# .pomiar/, PR usuwa je (decyzja właściciela) i dodaje pliki procesu; KOD=1 dokłada zmianę src/.
+pr_adaptacji() {
+  printf 'X=1\n' >.env
+  mkdir -p .pomiar/isk52 src
+  printf 'ok\n' >.pomiar/isk52/lint.txt
+  printf 'export const app = 1;\n' >src/app.ts
+  git add -f .env .pomiar src
+  git commit -qm "przejęte repo"
+  git push -q origin HEAD:main
+  git checkout -q -b adopt/adaptacja
+  git rm -q -r .env .pomiar
+  mkdir -p .github/workflows .claude/roles/worker scripts
+  printf '# AGENTS.md\n\n## Lovable\n\nBez publikacji bez decyzji właściciela.\n' >AGENTS.md
+  printf '@AGENTS.md\n' >CLAUDE.md
+  printf 'name: SH\n' >.github/workflows/sh.yml
+  printf '{}\n' >.claude/roles/worker/settings.json
+  [ -f scripts/check-dod.sh ] || printf '#!/bin/bash\n' >scripts/check-dod.sh
+  yq -i --front-matter=process '.pochodzenie = "adopt" | .adopt.lovable = true' docs/konfiguracja.md
+  [ "${KOD:-0}" = 0 ] || printf 'export const app = 2;\n' >src/app.ts
+  git add -A
+  git commit -qm "adopt: adaptacja do procesu SH"
+  git push -q origin HEAD "HEAD:refs/pull/21/head"
+  jq --arg r "$R" --arg s "$(git rev-parse HEAD)" '. + [{repo:$r, number:21, title:"adopt: adaptacja do procesu SH", state:"OPEN",
+    headRefName:"adopt/adaptacja", headRefOid:$s, closingIssuesReferences:[], url:"https://github.com/\($r)/pull/21",
+    createdAt:"2026-11-12T21:30:00Z", comments:[], statusCheckRollup:[]}]' "$GH_ATRAPA/prs.json" >"$T/x" && mv "$T/x" "$GH_ATRAPA/prs.json"
+  git checkout -q main
+}
+
+@test "review adaptacji: PR z galezi adopt/adaptacja to review z kryteriami adaptacji i faktami shctl" {
+  zwykle_codex
+  yq -i --front-matter=process '.review.ryzyko.silnik = "codex"' docs/konfiguracja.md
+  git commit -qam "konfiguracja review" && git push -q origin HEAD:main
+  KOD=1 pr_adaptacji
+  wynik_codex FAIL '[{"waga":"krytyczne","plik":"src/app.ts","linia":1,"opis":"zmiana kodu aplikacji"}]'
+  run --separate-stderr "$SHCTL" review run 21 --json
+  echo "$output $stderr"
+  [ "$status" -eq 0 ]
+  [ "$(jq -r '.wynik.etap, .wynik.nr, .wynik.werdykt' <<<"$output" | tr '\n' ' ')" = "adaptacja null FAIL " ]
+  grep -q '^- Tryb review: adaptacja$' "$CODEX_ATRAPA/prompt"
+  grep -q 'sekcji „Review adaptacji” skilla' "$CODEX_ATRAPA/prompt"
+  grep -q '^### Review adaptacji$' "$CODEX_ATRAPA/prompt"
+  grep -q '^- Iteracja: 1$' "$CODEX_ATRAPA/prompt"
+  grep -q '^### Fakty shctl (adaptacja)$' "$CODEX_ATRAPA/prompt"
+  grep -qF '  - `src/app.ts`' "$CODEX_ATRAPA/prompt"
+  ! grep -qF '  - `AGENTS.md`' "$CODEX_ATRAPA/prompt"
+  grep -q '^- Pliki usunięte (2; ' "$CODEX_ATRAPA/prompt"
+  grep -qF '  - `.env`' "$CODEX_ATRAPA/prompt"
+  grep -q 'adopt.lovable w docs/konfiguracja.md: true; sekcja „## Lovable” w AGENTS.md: tak' "$CODEX_ATRAPA/prompt"
+  ! grep -q 'DoD etapu' "$CODEX_ATRAPA/prompt"
+  grep -q '^tab create.*--label review:demo:adaptacja' "$HERDR_ATRAPA/calls"
+  komentarze 21 | grep -q '^## Review Codex: FAIL'
+  [ ! -e "$SH_DIR/wt/demo/review-adaptacja" ]
+
+  # Poprawka: nowy commit bez zmiany kodu, iteracja 2 z diffem od poprzedniego review.
+  git checkout -q adopt/adaptacja
+  git checkout -q main -- src/app.ts
+  git commit -qm "adopt: bez zmian w src"
+  git push -q origin HEAD "HEAD:refs/pull/21/head" --force
+  jq --arg s "$(git rev-parse HEAD)" 'map(if .number == 21 then .headRefOid = $s else . end)' "$GH_ATRAPA/prs.json" >"$T/x" && mv "$T/x" "$GH_ATRAPA/prs.json"
+  git checkout -q main
+  wynik_codex PASS '[]'
+  run --separate-stderr "$SHCTL" review run 21 --json
+  echo "$output $stderr"
+  [ "$status" -eq 0 ]
+  [ "$(jq -r .wynik.werdykt <<<"$output")" = PASS ]
+  grep -q '^- Iteracja: 2$' "$CODEX_ATRAPA/prompt"
+  grep -q 'Pliki dodane albo zmienione spoza listy procesu (kod aplikacji?):$' "$CODEX_ATRAPA/prompt"
+  grep -A1 'spoza listy procesu' "$CODEX_ATRAPA/prompt" | grep -qx '  brak'
+}
+
 @test "review: PR bez zadania i etapu to odmowa" {
   jq 'map(if .number == 20 then .closingIssuesReferences = [] | .headRefName = "inna/galaz" else . end)' "$GH_ATRAPA/prs.json" >"$T/x" && mv "$T/x" "$GH_ATRAPA/prs.json"
   run --separate-stderr "$SHCTL" review run 20

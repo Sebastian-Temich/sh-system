@@ -179,7 +179,9 @@ stage iter ETAP: po FAIL review etapu podbija iteracja w DoD.md i ustawia in-pro
 gałąź stage/ETAP frontmattera nie zmienia). Wymaga otwartego PR z gałęzi stage/ETAP i FAIL dla jego
 bieżącego commita. Etapy 00-intake, 04-plan, 06-zadania: najwyżej jedna iteracja poprawek, FAIL w
 iteracji 2 otwiera eskalację. wydanie: eskalacja po FAIL w iteracji 3. 08-qa nie ma review: kod 4.
-Powtórka dla tego samego review nic nie zmienia.
+Powtórka dla tego samego review nic nie zmienia. Projekt przejęty przed merge'em analizy: DoD.md
+00-analiza jest tylko w worktree wt/NAZWA/stage-00-analiza, więc start, review, iter i escalate
+zmieniają go tam (commit na gałęzi stage/00-analiza).
 ```
 
 ## decision
@@ -424,7 +426,10 @@ Użycie: shctl review run PR [--timeout SEKUNDY]
 
 Niezależne review w świeżej sesji (skill sh-review), jedno naraz dla PR. PR z Closes #NR albo
 gałęzi task/NR- to review zadania; PR z gałęzi stage/ETAP to review etapu (DoD.md etapu, iteracja
-z DoD.md na main). stage/08-qa: kod 4 (raport QA bez review, merge po zielonym CI).
+z DoD.md na main). stage/08-qa: kod 4 (raport QA bez review, merge po zielonym CI). PR z gałęzi
+adopt/adaptacja (shctl adopt adaptacja) to review adaptacji: etap „adaptacja” bez DoD, kryteria
+skilla („Review adaptacji”), fakty shctl w prompcie (pliki spoza listy procesu, usunięte, brakujące
+pliki procesu, Lovable), iteracja 1 + wcześniejsze review w PR.
 
 Silnik według ryzyka PR (/Users/Shared/sh/konfiguracja.md, klucz review; projekt nadpisuje pole po
 polu w docs/konfiguracja.md):

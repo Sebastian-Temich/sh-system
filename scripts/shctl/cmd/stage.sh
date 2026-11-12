@@ -1,6 +1,7 @@
 # shctl stage AKCJA ETAP [--notatka "..."]: jedna komenda etapu, AKCJA to start, review, iter, done
 # albo escalate. Status i iteracja są we frontmatterze DoD.md na main; gałąź stage/ETAP go nie zmienia,
-# więc PR etapu nie ma konfliktu z main. Pominięcie etapu: status pominiety i decyzja w DoD.md
+# więc PR etapu nie ma konfliktu z main (wyjątek: 00-analiza projektu przejętego przed merge'em
+# analizy, DoD tylko w worktree stage-00-analiza, kat_docs w lib/projekt.sh). Pominięcie etapu: status pominiety i decyzja w DoD.md
 # (shctl decision add); check-dod.sh odrzuca pominiety bez decyzji.
 # shellcheck shell=bash
 
@@ -33,7 +34,7 @@ stage_iter() {
     die "$E_WYKONANIE" "gh pr list nie działa dla $SLUG"
   [ -n "$pr" ] || die "$E_ODMOWA" "brak otwartego PR z gałęzi stage/$etap"
   prn="$(jq -r .number <<<"$pr")" head="$(jq -r .headRefOid <<<"$pr")" stan="$(stan_etapu "$etap")"
-  obecna="$(fm_get "$ROOT/docs/$etap/DoD.md" iteracja)"
+  obecna="$(fm_get "$(dod "$etap")" iteracja)"
   case "$obecna" in "" | *[!0-9]*) obecna=0 ;; esac
   if [ "$(jq -r '.iter_review // ""' <<<"$stan")" = "$head" ]; then # powtórka dla tego samego review
     cel="$(jq -r .iter_cel <<<"$stan")"
@@ -60,8 +61,8 @@ stage_iter() {
   if [ "$DRY" -eq 0 ]; then
     ostrzez_gdy_nie_main
     stan_etapu_zapisz "$etap" "$(jq -nc --arg h "$head" --argjson c "$cel" '{iter_review:$h, iter_cel:$c}')"
-    yq -i --front-matter=process ".iteracja = $cel" "$ROOT/docs/$etap/DoD.md"
-    case "$(fm_get "$ROOT/docs/$etap/DoD.md" status)" in review | in-progress) fm_set "$ROOT/docs/$etap/DoD.md" status in-progress ;; esac
+    yq -i --front-matter=process ".iteracja = $cel" "$(dod "$etap")"
+    case "$(fm_get "$(dod "$etap")" status)" in review | in-progress) fm_set "$(dod "$etap")" status in-progress ;; esac
     dopisz_dziennik "- $(dzis) \`$etap\`: iteracja $cel (FAIL review PR #$prn)"
     odswiez_projekt || true
   fi
@@ -90,14 +91,14 @@ komenda_main() {
   fi
   znajdz_projekt
   sprawdz_etap "$etap"
-  obecny="$(fm_get "$ROOT/docs/$etap/DoD.md" status)"
+  obecny="$(fm_get "$(dod "$etap")" status)"
   cel="$(printf '%s\n' $PRZEJSCIA | sed -n "s/^$akcja:$obecny=//p")"
   [ -n "$cel" ] || die "$E_ODMOWA" "stage $akcja niedozwolone dla $etap w statusie $obecny"
   [ "$akcja" != done ] || [ "$obecny" = done ] || sprawdz_dod_po_zmianie "$etap"
   [ "$cel" = "$obecny" ] || zmiana=1
   if [ "$DRY" -eq 0 ] && { [ "$zmiana" -eq 1 ] || [ -n "$notatka" ]; }; then
     ostrzez_gdy_nie_main
-    [ "$zmiana" -eq 0 ] || fm_set "$ROOT/docs/$etap/DoD.md" status "$cel"
+    [ "$zmiana" -eq 0 ] || fm_set "$(dod "$etap")" status "$cel"
     linia="- $(dzis) \`$etap\`: $cel"
     dopisz_dziennik "$linia${notatka:+, $(komorka "$notatka")}"
   fi

@@ -23,7 +23,7 @@ case "\$1 \$2" in
   "pr create") echo "https://github.com/acme/app/pull/7" ;;
   "pr view")
     case "\$*" in
-      *"--json comments"*) echo '{"comments":[]}' ;;
+      *"--json comments"*) cat "$T/pr-komentarze" 2>/dev/null || echo '{"comments":[]}' ;;
       *) echo '{"number":7,"title":"00-analiza: raport","state":"OPEN","headRefName":"stage/00-analiza","headRefOid":"abc1234","closingIssuesReferences":[],"url":"https://github.com/acme/app/pull/7"}' ;;
     esac ;;
   "label create" | "variable set") ;;
@@ -190,6 +190,39 @@ analiza_na_main() {
   cd "$T"
   run --separate-stderr "$SHCTL" review run 7 --dry-run --json --projekt app
   [ "$status" -eq 0 ] || { echo "$output $stderr"; false; }
+}
+
+@test "przed merge'em analizy: stage iter i escalate 00-analiza zapisuja DoD i eskalacje w worktree analizy" {
+  "$SHCTL" adopt acme/app --nazwa app >/dev/null
+  [ ! -e "$SH_DIR/projekty/app/docs" ]
+  # Otwarty PR analizy z wynikiem review FAIL dla bieżącego commita.
+  echo '{"number":7,"headRefOid":"abc1234"}' >"$T/pr-otwarty"
+  dane="$(printf '{"werdykt":"FAIL","podsumowanie":"brak RLS","zgloszenia":[{"waga":"istotne","plik":"","linia":0,"opis":"x"}]}' | base64 | tr -d '\n')"
+  jq -nc --arg b "## Review Codex: FAIL
+<!-- shctl:review head=abc1234 werdykt=FAIL -->
+<!-- shctl:review-dane $dane -->" '{comments:[{body:$b}]}' >"$T/pr-komentarze"
+  run --separate-stderr "$SHCTL" stage iter 00-analiza --projekt app --json
+  [ "$status" -eq 0 ] || { echo "$output $stderr"; false; }
+  jq -e '.wynik.iteracja == 2 and (.wynik.eskalowano | not)' <<<"$output"
+  [ "$(fm "$(WT)/docs/00-analiza/DoD.md" iteracja)" = 2 ]
+  [ ! -e "$SH_DIR/projekty/app/docs" ]
+
+  # Eskalacja etapu z głównej kopii (--projekt) i z worktree analizy: jeden katalog eskalacji.
+  run --separate-stderr "$SHCTL" escalate --projekt app --dotyczy 00-analiza --powod "sprzeczne wymagania" \
+    --sytuacja "raport i kod się różnią" --sprawdzono "raport, src/" --potrzebne "decyzja" --json
+  [ "$status" -eq 0 ] || { echo "$output $stderr"; false; }
+  E="$(WT)/docs/07-realizacja/escalations"
+  [ -f "$E/E-001.md" ]
+  grep -q '^Etap: 00-analiza' "$E/E-001.md"
+  [ "$(fm "$(WT)/docs/00-analiza/DoD.md" status)" = escalated ]
+  [ ! -e "$SH_DIR/projekty/app/docs" ]
+  cd "$(WT)"
+  run --separate-stderr "$SHCTL" escalate --dotyczy 00-analiza --powod "dostęp" --sytuacja s --sprawdzono c --potrzebne p --json
+  [ "$status" -eq 0 ] || { echo "$output $stderr"; false; }
+  [ -f "$E/E-002.md" ]
+  run --separate-stderr "$SHCTL" escalate close E-001 --odpowiedz "kierunek A" --json
+  [ "$status" -eq 0 ] || { echo "$output $stderr"; false; }
+  [ "$(fm "$E/E-001.md" status)" = zamknieta ]
 }
 
 @test "etapy projektu przejetego zaczynaja sie od 00-analiza" {

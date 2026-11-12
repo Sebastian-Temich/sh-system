@@ -37,6 +37,33 @@ konfig_adopt() {
   printf '%s' "$k"
 }
 
+# Katalog z docs/ procesu: ROOT, a dla projektu przejętego przed merge'em analizy worktree etapu
+# 00-analiza. Tam idą DoD (status, iteracja) i eskalacje; commit na gałęzi stage/00-analiza robi
+# orkiestrator, a merge analizy przenosi je na main.
+kat_docs() {
+  local k
+  if [ ! -f "$ROOT/docs/konfiguracja.md" ] && k="$(konfig_adopt "$PROJEKT")"; then
+    dirname "$(dirname "$k")"
+  else
+    printf '%s' "$ROOT"
+  fi
+}
+
+# Ścieżka DoD.md etapu (kat_docs).
+dod() { printf '%s/docs/%s/DoD.md' "$(kat_docs)" "$1"; }
+
+# Pliki procesu, które adaptacja bierze z szablonu (biała lista: nic z kodu aplikacji). CI szablonu,
+# .gitignore, README, .env.example i konfiguracja pnpm zostają po stronie projektu; istniejące CI
+# działa dalej, a obok dochodzi .github/workflows/sh.yml (shctl adopt adaptacja, review adaptacji).
+plik_procesu() {
+  case "$1" in
+    scripts/tests/*) return 1 ;;
+    AGENTS.md | CLAUDE.md | CHANGELOG.md | docs/* | scripts/* | .claude/roles/* | \
+      .github/PULL_REQUEST_TEMPLATE.md | .github/ISSUE_TEMPLATE/*) return 0 ;;
+  esac
+  return 1
+}
+
 # Ustawia PROJEKT i ROOT: z --projekt albo z bieżącego katalogu (także worktree).
 znajdz_projekt() {
   local d wspolny
@@ -117,7 +144,7 @@ sprawdz_etap() {
     *" $1 "*) ;;
     *) die "$E_UZYCIE" "nieznany etap: '$1' (dozwolone: $ETAPY)" ;;
   esac
-  [ -f "$ROOT/docs/$1/DoD.md" ] || die "$E_BRAK" "brak docs/$1/DoD.md"
+  [ -f "$(dod "$1")" ] || die "$E_BRAK" "brak docs/$1/DoD.md"
 }
 
 # Pliki wspólne aktualizuje orkiestrator na main (proces.md, „Zasady stałe”).
@@ -164,8 +191,8 @@ opis_etapu() {
     return
   fi
   for e in $ETAPY; do
-    [ -f "$ROOT/docs/$e/DoD.md" ] || continue
-    s="$(fm_get "$ROOT/docs/$e/DoD.md" status)"
+    [ -f "$(dod "$e")" ] || continue
+    s="$(fm_get "$(dod "$e")" status)"
     case "$s" in
       in-progress | review | escalated) aktywne="$aktywne- \`$e\`: $s"$'\n' ;;
       todo) [ -n "$nastepny" ] || nastepny="- \`$e\`: todo (następny)" ;;
@@ -186,6 +213,8 @@ odswiez_etap() { odswiez_projekt || true; }
 # Wpis do „Dziennik etapów” w docs/historia.md; ten sam wpis nie powtarza się, „(brak)” znika.
 dopisz_dziennik() {
   local linia="$1" obecne h
+  # Przed merge'em analizy projekt przejęty nie ma historia.md (dochodzi z adaptacją); stan jest w DoD.
+  [ "$(kat_docs)" = "$ROOT" ] || return 0
   h="$(plik_historii "$ROOT")"
   [ -f "$h" ] || printf '# Historia projektu\n\n## Punkt przekazania\n\n(brak)\n\n## Dziennik etapów\n\n(brak)\n' >"$h"
   obecne="$(czytaj_sekcje "$h" "Dziennik etapów" | grep -vxF '(brak)' || true)"
@@ -195,7 +224,7 @@ dopisz_dziennik() {
 }
 
 zmien_status_etapu() {
-  fm_set "$ROOT/docs/$1/DoD.md" status "$2"
+  fm_set "$(dod "$1")" status "$2"
   odswiez_etap
 }
 

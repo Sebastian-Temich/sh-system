@@ -2,7 +2,10 @@ Użycie: shctl review run PR [--timeout SEKUNDY]
 
 Niezależne review w świeżej sesji (skill sh-review), jedno naraz dla PR. PR z Closes #NR albo
 gałęzi task/NR- to review zadania; PR z gałęzi stage/ETAP to review etapu (DoD.md etapu, iteracja
-z DoD.md na main). stage/08-qa: kod 4 (raport QA bez review, merge po zielonym CI).
+z DoD.md na main). stage/08-qa: kod 4 (raport QA bez review, merge po zielonym CI). PR z gałęzi
+adopt/adaptacja (shctl adopt adaptacja) to review adaptacji: etap „adaptacja” bez DoD, kryteria
+skilla („Review adaptacji”), fakty shctl w prompcie (pliki spoza listy procesu, usunięte, brakujące
+pliki procesu, Lovable), iteracja 1 + wcześniejsze review w PR.
 
 Silnik według ryzyka PR (/Users/Shared/sh/konfiguracja.md, klucz review; projekt nadpisuje pole po
 polu w docs/konfiguracja.md):

@@ -19,17 +19,19 @@
 
 Z_WORKTREE=""
 
-# Pliki eskalacji zawsze w głównej kopii projektu (katalog wspólnego .git), na gałęzi main.
+# Pliki eskalacji zawsze w głównej kopii projektu (katalog wspólnego .git), na gałęzi main. Wyjątek:
+# projekt przejęty przed merge'em analizy, gdzie docs/ są tylko w worktree 00-analiza (kat_docs).
 uzyj_glownej_kopii() {
   local w g
   w="$(git -C "$ROOT" rev-parse --path-format=absolute --git-common-dir 2>/dev/null || true)"
   [ -n "$w" ] || return 0
   w="$(dirname "$w")"
   if [ "$w" != "$ROOT" ]; then
-    [ -f "$w/docs/konfiguracja.md" ] || die "$E_BRAK" "brak głównej kopii projektu $w"
+    [ -f "$w/docs/konfiguracja.md" ] || konfig_adopt "$PROJEKT" >/dev/null || die "$E_BRAK" "brak głównej kopii projektu $w"
     Z_WORKTREE="$ROOT"
     ROOT="$w"
     KONFIG="$ROOT/docs/konfiguracja.md"
+    [ -f "$KONFIG" ] || KONFIG="$(konfig_adopt "$PROJEKT")"
     ST="$(plik_projektu "$ROOT")"
     g="$(git -C "$ROOT" symbolic-ref --short -q HEAD 2>/dev/null || true)"
     [ "$g" = main ] || die "$E_ODMOWA" "główna kopia $ROOT jest na gałęzi ${g:-(odłączony HEAD)}, nie na main; eskalację zapisuje orkiestrator na main"
@@ -41,7 +43,7 @@ blokada_eskalacji() {
   zablokuj "$(git -C "$ROOT" rev-parse --path-format=absolute --git-common-dir)/shctl-escalate.lock"
 }
 
-kat_esk() { echo "$ROOT/docs/07-realizacja/escalations"; }
+kat_esk() { echo "$(kat_docs)/docs/07-realizacja/escalations"; }
 
 kolejny_id() {
   local f n max=0
@@ -89,7 +91,10 @@ status_z_etykiet() {
 utworz_plik() {
   local plik="$1" id="$2" dotyczy="$3" powod="$4" potrzebne="$5" opcje="$6" priorytet="$7" poprz="$8" typ="$9"
   local sytuacja="${10}" sprawdzono="${11}"
-  local szablon="$ROOT/docs/_szablony/eskalacja.md" linia_celu lista="" o rest t
+  local szablon linia_celu lista="" o rest t
+  szablon="$(kat_docs)/docs/_szablony/eskalacja.md"
+  # Przed adaptacją projekt przejęty nie ma docs/_szablony: kopia szablonu z sh-system.
+  [ -f "$szablon" ] || [ "$(kat_docs)" = "$ROOT" ] || szablon="$SHCTL_DIR/../../templates/adopt/eskalacja.md"
   [ -f "$szablon" ] || die "$E_BRAK" "brak docs/_szablony/eskalacja.md"
   case "$dotyczy" in
     \#*) linia_celu="Zadanie: $dotyczy" ;;
@@ -195,7 +200,7 @@ otworz() {
         poprz="$(status_z_etykiet "$nr" "$slug")" || die "$E_WYKONANIE" "nie można odczytać issue #$nr"
         poprz="${poprz#status:}"
       else
-        poprz="$(fm_get "$ROOT/docs/$etap/DoD.md" status)"
+        poprz="$(fm_get "$(dod "$etap")" status)"
         [ "$poprz" != escalated ] || poprz=in-progress
       fi
       utworz_plik "$plik" "$id" "$dotyczy" "$powod" "$potrzebne" "$opcje" "$priorytet" "$poprz" "$typ" "$sytuacja" "$sprawdzono"
@@ -215,7 +220,7 @@ otworz() {
           die "$E_WYKONANIE" "nie można ustawić etykiety na #$nr"
       fi
     else
-      case "$(fm_get "$ROOT/docs/$etap/DoD.md" status)" in
+      case "$(fm_get "$(dod "$etap")" status)" in
         done | pominiety) uwaga "etap $etap jest zamknięty, status bez zmian" ;;
         *) zmien_status_etapu "$etap" escalated ;;
       esac
@@ -303,7 +308,7 @@ zamknij() {
         *)
           etap="$dotyczy"
           cel="${poprz:-in-progress}"
-          if [ "$(fm_get "$ROOT/docs/$etap/DoD.md" status)" = escalated ]; then
+          if [ "$(fm_get "$(dod "$etap")" status)" = escalated ]; then
             zmien_status_etapu "$etap" "$cel"
           fi
           ;;

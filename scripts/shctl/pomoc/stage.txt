@@ -18,4 +18,6 @@ stage iter ETAP: po FAIL review etapu podbija iteracja w DoD.md i ustawia in-pro
 gałąź stage/ETAP frontmattera nie zmienia). Wymaga otwartego PR z gałęzi stage/ETAP i FAIL dla jego
 bieżącego commita. Etapy 00-intake, 04-plan, 06-zadania: najwyżej jedna iteracja poprawek, FAIL w
 iteracji 2 otwiera eskalację. wydanie: eskalacja po FAIL w iteracji 3. 08-qa nie ma review: kod 4.
-Powtórka dla tego samego review nic nie zmienia.
+Powtórka dla tego samego review nic nie zmienia. Projekt przejęty przed merge'em analizy: DoD.md
+00-analiza jest tylko w worktree wt/NAZWA/stage-00-analiza, więc start, review, iter i escalate
+zmieniają go tam (commit na gałęzi stage/00-analiza).
