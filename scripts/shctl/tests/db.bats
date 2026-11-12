@@ -59,6 +59,7 @@ MOCK
   grep -qx 'port = 55122' "$T/config.kopia"
   grep -qx 'shadow_port = 55128' "$T/config.kopia"
   grep -qx 'inspector_port = 55125' "$T/config.kopia"
+  awk '/^\[analytics\]/{w=1;next} /^\[/{w=0} w' "$T/config.kopia" | grep -qx 'enabled = false'
   [ "$(cat "$T/kopia.migracje")" = "$P/supabase/migrations" ]
   ! grep -qE '^\.env|^\.temp' "$T/kopia.ls" || false
   grep -qx 'seed.sql' "$T/kopia.ls"

@@ -545,7 +545,7 @@ status    adres API, DB, Studio, Mail i lokalne klucze anon i service_role; dzia
 inaczej główna kopia /Users/Shared/sh/projekty/NAZWA. Główna kopia i worktree dzielą jeden stack.
 Porty: blok projektu z /Users/Shared/sh/porty.md (API X21, DB X22, Studio X23, Mail X24 ...). CLI
 dostaje kopię roboczą /Users/Shared/sh/stan/db/NAZWA/supabase: config.toml z portami bloku i
-project_id = NAZWA, reszta supabase/ jako dowiązania. Pliki projektu zostają bez zmian.
+project_id = NAZWA, bez analytics (logflare i vector), reszta supabase/ jako dowiązania. Pliki projektu zostają bez zmian.
 
 Odmowa (kod 4): supabase/ powiązany z chmurą (supabase/.temp/project-ref po supabase link), adres API
 spoza bloku projektu, działający stack innego projektu SH (jeden naraz), zajęty port bloku, trwająca

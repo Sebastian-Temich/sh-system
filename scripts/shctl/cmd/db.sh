@@ -3,7 +3,7 @@
 # git push), więc worker sprawdza migracje i pgTAP na żywej bazie tą komendą; CI zostaje drugim
 # sprawdzeniem. Tylko baza lokalna:
 # - CLI dostaje kopię roboczą $SH_DIR/stan/db/NAZWA/supabase: config.toml z portami bloku projektu w
-#   porty.md i project_id = NAZWA, reszta katalogu supabase/ jako dowiązania, bez .temp (powiązanie z
+#   porty.md, project_id = NAZWA i bez analytics, reszta katalogu supabase/ jako dowiązania, bez .temp (powiązanie z
 #   chmurą) i plików .env; pliki repo zostają nietknięte;
 # - odmowa, gdy supabase/ jest powiązany z projektem w chmurze (supabase/.temp/project-ref), gdy projekt
 #   nie ma bloku w porty.md, albo gdy adres API nie jest lokalny;
@@ -58,6 +58,9 @@ db_kopia() {
   done
   cp "$DB_ZRODLO/supabase/config.toml" "$DB_KAT/supabase/config.toml"
   porty_do_configu "$DB_KAT" "$PROJEKT" "$DB_BAZA"
+  # Logflare i vector (logi) na macOS nie dochodzą do stanu healthy i przerywają start (test
+  # sh-test-adopt); agentom niepotrzebne.
+  toml_ustaw "$DB_KAT/supabase/config.toml" analytics enabled false
 }
 
 # Supabase CLI bez zmiennych środowiska sesji: żadnych tokenów i adresów chmury.
