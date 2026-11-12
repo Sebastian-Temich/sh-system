@@ -27,6 +27,16 @@ ROOT=""
 ST=""
 KONFIG=""
 
+# Projekt przejęty przed merge'em PR analizy: main nie ma jeszcze docs/, a konfiguracja i DoD etapu
+# są tylko w worktree /Users/Shared/sh/wt/NAZWA/stage-00-analiza (shctl adopt). Wypisuje ścieżkę
+# konfiguracji albo kończy się kodem 1.
+konfig_adopt() {
+  local k="$SH_DIR/wt/$1/stage-00-analiza/docs/konfiguracja.md"
+  [ -n "$1" ] && [ -f "$k" ] || return 1
+  [ "$(yq --front-matter=extract '.pochodzenie // ""' "$k" 2>/dev/null || true)" = adopt ] || return 1
+  printf '%s' "$k"
+}
+
 # Ustawia PROJEKT i ROOT: z --projekt albo z bieżącego katalogu (także worktree).
 znajdz_projekt() {
   local d wspolny
@@ -44,6 +54,7 @@ znajdz_projekt() {
     if [ -n "$wspolny" ]; then PROJEKT="$(basename "$(dirname "$wspolny")")"; else PROJEKT="$(basename "$ROOT")"; fi
   fi
   KONFIG="$ROOT/docs/konfiguracja.md"
+  [ -f "$KONFIG" ] || KONFIG="$(konfig_adopt "$PROJEKT")" || KONFIG="$ROOT/docs/konfiguracja.md"
   ST="$(plik_projektu "$ROOT")"
   [ -f "$KONFIG" ] || die "$E_BRAK" "brak $KONFIG"
   wymagaj yq jq git

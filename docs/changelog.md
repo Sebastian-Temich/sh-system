@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-11-12 (SH-lite B1 krok 2b: poprawki z testu na sh-test-adopt)
+
+- `shctl pr check` i `review run` (i `--projekt`) w projekcie przejętym przed merge'em PR analizy biorą konfigurację i `DoD.md` etapu z worktree `wt/NAZWA/stage-00-analiza` (`konfig_adopt`); wcześniej kończyły się kodem 3 „brak docs/konfiguracja.md”.
+- `wykryj.sh`: README i `index.html` z listy plików repo, bez podwójnego `README.md`/`readme.md` na macOS.
+
 ## 2026-11-12 (SH-lite B1 krok 2: tryb adopt dla istniejących projektów)
 
 - Nowa komenda `shctl adopt OWNER/REPO --nazwa NAZWA [--tryb M|S] [--limit-analizy MIN]`: pełny klon bez plików env i bez dostępu do produkcji, worktree `wt/NAZWA/stage-00-analiza` ze szkieletem etapu `00-analiza` (`pochodzenie: adopt` i blok `adopt` w `konfiguracja.md`, `decyzje.md`, DoD, szablon raportu, karta funkcji w stanie obecnym, `wykryj.json`), blok portów, klon docs/ w Obsidianie, skrzynka. Widoczności i ustawień repo nie zmienia. Limit analizy: `adopt.limit_analizy_min` w `/Users/Shared/sh/konfiguracja.md` (domyślnie 120 min).

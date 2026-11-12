@@ -21,6 +21,11 @@ case "\$1 \$2" in
   "repo edit") case "\$*" in *"--visibility public"*) echo PUBLIC >"$T/widocznosc" ;; esac ;;
   "pr list") cat "$T/pr-otwarty" 2>/dev/null || true ;;
   "pr create") echo "https://github.com/acme/app/pull/7" ;;
+  "pr view")
+    case "\$*" in
+      *"--json comments"*) echo '{"comments":[]}' ;;
+      *) echo '{"number":7,"title":"00-analiza: raport","state":"OPEN","headRefName":"stage/00-analiza","headRefOid":"abc1234","closingIssuesReferences":[],"url":"https://github.com/acme/app/pull/7"}' ;;
+    esac ;;
   "label create" | "variable set") ;;
   "auth git-credential") printf 'username=x-access-token\npassword=atrapa\n' ;;
 esac
@@ -171,6 +176,18 @@ analiza_na_main() {
   git -C "$(WT)" commit -qm "00-analiza: raport"
   git -C "$(WT)" push -q origin HEAD:main
   git -C "$SH_DIR/projekty/app" pull -q --ff-only
+}
+
+@test "przed merge'em analizy: review run i --projekt znajduja konfiguracje i DoD w worktree 00-analiza" {
+  "$SHCTL" adopt acme/app --nazwa app >/dev/null
+  [ ! -e "$SH_DIR/projekty/app/docs/konfiguracja.md" ]
+  cd "$(WT)"
+  run --separate-stderr "$SHCTL" review run 7 --dry-run --json
+  [ "$status" -eq 0 ] || { echo "$output $stderr"; false; }
+  jq -e '.ok and (.wynik | tostring | test("00-analiza"))' <<<"$output"
+  cd "$T"
+  run --separate-stderr "$SHCTL" review run 7 --dry-run --json --projekt app
+  [ "$status" -eq 0 ] || { echo "$output $stderr"; false; }
 }
 
 @test "etapy projektu przejetego zaczynaja sie od 00-analiza" {
