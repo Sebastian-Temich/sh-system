@@ -1,5 +1,5 @@
 # shctl review run PR [--timeout SEKUNDY]: review PR w świeżej sesji Claude albo Codexa, w czystym
-# worktree bez plików env. PR zadania (Closes #NR, task/NR-) albo PR etapu (gałąź stage/ETAP). Silnik
+# worktree bez plików env (odmowa tylko, gdy PR dodaje lub zmienia .env*). PR zadania (Closes #NR, task/NR-) albo PR etapu (gałąź stage/ETAP). Silnik
 # wybiera konfiguracja review (zwykle albo ryzyko, docs/shctl.md, „review”). Wynik idzie
 # komentarzem do PR ze znacznikiem commita; powtórka dla tego samego commita go zwraca.
 # shellcheck shell=bash
@@ -176,6 +176,12 @@ ocen_pr() {
          (test("^docs/") or test("\\.md$")) and (test("^(AGENTS|CLAUDE)\\.md$|^\\.claude/|^\\.github/") | not))),
        poziom: (if ($pw | length) > 0 then "ryzyko" else "zwykle" end), powody: $pw,
        linie: ($a + $d), dodane: $a, usuniete: $d, pliki: ($f | length)}'
+}
+
+# Pliki env (.env*, poza .env.example) dodane albo zmienione w PR (bez usuniętych), do 3 ścieżek.
+env_w_pr() {
+  git -C "$ROOT_G" diff --name-only --no-renames --diff-filter=d "$1" "$2" |
+    grep -E '(^|/)\.env[^/]*$' | grep -vE '(^|/)\.env\.example$' | head -3 || true
 }
 
 # --- Poprzednie review i prompt ---------------------------------------------------------------
@@ -611,6 +617,10 @@ review_run() {
         i="$(wstrzymanie_silnika "$(jq -r .silnik <<<"$PROFIL")")"
         obsluz_limit "$(jq -r .silnik <<<"$PROFIL")" "$(odnowienie_z "$i" || true)" "$LIMITY: $i" "$prn" "$url"
       fi
+      # Odmowa tylko, gdy PR dodaje albo zmienia plik env (poza .env.example). Plik env śledzony
+      # w repo już przed PR (przejęty projekt) nie blokuje review: znika z worktree reviewera.
+      i="$(env_w_pr "$baza" "$head")"
+      [ -z "$i" ] || die "$E_ODMOWA" "PR #$prn dodaje albo zmienia pliki env ($(printf '%s' "$i" | paste -sd, -)); review bez sekretów niemożliwe"
       herdr_dziala
       sprawdz_wolny_katalog "$kat"
       # Czysty worktree na commicie PR: bez plików env, bez node_modules.
@@ -619,8 +629,12 @@ review_run() {
         git -C "$ROOT_G" worktree remove --force "$kat" || die "$E_WYKONANIE" "nie można usunąć starego $kat"
       fi
       git -C "$ROOT_G" worktree add -q --detach "$kat" "$head" || die "$E_WYKONANIE" "git worktree add $kat nie powiódł się"
-      i="$(find "$kat" -name '.env*' ! -name .env.example ! -path '*/.git/*' | head -3)"
-      [ -z "$i" ] || die "$E_ODMOWA" "PR #$prn zawiera pliki env ($(printf '%s' "$i" | sed "s#$kat/##" | paste -sd, -)); review bez sekretów niemożliwe"
+      i="$(find "$kat" -name '.env*' ! -name .env.example ! -type d ! -path '*/.git/*' | sed "s#^$kat/##")"
+      if [ -n "$i" ]; then
+        find "$kat" -name '.env*' ! -name .env.example ! -type d ! -path '*/.git/*' -delete ||
+          die "$E_WYKONANIE" "nie można usunąć plików env z $kat"
+        info "PR #$prn: pliki env śledzone w repo, niezmienione w PR, usunięte z worktree review ($(printf '%s' "$i" | paste -sd, -))"
+      fi
 
       prompt="$dir/prompt.md"
       zbuduj_prompt "$pr" "$j" "$baza" "$etap" "$iter" "$poprz" "$dost" "$ocena" >"$prompt"

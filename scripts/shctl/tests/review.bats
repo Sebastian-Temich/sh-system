@@ -171,6 +171,51 @@ nowy_commit() {
   [ ! -e "$SH_DIR/wt/demo/review-12" ]
 }
 
+@test "review: plik env sledzony na main, niezmieniony w PR, nie blokuje review i znika z worktree" {
+  zwykle_codex
+  wynik_codex PASS '[]'
+  wt="$SH_DIR/wt/demo/12"
+  # Przejęty projekt: .env i supabase/.env w historii main, zanim powstał PR.
+  mkdir -p "$wt/supabase"
+  printf 'X=1\n' >"$wt/.env"
+  printf 'Y=2\n' >"$wt/supabase/.env"
+  printf 'X=\n' >"$wt/.env.example"
+  git -C "$wt" add -f .env supabase/.env .env.example
+  git -C "$wt" commit -qm "env z przejętego repo"
+  git -C "$wt" push -q origin HEAD:main --force
+  nowy_commit src/b.ts
+  run --separate-stderr "$SHCTL" review run 20 --json
+  echo "$output $stderr"
+  [ "$status" -eq 0 ]
+  [ "$(jq -r .wynik.werdykt <<<"$output")" = PASS ]
+  [ -s "$CODEX_ATRAPA/calls" ]
+  [ ! -s "$CODEX_ATRAPA/env-w-katalogu" ]
+  [ ! -e "$SH_DIR/wt/demo/review-12" ]
+}
+
+@test "review: PR zmieniajacy plik env sledzony na main to odmowa, usuniecie env nie" {
+  zwykle_codex
+  wynik_codex PASS '[]'
+  wt="$SH_DIR/wt/demo/12"
+  printf 'X=1\n' >"$wt/.env"
+  git -C "$wt" add -f .env
+  git -C "$wt" commit -qm "env z przejętego repo"
+  git -C "$wt" push -q origin HEAD:main --force
+  nowy_commit .env 'X=2'
+  run --separate-stderr "$SHCTL" review run 20
+  [ "$status" -eq 4 ]
+  [[ "$stderr" == *"zmienia pliki env (.env)"* ]] || false
+  [ ! -s "$CODEX_ATRAPA/calls" ]
+  git -C "$wt" rm -q .env
+  git -C "$wt" commit -qm "bez env"
+  git -C "$wt" push -q origin HEAD "HEAD:refs/pull/20/head" --force
+  jq --arg s "$(git -C "$wt" rev-parse HEAD)" 'map(if .number == 20 then .headRefOid = $s else . end)' "$GH_ATRAPA/prs.json" >"$T/x" && mv "$T/x" "$GH_ATRAPA/prs.json"
+  run --separate-stderr "$SHCTL" review run 20
+  echo "$output $stderr"
+  [ "$status" -eq 0 ]
+  [ -s "$CODEX_ATRAPA/calls" ]
+}
+
 @test "review --dry-run: bez etykiet, worktree i Codexa" {
   run --separate-stderr "$SHCTL" review run 20 --dry-run --json
   [ "$status" -eq 0 ]

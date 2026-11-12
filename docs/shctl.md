@@ -438,7 +438,7 @@ sekretów, CI lub uprawnień, diff powyżej progu. PR zadania tylko z docs/** i 
 CLAUDE.md, .claude/, .github/) dostaje „Review shctl: PASS” bez modelu.
 
 Kolejno: status:review na issue, ocena ryzyka i iteracji, czysty worktree
-/Users/Shared/sh/wt/NAZWA/review-NR bez plików env (.env* w PR: kod 4), panel review:NAZWA:NR,
+/Users/Shared/sh/wt/NAZWA/review-NR bez plików env (PR dodający lub zmieniający .env*, poza .env.example: kod 4; .env* już śledzone w repo są usuwane z worktree), panel review:NAZWA:NR,
 silnik tylko do odczytu (Codex: profil reviewer, -s read-only; Claude: claude -p z
 .claude/roles/reviewer/settings.json z main projektu), komentarz w PR z werdyktem, zgłoszeniami
 🔴🟡⚪ i metrykami, sprzątanie worktree i panelu. Prompt: skill sh-review, kontekst issue jako
