@@ -233,8 +233,13 @@ bramka_json() {
   [ "$gl" -eq 0 ] || [ "$(jq length <<<"$lista")" -gt 0 ] || lista='[{"regula":"nieznana","plik":"zob. gitleaks"}]'
   fakty="$(bash "$WYKRYJ" "$ROOT")" || die "$E_WYKONANIE" "wykryj.sh nie powiódł się"
   jq -nc --argjson g "$lista" --argjson f "$fakty" --arg raport "$([ -f "$ROOT/docs/00-analiza/raport.md" ] && grep -qi 'RLS' "$ROOT/docs/00-analiza/raport.md" && echo tak || echo nie)" '
-    {gitleaks: {znaleziska: ($g | length), lista: $g,
-       zalecenie: (if ($g | length) > 0 then "unieważnij każdy znaleziony sekret u dostawcy i wydaj nowy; historii nie przepisujemy" else null end)},
+    # Klucz anon Supabase (np. client.ts z Lovable) jest publiczny z założenia: gitleaks go zgłasza
+    # (reguła jwt), ale w miejscu klucza o roli anon według wykryj.sh znalezisko nie blokuje.
+    [$f.klucze[] | select(.rola == "anon") | "\(.plik):\(.linia)"] as $anon
+    | ($g | map(. + {klucz_anon: (("\(.plik):\(.linia)") as $k | $anon | index($k) != null)})) as $g
+    | ([$g[] | select(.klucz_anon | not)]) as $s
+    | {gitleaks: {znaleziska: ($s | length), klucze_anon: ([$g[] | select(.klucz_anon)] | length), lista: $g,
+       zalecenie: (if ($s | length) > 0 then "unieważnij każdy znaleziony sekret u dostawcy i wydaj nowy; historii nie przepisujemy" else null end)},
      rls: {bez_rls: $f.rls.bez_rls, przeglad_w_raporcie: ($raport == "tak")},
      dane_osobowe: $f.dane_osobowe, env_w_repo: $f.env_w_repo,
      service_role: [$f.klucze[] | select(.rola == "service_role")]}

@@ -129,7 +129,8 @@ workflow .github/workflows/sh.yml (check-dod, gitleaks). Plik projektu różny o
 prywatnym zmienna SH_RUNS_ON, gitleaks commitu adaptacji, check-dod, push i PR.
 
 bramka: przed upublicznieniem repo. gitleaks na całej historii (sekret = zalecenie unieważnienia u
-dostawcy, bez przepisywania historii), tabele public bez RLS w migracjach, przegląd RLS w raporcie
+dostawcy, bez przepisywania historii; znalezisko w miejscu klucza Supabase o roli anon jest
+oznaczone klucz_anon i nie blokuje), tabele public bez RLS w migracjach, przegląd RLS w raporcie
 analizy, dane osobowe w seedach i fixture'ach, pliki env i klucz service_role w repo. Blokada: kod 4.
 
 upublicznij: tylko z wierszem wlasciciel z „upublicz” w decyzje.md i po bramce bez blokad; gh repo
