@@ -1,5 +1,5 @@
 # shctl review run PR [--timeout SEKUNDY]: review PR w świeżej sesji Claude albo Codexa, w czystym
-# worktree bez plików env (odmowa tylko, gdy PR dodaje lub zmienia .env*). PR zadania (Closes #NR, task/NR-) albo PR etapu (gałąź stage/ETAP). Silnik
+# worktree bez plików env (odmowa tylko, gdy PR dodaje lub zmienia .env* albo dodaje sekret). PR zadania (Closes #NR, task/NR-) albo PR etapu (gałąź stage/ETAP). Silnik
 # wybiera konfiguracja review (zwykle albo ryzyko, docs/shctl.md, „review”). Wynik idzie
 # komentarzem do PR ze znacznikiem commita; powtórka dla tego samego commita go zwraca.
 # shellcheck shell=bash
@@ -182,6 +182,20 @@ ocen_pr() {
 env_w_pr() {
   git -C "$ROOT_G" diff --name-only --no-renames --diff-filter=d "$1" "$2" |
     grep -E '(^|/)\.env[^/]*$' | grep -vE '(^|/)\.env\.example$' | head -3 || true
+}
+
+# Sekrety o wysokiej pewności (ERE) w liniach dodanych przez PR: klucze prywatne, tokeny GitHuba,
+# AWS, Stripe live, Slack, Google, Anthropic, OpenAI, klucze sekretne Supabase. Linie usunięte
+# i sekret już obecny na main nie blokują. Lokalny klucz demo Supabase CLI jest jawny.
+WZORZEC_SEKRETOW='-----BEGIN ([A-Z]+ )?PRIVATE KEY-----|gh[pousr]_[A-Za-z0-9]{36,}|github_pat_[A-Za-z0-9_]{40,}|(AKIA|ASIA)[0-9A-Z]{16}|[sr]k_live_[0-9A-Za-z]{20,}|xox[abprs]-[0-9A-Za-z-]{10,}|AIza[0-9A-Za-z_-]{35}|sk-ant-[A-Za-z0-9_-]{20,}|sk-proj-[A-Za-z0-9_-]{20,}|sb_secret_[A-Za-z0-9_-]{20,}'
+# Literał dzielony: push protection GitHuba bierze jawny klucz demo za sekret.
+SEKRET_DEMO_SUPABASE='sb_secret_''N7UND0UgjKTVK-Uodkm0Hg_xSvEMPvz'
+
+# Pliki z sekretem w dodanych liniach PR (bez treści sekretu), do 3 ścieżek.
+sekrety_w_pr() {
+  git -C "$ROOT_G" diff --no-color --no-ext-diff --no-renames -U0 "$1" "$2" |
+    awk '/^\+\+\+ / { p = substr($0, 5); sub(/^b\//, "", p); next } /^\+/ { print p "\t" substr($0, 2) }' |
+    sed "s/$SEKRET_DEMO_SUPABASE//g" | grep -E -- $'\t'".*($WZORZEC_SEKRETOW)" | cut -f1 | awk '!z[$0]++' | head -3 || true
 }
 
 # --- Poprzednie review i prompt ---------------------------------------------------------------
@@ -602,6 +616,10 @@ review_run() {
       dost=1
       od_poprz="$(git -C "$ROOT_G" diff --numstat "$(jq -r .head <<<"$poprz")" "$head" | awk '$1 != "-" { n += $1 + $2 } END { printf "%d", n }')"
     fi
+
+    # Sekret w dodanych liniach (także w dokumentacji): odmowa przed jakimkolwiek PASS.
+    i="$(sekrety_w_pr "$baza" "$head")"
+    [ -z "$i" ] || die "$E_ODMOWA" "PR #$prn dodaje sekret ($(printf '%s' "$i" | paste -sd, -)); usuń go z PR i unieważnij, review bez sekretów niemożliwe"
 
     # PR zadania zmieniający tylko dokumentację: PASS bez review modelu.
     if [ -n "$nr" ] && [ "$(jq -r .tylko_docs <<<"$ocena")" = true ]; then

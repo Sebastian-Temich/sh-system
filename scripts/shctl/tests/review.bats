@@ -216,6 +216,50 @@ nowy_commit() {
   [ -s "$CODEX_ATRAPA/calls" ]
 }
 
+@test "review: sekret w dodanych liniach PR to odmowa bez wypisania sekretu" {
+  zwykle_codex
+  # Klucz składany w teście, żeby plik testu sam nie wyglądał na sekret.
+  klucz="ghp_$(printf 'A%.0s' $(seq 1 36))"
+  nowy_commit src/klient.ts "const token = \"$klucz\";"
+  run --separate-stderr "$SHCTL" review run 20
+  echo "$output $stderr"
+  [ "$status" -eq 4 ]
+  [[ "$stderr" == *"sekret"*"src/klient.ts"* ]] || false
+  [[ "$stderr" != *"$klucz"* ]] || false
+  [ ! -s "$CODEX_ATRAPA/calls" ]
+  [ ! -e "$SH_DIR/wt/demo/review-12" ]
+  [ -z "$(komentarze 20)" ]
+}
+
+@test "review: sekret w PR tylko z dokumentacja to odmowa, nie PASS bez modelu" {
+  git -C "$SH_DIR/wt/demo/12" rm -q src/praca-12.txt
+  git -C "$SH_DIR/wt/demo/12" commit -qm "#12: bez kodu"
+  nowy_commit docs/wdrozenie.md "Klucz: sk_live_$(printf 'x%.0s' $(seq 1 24))"
+  run --separate-stderr "$SHCTL" review run 20
+  echo "$output $stderr"
+  [ "$status" -eq 4 ]
+  [[ "$stderr" == *"docs/wdrozenie.md"* ]] || false
+  [ -z "$(komentarze 20)" ]
+}
+
+@test "review: sekret tylko w usunietych liniach i lokalny klucz demo Supabase nie blokuja" {
+  zwykle_codex
+  wynik_codex PASS '[]'
+  wt="$SH_DIR/wt/demo/12"
+  klucz="-----BEGIN RSA PRIVATE""-----"
+  printf '%s\n' "$klucz" >"$wt/stary.pem.txt"
+  git -C "$wt" add stary.pem.txt
+  git -C "$wt" commit -qm "sekret z przejętego repo"
+  git -C "$wt" push -q origin HEAD:main --force
+  git -C "$wt" rm -q stary.pem.txt
+  nowy_commit src/lokalnie.ts "export const klucz = 'sb_secret_""N7UND0UgjKTVK-Uodkm0Hg_xSvEMPvz';"
+  run --separate-stderr "$SHCTL" review run 20 --json
+  echo "$output $stderr"
+  [ "$status" -eq 0 ]
+  [ "$(jq -r .wynik.werdykt <<<"$output")" = PASS ]
+  [ -s "$CODEX_ATRAPA/calls" ]
+}
+
 @test "review --dry-run: bez etykiet, worktree i Codexa" {
   run --separate-stderr "$SHCTL" review run 20 --dry-run --json
   [ "$status" -eq 0 ]
