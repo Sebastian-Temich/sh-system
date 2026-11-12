@@ -61,6 +61,9 @@ zadania_init() {
   [ -n "$wspolny" ] || die "$E_BRAK" "$ROOT nie jest repozytorium git"
   ROOT_G="$(dirname "$wspolny")"
   KONFIG="$ROOT_G/docs/konfiguracja.md"
+  [ -f "$KONFIG" ] || KONFIG="$(konfig_adopt "$PROJEKT")" || KONFIG="$ROOT_G/docs/konfiguracja.md"
+  # Katalog z docs/ projektu: main, a dla projektu przejętego przed merge'em analizy worktree etapu.
+  ROOT_DOCS="$(dirname "$(dirname "$KONFIG")")"
   ST="$(plik_projektu "$ROOT_G")"
   [ -f "$KONFIG" ] || die "$E_BRAK" "brak $KONFIG"
   ustal_etapy

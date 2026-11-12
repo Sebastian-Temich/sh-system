@@ -42,7 +42,7 @@ repo_lovable() {
   run bash "$W" "$R"
   [ "$status" -eq 0 ]
   jq -e '.lovable.wykryto and .lovable.synchronizacja.aktywna and .lovable.synchronizacja.commity == 1' <<<"$output"
-  jq -e '[.lovable.pliki[].plik] | index("package.json") and index("README.md")' <<<"$output"
+  jq -e '[.lovable.pliki[].plik] == ["package.json","README.md"]' <<<"$output"
   jq -e '.supabase.config_toml and .supabase.migracje.liczba == 1 and .supabase.funkcje == ["wyslij"] and .supabase.seed == ["supabase/seed.sql"]' <<<"$output"
   jq -e '.supabase.klienci == [{"plik":"src/integrations/supabase/client.ts","klucz_z":"kod"}]' <<<"$output"
   jq -e '.klucze == [{"plik":"src/integrations/supabase/client.ts","linia":"3","rodzaj":"jwt","rola":"anon"}]' <<<"$output"

@@ -21,6 +21,11 @@ case "\$1 \$2" in
   "repo edit") case "\$*" in *"--visibility public"*) echo PUBLIC >"$T/widocznosc" ;; esac ;;
   "pr list") cat "$T/pr-otwarty" 2>/dev/null || true ;;
   "pr create") echo "https://github.com/acme/app/pull/7" ;;
+  "pr view")
+    case "\$*" in
+      *"--json comments"*) echo '{"comments":[]}' ;;
+      *) echo '{"number":7,"title":"00-analiza: raport","state":"OPEN","headRefName":"stage/00-analiza","headRefOid":"abc1234","closingIssuesReferences":[],"url":"https://github.com/acme/app/pull/7"}' ;;
+    esac ;;
   "label create" | "variable set") ;;
   "auth git-credential") printf 'username=x-access-token\npassword=atrapa\n' ;;
 esac
@@ -32,7 +37,9 @@ echo "\$*" >>"$T/gitleaks.calls"
 [ -f "$T/gitleaks-sekret" ] || exit 0
 r=""
 while [ \$# -gt 0 ]; do [ "\$1" = --report-path ] && r="\$2"; shift; done
-[ -z "\$r" ] || printf '[{"RuleID":"generic-api-key","File":"src/stary.ts","StartLine":3,"Commit":"abcdef1234567","Date":"2025-01-01T00:00:00Z","Secret":"REDACTED"}]' >"\$r"
+# \$T/gitleaks-miejsce: "PLIK LINIA" znaleziska (domyślnie src/stary.ts 3).
+set -- \$(cat "$T/gitleaks-miejsce" 2>/dev/null || echo src/stary.ts 3)
+[ -z "\$r" ] || printf '[{"RuleID":"jwt","File":"%s","StartLine":%s,"Commit":"abcdef1234567","Date":"2025-01-01T00:00:00Z","Secret":"REDACTED"}]' "\$1" "\$2" >"\$r"
 echo "leaks found: 1"
 exit 1
 MOCK
@@ -173,6 +180,18 @@ analiza_na_main() {
   git -C "$SH_DIR/projekty/app" pull -q --ff-only
 }
 
+@test "przed merge'em analizy: review run i --projekt znajduja konfiguracje i DoD w worktree 00-analiza" {
+  "$SHCTL" adopt acme/app --nazwa app >/dev/null
+  [ ! -e "$SH_DIR/projekty/app/docs/konfiguracja.md" ]
+  cd "$(WT)"
+  run --separate-stderr "$SHCTL" review run 7 --dry-run --json
+  [ "$status" -eq 0 ] || { echo "$output $stderr"; false; }
+  jq -e '.ok and (.wynik | tostring | test("00-analiza"))' <<<"$output"
+  cd "$T"
+  run --separate-stderr "$SHCTL" review run 7 --dry-run --json --projekt app
+  [ "$status" -eq 0 ] || { echo "$output $stderr"; false; }
+}
+
 @test "etapy projektu przejetego zaczynaja sie od 00-analiza" {
   analiza_na_main
   run "$SHCTL" stage review 00-analiza --projekt app --dry-run
@@ -239,6 +258,25 @@ analiza_na_main() {
   jq -e '.wynik.gitleaks.znaleziska == 1 and (.wynik.gitleaks.zalecenie | test("unieważnij"))' <<<"$output"
   jq -e '.wynik.rls.bez_rls == ["profile"] and (.wynik.dane_osobowe | length) == 1' <<<"$output"
   [[ "$output" != *"jan.kowalski"* ]]
+}
+
+@test "bramka: gitleaks na kluczu anon Supabase (client.ts z Lovable) nie blokuje, jest oznaczony" {
+  analiza_na_main
+  P="$SH_DIR/projekty/app"
+  mkdir -p "$P/src/integrations/supabase"
+  p="$(printf '{"iss":"supabase","role":"anon"}' | base64 | tr '+/' '-_' | tr -d '=\n')"
+  printf 'import { createClient } from "@supabase/supabase-js";\nconst K = "eyJhbGciOiJIUzI1NiJ9.%s.c2lnbmF0dXJh";\nexport const s = createClient("https://x.supabase.co", K);\n' "$p" \
+    >"$P/src/integrations/supabase/client.ts"
+  git -C "$P" add -A
+  git -C "$P" commit -qm klient
+  touch "$T/gitleaks-sekret"
+  echo "src/integrations/supabase/client.ts 2" >"$T/gitleaks-miejsce"
+  run --separate-stderr "$SHCTL" adopt bramka --projekt app --json
+  [ "$status" -eq 0 ] || { echo "$output"; false; }
+  jq -e '.wynik.gitleaks.znaleziska == 0 and .wynik.gitleaks.klucze_anon == 1 and .wynik.gitleaks.lista[0].klucz_anon' <<<"$output"
+  echo "src/integrations/supabase/client.ts 3" >"$T/gitleaks-miejsce"
+  run --separate-stderr "$SHCTL" adopt bramka --projekt app --json
+  [ "$status" -eq 4 ]
 }
 
 @test "upublicznij: tylko z decyzja wlasciciela i po bramce; zmienia widocznosc przez gh repo edit" {

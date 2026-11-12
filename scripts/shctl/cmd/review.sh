@@ -197,7 +197,7 @@ poprzednie_review() {
 # zmiany większa z wartości na main i na commicie PR; 0, gdy brak.
 iteracja_etapu() {
   local a b
-  a="$(yq --front-matter=extract '.iteracja // 0' "$ROOT_G/docs/$2/DoD.md" 2>/dev/null || true)"
+  a="$(yq --front-matter=extract '.iteracja // 0' "$ROOT_DOCS/docs/$2/DoD.md" 2>/dev/null || true)"
   b="$(git -C "$ROOT_G" show "$1:docs/$2/DoD.md" 2>/dev/null | yq --front-matter=extract '.iteracja // 0' 2>/dev/null || true)"
   case "$a" in "" | *[!0-9]*) a=0 ;; esac
   case "$b" in "" | *[!0-9]*) b=0 ;; esac
@@ -533,7 +533,7 @@ review_run() {
   if [ "$etap" = 08-qa ]; then
     die "$E_ODMOWA" "PR #$prn: raport QA (08-qa) nie ma review etapu; merge po zielonym CI (SH-lite F1)"
   fi
-  if [ -n "$etap" ] && [ ! -f "$ROOT_G/docs/$etap/DoD.md" ]; then
+  if [ -n "$etap" ] && [ ! -f "$ROOT_DOCS/docs/$etap/DoD.md" ]; then
     die "$E_ODMOWA" "PR #$prn: etap $etap nie ma docs/$etap/DoD.md"
   fi
   head="$(jq -r .headRefOid <<<"$pr")"

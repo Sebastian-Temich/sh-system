@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-11-12 (SH-lite B1 krok 2b: poprawki z testu na sh-test-adopt)
+
+- `shctl pr check` i `review run` (i `--projekt`) w projekcie przejętym przed merge'em PR analizy biorą konfigurację i `DoD.md` etapu z worktree `wt/NAZWA/stage-00-analiza` (`konfig_adopt`); wcześniej kończyły się kodem 3 „brak docs/konfiguracja.md”.
+- `wykryj.sh`: README i `index.html` z listy plików repo, bez podwójnego `README.md`/`readme.md` na macOS.
+- `shctl adopt bramka`: znalezisko gitleaks w miejscu klucza Supabase o roli `anon` (np. `client.ts` z Lovable, publiczny z założenia) jest oznaczone `klucz_anon` i nie blokuje; wcześniej bramka blokowała każdy projekt z Lovable.
+- Ustalenie z testu: w repo prywatnym własne CI aplikacji na runnerach GitHuba nie startuje (job bez runnera, billing jak E-007); workflow `SH` z adaptacji idzie na runner serwera przez `SH_RUNS_ON`, ale istniejące CI aplikacji nie. Decyzja o jego `runs-on` należy do właściciela (zmiana CI aplikacji).
+
 ## 2026-11-12 (SH-lite B1 krok 2: tryb adopt dla istniejących projektów)
 
 - Nowa komenda `shctl adopt OWNER/REPO --nazwa NAZWA [--tryb M|S] [--limit-analizy MIN]`: pełny klon bez plików env i bez dostępu do produkcji, worktree `wt/NAZWA/stage-00-analiza` ze szkieletem etapu `00-analiza` (`pochodzenie: adopt` i blok `adopt` w `konfiguracja.md`, `decyzje.md`, DoD, szablon raportu, karta funkcji w stanie obecnym, `wykryj.json`), blok portów, klon docs/ w Obsidianie, skrzynka. Widoczności i ustawień repo nie zmienia. Limit analizy: `adopt.limit_analizy_min` w `/Users/Shared/sh/konfiguracja.md` (domyślnie 120 min).

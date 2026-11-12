@@ -59,9 +59,11 @@ grep -E '(^|/)\.lovable(/|$)' "$T/pliki" | sed 's/$/\tkatalog .lovable/' >>"$T/l
 for p in package.json vite.config.ts vite.config.js vite.config.mts vite.config.mjs; do
   [ -f "$p" ] && grep -q 'lovable-tagger' "$p" && printf '%s\tlovable-tagger\n' "$p" >>"$T/lovable" || true
 done
-for p in README.md readme.md index.html; do
-  [ -f "$p" ] && grep -qi 'lovable\.dev\|lovable\.app' "$p" && printf '%s\todnośnik lovable.dev\n' "$p" >>"$T/lovable" || true
-done
+# Nazwy z listy plików repo: na macOS (system plików bez rozróżniania wielkości liter) [ -f readme.md ]
+# jest prawdą także dla README.md.
+grep -xiE 'readme\.md|index\.html' "$T/pliki" | while IFS= read -r p; do
+  [ -f "$p" ] && grep -qi 'lovable\.dev\|lovable\.app' "$p" && printf '%s\todnośnik lovable.dev\n' "$p" || true
+done >>"$T/lovable" || true
 SYNC_N=0
 SYNC_OST=""
 if [ "$GIT" -eq 1 ]; then
