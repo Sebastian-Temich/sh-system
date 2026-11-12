@@ -23,7 +23,8 @@ masz w kontekście. Silnik (Claude albo Codex) wybiera shctl według ryzyka PR; 
 
 Robisz:
 
-- review PR zadania (gałąź `task/NR-slug`, `Closes #NR`) i review etapu (gałąź `stage/ETAP`);
+- review PR zadania (gałąź `task/NR-slug`, `Closes #NR`), review etapu (gałąź `stage/ETAP`) i review
+  adaptacji projektu przejętego (gałąź `adopt/adaptacja`);
 - w iteracji 2+ najpierw weryfikację zgłoszeń 🔴 i 🟡 z poprzedniego review;
 - zgłoszenia z wagą, przyczyną i miejscem, werdykt i krótkie podsumowanie.
 
@@ -91,15 +92,18 @@ werdykcie orkiestrator wywołuje `shctl task iter NR` albo `shctl task close NR`
 
 ## Procedura
 
-1. Ustal tryb, iterację i commit. Gałąź `stage/ETAP` bez `Closes #NR` to review etapu, inaczej review
-   PR. Iteracja `N` pochodzi z kontekstu shctl albo z etykiety `iter:N` issue (review PR) lub pola
-   `iteracja` w `docs/ETAP/DoD.md` na `main` (review etapu); 0 traktujesz jak 1. Review dotyczy
+1. Ustal tryb, iterację i commit. Gałąź `stage/ETAP` bez `Closes #NR` to review etapu, gałąź
+   `adopt/adaptacja` to review adaptacji, inaczej review PR. Iteracja `N` pochodzi z kontekstu shctl
+   albo z etykiety `iter:N` issue (review PR) lub pola `iteracja` w `docs/ETAP/DoD.md` na `main`
+   (review etapu; dla `00-analiza` przed merge'em analizy na gałęzi `stage/00-analiza`); w adaptacji
+   to 1 plus liczba wcześniejszych review w PR. 0 traktujesz jak 1. Review dotyczy
    commita `headRefOid`; w Claude Code czytasz pliki z tego commita (`git fetch origin pull/PR/head`,
    potem `git show SHA:ŚCIEŻKA` albo worktree na tym commicie).
 2. Przeczytaj źródła z „Wejścia” dla swojego trybu.
 3. Iteracja 2+: zweryfikuj poprzednie review według „Iteracji 2+” (niżej), zanim zaczniesz szukać
    nowych problemów.
 4. Review PR: sprawdź po kolei punkty z „Review PR” (niżej). Review etapu: punkty z „Review etapu”.
+   Review adaptacji: punkty z „Review adaptacji”.
 5. Każdemu problemowi nadaj wagę według „Kryteriów review”, w iteracji 3 z regułą dla nowych
    istotnych. Gdy waha się między dwiema wagami, wybierz niższą i napisz dlaczego.
 6. Zapisz zgłoszenie w jednej linii: przyczynę, miejsce (`ścieżka` albo `ścieżka:linia`, gdy dotyczy
@@ -192,7 +196,9 @@ i `sh-stack-STACK/SKILL.md`.
 ### Review etapu
 
 1. `docs/ETAP/DoD.md`: frontmatter (`etap` równy folderowi; `status` i `iteracja` zmienia tylko shctl na
-   `main`, więc zmiana frontmattera na gałęzi etapu to 🟡), każde zaznaczone pole naprawdę spełnione
+   `main`, więc zmiana frontmattera na gałęzi etapu to 🟡; wyjątek: `00-analiza` projektu przejętego
+   przed merge'em analizy, gdzie `DoD.md` jest tylko na `stage/00-analiza` i tam shctl podbija
+   `status` i `iteracja`), każde zaznaczone pole naprawdę spełnione
    przez dokumenty, każde puste pole wyjaśnione notatką. Pole „nie dotyczy” (`- [-] ... (nie dotyczy:
    powód)`) przyjmujesz tylko z prawdziwym powodem (np. E2E w bibliotece bez UI); fałszywy powód to 🟡.
    Pola z bloku
@@ -211,6 +217,35 @@ i `sh-stack-STACK/SKILL.md`.
 5. Sekrety i dane osobowe: brak w dokumentach, opisie PR i przykładach.
 6. Zakres PR: tylko pliki etapu (`docs/ETAP/` i pola DoD powiązanych etapów); bez kodu aplikacji i
    plików wspólnych.
+
+### Review adaptacji
+
+PR `shctl adopt adaptacja` (gałąź `adopt/adaptacja`) po akceptacji analizy przez właściciela. Nie ma
+`DoD.md`; kryteria są tutaj, a „Fakty shctl (adaptacja)” w kontekście podają listy policzone
+mechanicznie. Źródła: diff, `docs/00-analiza/raport.md` i `DoD.md`, `docs/decyzje.md`, `AGENTS.md`,
+`docs/konfiguracja.md`.
+
+1. Bez zmian w kodzie aplikacji. Plik dodany albo zmieniony spoza listy procesu (fakty shctl) to 🔴,
+   gdy to kod, konfiguracja budowania, zależności albo CI projektu, a 🟡 w pozostałych przypadkach.
+   Usunięcie pliku z repo jest dopuszczalne tylko z decyzją właściciela w `docs/decyzje.md` (np. `.env`
+   i artefakty pomiarów w repo); bez decyzji to 🟡, a usunięty kod aplikacji to 🔴.
+2. Pliki szablonu: `AGENTS.md`, `CLAUDE.md`, `docs/` v2 (DoD etapów, `_szablony/`, `proces.md`),
+   `scripts/` procesu (`check-dod.sh`, `sync-status.sh`, `setup-labels.sh`), profile ról
+   `.claude/roles/`, `.github/workflows/sh.yml` obok istniejącego CI. Brakujący plik z faktów shctl to
+   🟡. Istniejące CI projektu zostaje bez zmian. `docs/konfiguracja.md` ma `pochodzenie: adopt`, pola
+   `adopt` z analizy i `blok_portow`; `docs/00-analiza/DoD.md` ma `status: done`.
+3. `AGENTS.md` łączy szablon z projektem: zasady procesu z szablonu (gałęzie, pliki wspólne, profil
+   workera, review, eskalacje, sekrety) bez usuniętych sekcji; „Stack (kontrakt)” uzupełniony faktami z
+   raportu analizy (framework, instalacja, lint, testy, build), a nie `(do uzupełnienia)`; przy
+   `adopt.lovable: true` sekcja `## Lovable` (bez publikacji bez decyzji właściciela, źródło prawdy w
+   repo). Brak sekcji Lovable przy projekcie z Lovable albo sprzeczność z raportem to 🟡.
+4. Sekrety: żadnych `.env*` poza `.env.example` ani kluczy w dodanych plikach (shctl odmawia review
+   takiego PR). Sekret istniejący w historii to sprawa bramki adopt, nie tego PR.
+5. Zgodność z analizą: ustalenia raportu dla wykonawcy (polecenia testów, wersje, zasady Lovable i
+   Supabase) trafiają do `AGENTS.md` albo `konfiguracja.md` tam, gdzie szablon ma na nie miejsce.
+
+Adaptacja ma najwyżej jedną iterację poprawek, jak etap dokumentowy: w iteracji 2 zgłoszenia 🟡 dajesz
+jako ⚪ z „(do decyzje.md) ”, 🔴 zostaje 🔴.
 
 ## Tryby
 

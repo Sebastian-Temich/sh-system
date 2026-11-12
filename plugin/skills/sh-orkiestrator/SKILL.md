@@ -323,7 +323,9 @@ Istniejące repo właściciela („przejmij OWNER/REPO”) wchodzi przez `shctl 
    nich `service_role` albo plik env w repo (zalecenie: unieważnić klucz u dostawcy).
 2. Uruchom `sh-intake` w trybie adopt w worktree `wt/NAZWA/stage-00-analiza`. Polecenia shctl dla PR
    analizy (`pr check`, `review run`) wykonujesz z `cd` do tego worktree, bo do merge'u `main` nie ma
-   `docs/konfiguracja.md`. Review etapu: najwyżej jedna iteracja poprawek, jak `00-intake`.
+   `docs/konfiguracja.md`. Review etapu: najwyżej jedna iteracja poprawek, jak `00-intake`. `stage
+   iter 00-analiza` i `escalate --dotyczy 00-analiza` (z `--projekt NAZWA` albo z worktree) zmieniają
+   do merge'u `DoD.md` i pliki eskalacji w worktree analizy: commitujesz je na `stage/00-analiza`.
 3. PASS i zielone CI (repo bez CI: `pr check` zgłasza brak CI, PR z samym `docs/` przechodzi z tym
    zapisem w `decision add`): merge `gh pr merge --squash --match-head-commit SHA`, potem
    `git pull` w `projekty/NAZWA`. Raport trafia do Obsidiana z klonem docs/.
@@ -333,7 +335,9 @@ Istniejące repo właściciela („przejmij OWNER/REPO”) wchodzi przez `shctl 
    wlasciciel --co "Akceptacja analizy i kierunku" ...`, pola Checkpointu w `00-analiza/DoD.md` na
    `main`, commit i push.
 5. `shctl adopt adaptacja --projekt NAZWA --json`: PR adaptacji (bez kodu aplikacji). Zwykła ścieżka:
-   `pr check`, `review run`, merge. Pliki z listy „pominięte” łączysz w tym PR albo zapisujesz decyzję.
+   `pr check`, `review run` (review adaptacji: kryteria skilla `sh-review`, „Review adaptacji”;
+   najwyżej jedna iteracja poprawek, bez `stage iter`), merge. Pliki z listy „pominięte” łączysz w tym
+   PR albo zapisujesz decyzję; usunięcie pliku z repo w tym PR tylko z decyzją właściciela.
 6. Upublicznienie repo tylko na polecenie właściciela: `shctl adopt bramka --projekt NAZWA` (wynik
    pokazujesz; sekret w historii = zalecenie unieważnienia u dostawcy, bez przepisywania historii),
    po zgodzie `shctl decision add --rola wlasciciel --co "Upublicznienie repo OWNER/REPO" ...` i

@@ -296,18 +296,7 @@ adopt_upublicznij() {
   wynik_json "$(jq -nc --arg r "$SLUG" --argjson w "$w" '{repo:$r, widocznosc:"public", zmiana:true, bramka:$w}')"
 }
 
-# Pliki procesu, które adaptacja bierze z szablonu (biała lista: nic z kodu aplikacji). CI szablonu,
-# .gitignore, README, .env.example i konfiguracja pnpm zostają po stronie projektu; istniejące CI
-# działa dalej, a obok dochodzi .github/workflows/sh.yml.
-plik_procesu() {
-  case "$1" in
-    scripts/tests/*) return 1 ;;
-    AGENTS.md | CLAUDE.md | CHANGELOG.md | docs/* | scripts/* | .claude/roles/* | \
-      .github/PULL_REQUEST_TEMPLATE.md | .github/ISSUE_TEMPLATE/*) return 0 ;;
-  esac
-  return 1
-}
-
+# Pliki procesu: plik_procesu w lib/projekt.sh (ta sama lista sprawdza review PR adaptacji).
 adopt_adaptacja() {
   local wt galaz=adopt/adaptacja szablon p dodane="" pominiete="" pr cialo old wyj tytul="adopt: adaptacja do procesu SH"
   while [ $# -gt 0 ]; do opcja_wspolna "$@"; shift "$ZJEDZONE"; done
