@@ -156,9 +156,9 @@ Konfiguracja w `/Users/Shared/sh/konfiguracja.md`, projekt nadpisuje w `docs/kon
 zadania z samą dokumentacją dostaje PASS od `shctl` bez modelu. Limit silnika: `review.gdy_limit`
 `czekaj` (PR czeka w `status:review`) albo `drugi_silnik`; dispatch staje przy `max_review_queue` (3).
 
-Prompt składa `shctl` ze skilla `sh-review` i dołącza listy kontrolne skilli kategorii zadania; przy
-plikach migracji zawsze lista bazy `sh-kat-baza` (RLS na nowych tabelach, `with check` zgodne z
-`using`, testy polityk dla właściciela i obcego, expand/contract, indeksy). Wagi: 🔴 krytyczne i 🟡
+Prompt składa `shctl` ze skilla `sh-review` i dołącza listy kontrolne skilli kategorii i stacku
+zadania; przy plikach migracji zawsze lista bazy `sh-kat-baza` (RLS, `with check` zgodne z `using`,
+testy pgTAP polityk dla właściciela i obcego, expand/contract, indeksy, `explain`, N+1, seedy). Wagi: 🔴 krytyczne i 🟡
 istotne blokują (FAIL), ⚪ drobne trafiają do `backlog-drobne.md`. PASS dotyczy jednego commita.
 Etapy `00-intake`, `04-plan`, `06-zadania`: najwyżej jedna iteracja poprawek; w iteracji 2 istotne
 uwagi idą jako ⚪ „(do decyzje.md)”, a FAIL (🔴) to eskalacja. `wydanie`: 3 iteracje.
@@ -184,7 +184,8 @@ Kategorie zadań: `frontend`, `backend`, `baza`, `integracje`, `bezpieczenstwo`,
 projektu (`.claude/skills`). Przy sprzeczności wygrywa projekt, potem stack, kategoria, bazowe.
 Brakujący skill dispatch pomija z ostrzeżeniem. Skille techniczne leżą w `plugin/skills/techniczne/`
 (kontrakt `_kontrakt.md`, do 150 linii, lista kontrolna z wagami). Dziś są: trzy bazowe,
-`sh-kat-frontend`, `sh-kat-bezpieczenstwo`, `sh-kat-baza` (szkielet, pełny w B1), `sh-stack-astro`.
+`sh-kat-frontend`, `sh-kat-bezpieczenstwo`, `sh-kat-baza`, `sh-kat-backend`, `sh-kat-refaktoryzacja`,
+`sh-stack-astro`, `sh-stack-supabase` (fragmenty oficjalnych skilli Supabase, MIT).
 Skill zewnętrzny wchodzi tylko po przeczytaniu i akceptacji właściciela, z adnotacją źródła.
 
 ## Sandbox: co lokalnie, co w CI
@@ -196,7 +197,7 @@ to jedna prosta komenda.
 
 | Lokalnie (worker) | Tylko w CI |
 |---|---|
-| Lint, typy, testy jednostkowe, build, `pnpm install`, bats skryptów | E2E Playwright (przeglądarki nie startują w sandboxie), Lighthouse, migracje stagingu, `qa-staging` |
+| Lint, typy, testy jednostkowe, build, `pnpm install`, bats skryptów | E2E Playwright (przeglądarki nie startują w sandboxie), Lighthouse, job `baza` (Supabase CLI w sandboxie kończy się `EPERM`: migracje na czystej bazie, pgTAP, `db lint`, `db advisors`, tylko przy zmianach w `supabase/`), migracje stagingu, `qa-staging` |
 
 Worker czyta wynik CI przez `gh run view RUN --log-failed`. Czego agent nie zrobi z sandboxa, robi
 właściciel: `install.sh` (LaunchAgenty), usunięcie gałęzi bez PR, `sudo`, ustawienia systemu, Docker

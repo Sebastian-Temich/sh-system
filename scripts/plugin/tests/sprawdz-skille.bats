@@ -115,7 +115,7 @@ techniczny() {
   sprawdz
   echo "$stderr"
   [ "$status" -eq 0 ]
-  [[ "$output" == *"8 skill(i) techniczne zgodne"* ]] || false
+  [[ "$output" == *"11 skill(i) techniczne zgodne"* ]] || false
 }
 
 @test "techniczne: ponad 150 linii" {

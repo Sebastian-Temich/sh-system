@@ -393,7 +393,7 @@ silnik tylko do odczytu (Codex: profil reviewer, -s read-only; Claude: claude -p
 .claude/roles/reviewer/settings.json z main projektu), komentarz w PR z werdyktem, zgłoszeniami
 🔴🟡⚪ i metrykami, sprzątanie worktree i panelu. Prompt: skill sh-review, kontekst issue jako
 dane, w iteracji 2+ diff od poprzedniego review i poprzednie zgłoszenia, listy kontrolne skilli
-kategorii zadania (przy migracjach także sh-kat-baza).
+kategorii i stacku zadania (przy migracjach także sh-kat-baza).
 
 Werdykt liczy shctl: FAIL przy 🔴 albo 🟡, inaczej PASS; kod 0 przy obu. PASS dotyczy tylko
 commita: nowy push wymaga nowego review. Powtórka dla tego samego commita zwraca wynik z

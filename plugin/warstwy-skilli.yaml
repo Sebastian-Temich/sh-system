@@ -5,7 +5,7 @@
 # ~/.claude/skills), dispatch pomija z ostrzeżeniem.
 # Skille techniczne leżą w plugin/skills/techniczne/NAZWA/SKILL.md (kontrakt: plugin/skills/_kontrakt.md,
 # „Skille techniczne”). Ważność przy sprzeczności: projekt > stack > kategoria > bazowe.
-# shctl review run dołącza do promptu „Listę kontrolną” skilli tej samej kategorii co u workera.
+# shctl review run dołącza do promptu „Listę kontrolną” skilli tej samej kategorii i stacku co u workera.
 bazowe: [sh-weryfikacja-przed-gotowe, sh-tdd-testy, sh-debugowanie]
 kategoria:
   frontend: [sh-kat-frontend]

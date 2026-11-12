@@ -148,8 +148,8 @@ Skille techniczne workera leżą w `plugin/skills/techniczne/NAZWA/SKILL.md` i m
 kontrakt (nie obowiązują ich sekcje 1–11 wyżej). Wybiera je `shctl task dispatch` według
 `plugin/warstwy-skilli.yaml` i podaje workerowi jako ścieżki do przeczytania („Przeczytaj skille
 techniczne: …”), bo Claude Code ładuje z pluginu tylko `skills/NAZWA/SKILL.md`. `shctl review run`
-dołącza do promptu review sekcję „Lista kontrolna” skilli tej samej kategorii, którą dostał worker
-(przy zmienionych plikach migracji także `sh-kat-baza`), więc worker i review pracują na jednej liście.
+dołącza do promptu review sekcję „Lista kontrolna” skilli tej samej kategorii i stacku, które dostał
+worker (przy zmienionych plikach migracji także `sh-kat-baza`), więc worker i review pracują na jednej liście.
 
 ### Warstwy i kolejność ważności
 

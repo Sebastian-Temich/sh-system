@@ -40,6 +40,13 @@ skille_kategorii() {
   jq -r --arg k "$1" '(.kategoria[$k] // ["sh-kat-" + $k])[]' <<<"$(mapa_warstw)"
 }
 
+# Skille warstwy stacku (lista nazw w liniach) dla listy stacków w JSON, jak u workera: mapa albo
+# sh-stack-STACK.
+skille_stacku() {
+  [ -n "$1" ] || return 0
+  jq -r --argjson s "$1" '. as $m | ($s // [])[] | ($m.stack[.] // ["sh-stack-" + .])[]' <<<"$(mapa_warstw)"
+}
+
 # Sekcja „## Lista kontrolna” skilla (bez nagłówka) albo pusto.
 lista_kontrolna_skilla() {
   awk '$0 == "## Lista kontrolna" { w = 1; next } w && /^## / { exit } w' "$1" | awk 'NF { t = 1 } t'
