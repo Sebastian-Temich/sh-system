@@ -18,6 +18,9 @@ ustal_etapy() {
     2) ETAPY="$ETAPY_V2" ;;
     *) die "$E_UZYCIE" "$KONFIG: wersja_procesu='$WERSJA_PROCESU', dozwolone 1 albo 2" ;;
   esac
+  # Projekt przejęty (shctl adopt) zaczyna od etapu 00-analiza.
+  [ "$(yq --front-matter=extract '.pochodzenie // ""' "$KONFIG" 2>/dev/null || true)" != adopt ] ||
+    ETAPY="00-analiza $ETAPY"
 }
 
 ROOT=""

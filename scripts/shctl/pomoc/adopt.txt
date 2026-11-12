@@ -1,0 +1,40 @@
+Użycie: shctl adopt OWNER/REPO --nazwa NAZWA [--tryb M|S] [--limit-analizy MIN]
+        shctl adopt adaptacja --projekt NAZWA
+        shctl adopt bramka --projekt NAZWA
+        shctl adopt upublicznij --projekt NAZWA
+
+Przejęcie istniejącego projektu (docs/proces.md, „Projekty przejęte”). Repo prywatne zostaje
+prywatne: adopt nigdy sam nie zmienia widoczności.
+
+Start (OWNER/REPO): pełny klon w /Users/Shared/sh/projekty/NAZWA bez plików env i bez dostępu do
+produkcji, worktree /Users/Shared/sh/wt/NAZWA/stage-00-analiza na gałęzi stage/00-analiza z commitem
+szkieletu etapu: docs/konfiguracja.md (pochodzenie: adopt, adopt.repo, widocznosc, analiza_od,
+analiza_do, limit_analizy_min, lovable, supabase), docs/decyzje.md, docs/00-analiza/ (DoD.md,
+raport.md, wykryj.json z scripts/adopt/wykryj.sh). Blok portów w porty.md, klon docs/ w Obsidianie
+i skrzynka. Bez pushu: PR raportu otwiera sh-intake w trybie adopt. Limit analizy: --limit-analizy,
+inaczej adopt.limit_analizy_min z /Users/Shared/sh/konfiguracja.md, inaczej 120 minut.
+
+  --nazwa            wymagana: nazwa projektu (litery, cyfry, - i _)
+  --tryb             M (domyślnie) albo S: tryb zleceń po adaptacji
+  --limit-analizy    limit czasu analizy w minutach
+
+adaptacja: po merge'u analizy i checkpoincie (wszystkie pola docs/00-analiza/DoD.md zaznaczone i
+wiersz wlasciciel z „analiz” w decyzje.md). Worktree wt/NAZWA/adaptacja na gałęzi adopt/adaptacja,
+brakujące pliki szablonu sh-template-projekt (AGENTS.md, CLAUDE.md, docs/ v2, scripts/,
+.claude/roles/, szablony issue i PR) bez kodu aplikacji i bez CI szablonu; obok istniejącego CI
+workflow .github/workflows/sh.yml (check-dod, gitleaks). Plik projektu różny od szablonu zostaje
+(lista „pominięte” w PR). Projekt z Lovable: sekcja „Lovable” w AGENTS.md. Etykiety, w repo
+prywatnym zmienna SH_RUNS_ON, gitleaks commitu adaptacji, check-dod, push i PR.
+
+bramka: przed upublicznieniem repo. gitleaks na całej historii (sekret = zalecenie unieważnienia u
+dostawcy, bez przepisywania historii), tabele public bez RLS w migracjach, przegląd RLS w raporcie
+analizy, dane osobowe w seedach i fixture'ach, pliki env i klucz service_role w repo. Blokada: kod 4.
+
+upublicznij: tylko z wierszem wlasciciel z „upublicz” w decyzje.md i po bramce bez blokad; gh repo
+edit --visibility public i adopt.widocznosc w konfiguracja.md (commit robi orkiestrator).
+
+Odmowa (kod 4): repo zarchiwizowane albo puste, domyślna gałąź inna niż main, katalog jest klonem
+innego repo, repo ma już docs/konfiguracja.md spoza adopt, brak checkpointu, blokada bramki.
+Brak repo albo dostępu: kod 3.
+Wynik JSON (start): repo, katalog, worktree, galaz, tryb, widocznosc, limit_analizy_min, porty,
+obsidian, lovable, supabase, alarmy, kroki.

@@ -94,6 +94,10 @@ to w raporcie.
 shctl status show --json --projekt NAZWA
 shctl doctor --json
 shctl new-project NAZWA --opis "KRÓTKI OPIS REPO" --zlecenie "TREŚĆ ZLECENIA" --json
+shctl adopt OWNER/REPO --nazwa NAZWA --tryb M --json
+shctl adopt adaptacja --json --projekt NAZWA
+shctl adopt bramka --json --projekt NAZWA
+shctl adopt upublicznij --json --projekt NAZWA
 shctl repo opis --opis "..." --topics "a,b" --website URL --dry-run --projekt NAZWA
 shctl stage start ETAP --projekt NAZWA
 shctl stage review ETAP --projekt NAZWA
@@ -308,6 +312,33 @@ potrzebujesz pliku z innej gałęzi, czytasz go przez `git -C … show GAŁĄŹ:
    → realizacja → odbiór.
 5. Drugie zlecenie M w projekcie, którego etapy mają `done`: proponujesz podział na zlecenia S albo
    osobny projekt (`shctl cykl new` to etap B).
+
+### Projekt przejęty
+
+Istniejące repo właściciela („przejmij OWNER/REPO”) wchodzi przez `shctl adopt`, nie `new-project`
+(proces.md, „Projekty przejęte”).
+
+1. `shctl adopt OWNER/REPO --nazwa NAZWA --tryb M --json` (najpierw `--dry-run`). Repo zostaje w
+   obecnej widoczności; alarmy z wyniku (`alarmy`) przekazujesz właścicielowi od razu, gdy jest wśród
+   nich `service_role` albo plik env w repo (zalecenie: unieważnić klucz u dostawcy).
+2. Uruchom `sh-intake` w trybie adopt w worktree `wt/NAZWA/stage-00-analiza`. Polecenia shctl dla PR
+   analizy (`pr check`, `review run`) wykonujesz z `cd` do tego worktree, bo do merge'u `main` nie ma
+   `docs/konfiguracja.md`. Review etapu: najwyżej jedna iteracja poprawek, jak `00-intake`.
+3. PASS i zielone CI (repo bez CI: `pr check` zgłasza brak CI, PR z samym `docs/` przechodzi z tym
+   zapisem w `decision add`): merge `gh pr merge --squash --match-head-commit SHA`, potem
+   `git pull` w `projekty/NAZWA`. Raport trafia do Obsidiana z klonem docs/.
+4. Powiadom „Czeka na Twoją akceptację: NAZWA / analiza” i pokaż część „Dla właściciela” raportu
+   (stan, ryzyka, pytania z propozycjami, pierwszy kamień). Odpowiedzi na pytania wpisujesz do raportu
+   na `main`. Akceptacja tylko słowami „akceptuję analizę i kierunek”: `shctl decision add --rola
+   wlasciciel --co "Akceptacja analizy i kierunku" ...`, pola Checkpointu w `00-analiza/DoD.md` na
+   `main`, commit i push.
+5. `shctl adopt adaptacja --projekt NAZWA --json`: PR adaptacji (bez kodu aplikacji). Zwykła ścieżka:
+   `pr check`, `review run`, merge. Pliki z listy „pominięte” łączysz w tym PR albo zapisujesz decyzję.
+6. Upublicznienie repo tylko na polecenie właściciela: `shctl adopt bramka --projekt NAZWA` (wynik
+   pokazujesz; sekret w historii = zalecenie unieważnienia u dostawcy, bez przepisywania historii),
+   po zgodzie `shctl decision add --rola wlasciciel --co "Upublicznienie repo OWNER/REPO" ...` i
+   `shctl adopt upublicznij --projekt NAZWA`. Sam nigdy nie zmieniasz widoczności (`gh repo edit
+   --visibility` jest zabronione).
 
 ### Etapy dokumentowe
 

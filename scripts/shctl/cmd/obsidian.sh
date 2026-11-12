@@ -6,7 +6,7 @@
 . "$SHCTL_DIR/lib/obsidian.sh"
 
 komenda_main() {
-  local akcja="${1:-}" nazwa="" kat slug zal powod skr
+  local akcja="${1:-}" nazwa="" kat slug zal powod skr s
   case "$akcja" in
     link | unlink) shift ;;
     *) die "$E_UZYCIE" "użycie: shctl obsidian link|unlink NAZWA" ;;
@@ -29,9 +29,14 @@ komenda_main() {
   obsidian_wymagaj
   kat="$(obsidian_kat "$nazwa")"
   slug="$SH_GH_OWNER/$nazwa"
+  # Projekt przejęty (shctl adopt) ma repo pod inną nazwą lub właścicielem: slug z originu klonu.
+  if [ -d "$PROJEKTY/$nazwa" ]; then
+    s="$(ROOT="$PROJEKTY/$nazwa" slug_repo)"
+    [ -z "$s" ] || slug="$s"
+  fi
 
   if [ "$akcja" = link ]; then
-    zal="$(obsidian_polacz "$nazwa")"
+    zal="$(obsidian_polacz "$nazwa" "$slug")"
     if [ "$zal" = 1 ]; then
       info "klon docs/: $kat"
       info "Synchronizację robi serwer co 5 minut (obsidian-sync.sh); w Obsidianie nic nie włączasz."

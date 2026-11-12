@@ -337,8 +337,14 @@ polecenie_silnika() {
 # Profil reviewera Claude z main projektu (nie z gałęzi PR, która mogłaby go zmienić).
 ustawienia_reviewera() {
   local cel="$1/reviewer-settings.json"
-  git -C "$ROOT_G" show "$(baza_main):.claude/roles/reviewer/settings.json" >"$cel" 2>/dev/null ||
-    die "$E_BRAK" "brak .claude/roles/reviewer/settings.json na main projektu; zaktualizuj pliki z szablonu (shctl template update)"
+  if ! git -C "$ROOT_G" show "$(baza_main):.claude/roles/reviewer/settings.json" >"$cel" 2>/dev/null; then
+    # Projekt przejęty przed adaptacją (PR analizy, PR adaptacji): main nie ma jeszcze profili ról,
+    # więc profil reviewera pochodzi z main szablonu, nie z gałęzi PR.
+    [ "$(fm_get "$KONFIG" pochodzenie)" = adopt ] &&
+      gh api -H "Accept: application/vnd.github.raw" \
+        "repos/$SH_GH_OWNER/$SH_TEMPLATE/contents/.claude/roles/reviewer/settings.json" >"$cel" 2>/dev/null ||
+      die "$E_BRAK" "brak .claude/roles/reviewer/settings.json na main projektu; zaktualizuj pliki z szablonu (shctl template update)"
+  fi
   jq -e 'type == "object"' "$cel" >/dev/null 2>&1 || die "$E_BRAK" "profil reviewera na main projektu nie jest poprawnym JSON"
   printf '%s' "$cel"
 }

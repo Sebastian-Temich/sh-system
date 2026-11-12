@@ -1,6 +1,8 @@
 Użycie: shctl KOMENDA [argumenty] [--dry-run] [--json] [--projekt NAZWA]
 
   new-project NAZWA --opis "krótki opis repo" [--zlecenie "..."] [--tryb S|M] [--prywatny]
+  adopt OWNER/REPO --nazwa NAZWA [--tryb M|S] [--limit-analizy MIN]
+  adopt adaptacja|bramka|upublicznij --projekt NAZWA
   repo opis [--opis "..."] [--topics "a,b"] [--website URL]
   stage start|review|done|escalate ETAP [--notatka "..."]
   stage iter ETAP
@@ -42,7 +44,8 @@ Kody wyjścia:
 JSON: {"ok":true,"komenda":"…","dry_run":false,"wynik":{…}} albo {"ok":false,"kod":N,"blad":"…"}.
 Każda komenda jest idempotentna: powtórka niczego nie dubluje, a przerwaną operację dokańcza.
 Każde wywołanie dopisuje linię do /Users/Shared/sh/logs/shctl.log. Commit na main projektu robi
-orkiestrator; shctl commituje sam tylko w new-project, template update, reset-dryrun i skrzynka.
+orkiestrator; shctl commituje sam tylko w new-project, template update, reset-dryrun, skrzynka i adopt
+(szkielet analizy i adaptacja, na swoich gałęziach).
 
 Zmienne środowiska (testy i inny układ; w nawiasie domyślnie):
   SH_DIR (/Users/Shared/sh), SH_GH_OWNER (Sebastian-Temich), SH_TEMPLATE (sh-template-projekt),

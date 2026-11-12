@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-11-12 (SH-lite B1 krok 2: tryb adopt dla istniejących projektów)
+
+- Nowa komenda `shctl adopt OWNER/REPO --nazwa NAZWA [--tryb M|S] [--limit-analizy MIN]`: pełny klon bez plików env i bez dostępu do produkcji, worktree `wt/NAZWA/stage-00-analiza` ze szkieletem etapu `00-analiza` (`pochodzenie: adopt` i blok `adopt` w `konfiguracja.md`, `decyzje.md`, DoD, szablon raportu, karta funkcji w stanie obecnym, `wykryj.json`), blok portów, klon docs/ w Obsidianie, skrzynka. Widoczności i ustawień repo nie zmienia. Limit analizy: `adopt.limit_analizy_min` w `/Users/Shared/sh/konfiguracja.md` (domyślnie 120 min).
+- `shctl adopt adaptacja`: po checkpoincie „akceptuję analizę i kierunek” osobny PR `adopt/adaptacja` z plikami procesu z szablonu (biała lista, bez kodu aplikacji i bez CI szablonu), workflow `SH` (check-dod, gitleaks) obok istniejącego CI, sekcja „Lovable” w `AGENTS.md`, etykiety. `shctl adopt bramka` (gitleaks na całej historii, RLS, dane osobowe w seedach, pliki env, `service_role`) i `shctl adopt upublicznij` (tylko z decyzją właściciela i po bramce).
+- `scripts/adopt/wykryj.sh`: Lovable (pliki, synchronizacja z GitHubem z autorów commitów), Supabase (config, migracje, edge functions, seed, klient z kluczem w kodzie albo env), role kluczy JWT i `sb_*` bez wartości, nazwy zmiennych env, tabele bez RLS, dane osobowe w seedach i fixture'ach.
+- Etapy projektu przejętego zaczynają się od `00-analiza` (shctl). `review run` w projekcie przejętym przed adaptacją bierze profil reviewera z szablonu. `obsidian link` bierze repo z originu projektu.
+- `sh-intake` (tryb adopt), `sh-worker` (projekt przejęty: testy zielone w stanie wyjściowym, migracje expand/contract i nigdy do chmury, dane z seedów, karta „było → ma być”, Lovable), `sh-orkiestrator` (przebieg przejęcia), `proces.md` („Projekty przejęte”).
+- `orkiestrator-settings.json`: `git worktree add` dla istniejącej gałęzi (bez `-b`) w `wt/` i `wt-system/` na liście dozwolonych (wyjątek sandboxa jak forma z `-b`), bez `--force`, `-f`, `-B`; `gh repo edit --visibility` zabronione. `CLAUDE-sh.md`: worktree dla istniejącej gałęzi i komendy z `!` działają w sandboxie sesji, więc właściciel uruchamia polecenia w osobnym Terminalu.
+
 ## 2026-11-12 (SH-lite B1 krok 1: skille techniczne przed onboardingiem)
 
 - `sh-kat-baza` pełny (zamiast szkieletu z F7): RLS w `public`, `with check` w `insert` (🔴) i jawne w `update` (🟡) jako osobne punkty, testy pgTAP właściciel/obcy z próbą przepisania `user_id`, expand/contract, indeksy pod polityki, klucze obce i zapytania, `explain` przed i po, N+1, transakcje, seedy tylko z danymi fikcyjnymi; błędy z testów review F6 (sh-dryrun #63, #64).
