@@ -159,6 +159,14 @@ MOCK
   [ "$status" -eq 2 ]
 }
 
+@test "zmieniony 06-zadania/index.md (sync-status w pracujacym projekcie) nie blokuje" {
+  printf '<!-- sync-status:start -->\n| #20 |\n<!-- sync-status:end -->\n' >docs/06-zadania/index.md
+  echo zmiana >>docs/Projekt.md
+  run "$SHCTL" cykl new --nazwa M2-bezpieczenstwo --json
+  [ "$status" -eq 0 ]
+  grep -qF '| #20 |' docs/06-zadania/index.md
+}
+
 @test "tryb S: odmowa" {
   sed -i.bak 's/^tryb_procesu: M/tryb_procesu: S/' docs/konfiguracja.md
   rm -f docs/konfiguracja.md.bak

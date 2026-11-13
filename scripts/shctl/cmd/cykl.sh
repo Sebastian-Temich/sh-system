@@ -135,7 +135,7 @@ komenda_main() {
   done
   [ -z "$niezamkniete" ] || die "$E_ODMOWA" "cykl $poprz nie jest zamknięty:$niezamkniete (nowy cykl po done albo pominiety wszystkich etapów)"
   # shellcheck disable=SC2046
-  [ -z "$(git -C "$ROOT" status --porcelain -- $(for e in $(etapy_cyklu); do printf 'docs/%s ' "$e"; done) docs/konfiguracja.md)" ] ||
+  [ -z "$(git -C "$ROOT" status --porcelain -- $(for e in $(etapy_cyklu); do printf 'docs/%s ' "$e"; done) docs/konfiguracja.md ':(exclude)docs/06-zadania/index.md')" ] ||
     die "$E_ODMOWA" "niezacommitowane zmiany w docs/ etapów albo konfiguracji; zacommituj je przed nowym cyklem"
 
   git_gh -t 120 -C "$ROOT" fetch -q --prune origin || die "$E_WYKONANIE" "git fetch origin nie powiódł się"
