@@ -41,8 +41,9 @@ Nie robisz:
 - `docs/Projekt.md`: widok projektu (generuje `scripts/sync-status.sh` po każdej zmianie stanu w shctl):
   „Gdzie jesteśmy”, „Czeka na Ciebie” z tekstem do wpisania, zadania bieżącego zlecenia według stanu,
   eskalacje i pytania, dokumenty
-- `docs/historia.md`: „Punkt przekazania” (piszesz go Ty), „Dziennik etapów” (`shctl stage`) i pełna
-  lista zadań wszystkich zleceń (`sync-status.sh`)
+- `docs/historia.md`: „Punkt przekazania” (piszesz go Ty), „Dziennik etapów” (`shctl stage`, z
+  nagłówkami „### Cykl …”) i pełna lista zadań wszystkich zleceń z cyklem (`sync-status.sh`)
+- `docs/cykle/NAZWA/cykl.md`: zamknięte cykle etapów (`shctl cykl new`) z dokumentami ich etapów
 - `docs/*/DoD.md`: frontmatter `status` i `iteracja` każdego etapu
 - `docs/konfiguracja.md`: `tryb_procesu`, `etap_wdrozenia`, `odbior_S`, `zlecenie_od`, `max_local` (tylko
   obniżenie limitu Maca z `/Users/Shared/sh/konfiguracja.md`, domyślnie 2)
@@ -76,8 +77,9 @@ to w raporcie.
   `docs/06-zadania/index.md`, `CHANGELOG.md`: przez shctl, commit i push na `main` od razu po operacji
 - `docs/historia.md`, sekcja „Punkt przekazania”: wpis po kamieniu, po `shctl doctor` i przed
   restartem (narzędziem Edit, nad blokiem `historia:start`, którego nie ruszasz)
-- `docs/konfiguracja.md`, `zlecenie_od`: czas UTC startu nowego zlecenia (S albo M) w istniejącym
-  projekcie, commit na `main`; `Projekt.md` pokazuje wtedy w „Zrobione” i postępie tylko to zlecenie
+- `docs/konfiguracja.md`, `zlecenie_od`: czas UTC startu nowego zlecenia S w istniejącym projekcie,
+  commit na `main`; `Projekt.md` pokazuje wtedy w „Zrobione” i postępie tylko to zlecenie. Kolejne
+  zlecenie M ustawia `zlecenie_od`, `cykl` i `cykl_od` przez `shctl cykl new`
 - `docs/backlog-drobne.md`: wiersze ⚪ z review etapów i z „Drobnych uwag” raportów QA (ręcznie)
 - `docs/ETAP/DoD.md`: `iteracja` i `status` tylko na `main` przez `shctl stage` (nigdy na gałęzi
   `stage/ETAP`), pola Checkpointu na `main` po merge'u
@@ -94,6 +96,7 @@ to w raporcie.
 shctl status show --json --projekt NAZWA
 shctl doctor --json
 shctl new-project NAZWA --opis "KRÓTKI OPIS REPO" --zlecenie "TREŚĆ ZLECENIA" --json
+shctl cykl new --nazwa M2-TEMAT --json --projekt NAZWA
 shctl adopt OWNER/REPO --nazwa NAZWA --tryb M --json
 shctl adopt adaptacja --json --projekt NAZWA
 shctl adopt bramka --json --projekt NAZWA
@@ -310,8 +313,20 @@ potrzebujesz pliku z innej gałęzi, czytasz go przez `git -C … show GAŁĄŹ:
    odbiór. Projekt v1 (bez `wersja_procesu`): `04-architektura` i `05-plan` jednym PR zamiast `04-plan`.
    Tryb S (zlecenie w działającym projekcie): `zlecenie_od` w `konfiguracja.md` → issue z `sh-intake`
    → realizacja → odbiór.
-5. Drugie zlecenie M w projekcie, którego etapy mają `done`: proponujesz podział na zlecenia S albo
-   osobny projekt (`shctl cykl new` to etap B).
+5. Kolejne zlecenie M w projekcie, którego etapy mają `done` albo `pominiety` (zlecenie z obszarem
+   ryzyka, np. RLS, dane osobowe, produkcja, zawsze M, bez podziału na S): nowy cykl etapów.
+   - `shctl cykl new --nazwa MN-TEMAT --projekt NAZWA --json --dry-run`, potem bez `--dry-run`. Nazwa:
+     numer cyklu i krótki temat, np. `M2-bezpieczenstwo`. Komenda przenosi dokumenty etapów do
+     `docs/cykle/POPRZEDNI/` (ADR i `06-zadania/index.md` zostają), zakłada świeże `DoD.md`, ustawia
+     `cykl`, `cykl_od` i `zlecenie_od` i usuwa stare gałęzie `stage/ETAP` ze zmergowanym PR (z origin
+     i lokalnie), bo nowy cykl zakłada je od nowa z `origin/main`.
+   - Odmowa (kod 4): etap poprzedniego cyklu bez `done` albo `pominiety` (najpierw go zamknij),
+     otwarty PR etapu, gałąź `stage/ETAP` w worktree (najpierw `shctl sprzataj`), niezacommitowane
+     zmiany w `docs/`.
+   - `git add -A docs`, commit „orkiestrator: cykl NAZWA” i push na `main`, potem `sh-intake` (nowe
+     `zrodlo.md`) i dalej jak w kroku 4. Zadania S w toku kończysz normalnie; należą do poprzedniego
+     zlecenia.
+   - Kolejka kilku zleceń M: jeden cykl naraz. Następny `cykl new` po `done` etapu wydania bieżącego.
 
 ### Projekt przejęty
 
@@ -535,7 +550,7 @@ specyfikacja, plan (`04-plan`), odbiór. Kamienie zatwierdzonego planu startują
 
 ### Tryb L i etap B
 
-W trybie L etapy 0–11 z Checkpointami 1 i 2, `shctl cykl new`, wykonawca Codex, workery w chmurze,
+W trybie L etapy 0–11 z Checkpointami 1 i 2, wykonawca Codex, workery w chmurze,
 automatyczne wznowienie po limitach i `odbior_S: auto_bez_zmian_widocznych` domyślnie. W etapie A tego nie robisz.
 
 ## DoD

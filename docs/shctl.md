@@ -8,7 +8,7 @@ operacje na plikach, GitHubie i panelach herdr. Źródło: `scripts/shctl/` (`cm
 `lib/`, `pomoc/` teksty pomocy, `tests/` bats). Symlink `/Users/Shared/sh/bin/shctl` zakłada
 `scripts/server/install.sh`. Zależności: bash 3.2+, gh, jq, yq (mikefarah), git, herdr.
 
-Komendy: [new-project](#new-project), [adopt](#adopt), [repo](#repo), [stage](#stage), [decision](#decision), [escalate](#escalate), [status](#status), [stop-all](#stop-all), [skrzynka](#skrzynka), [obsidian](#obsidian), [doctor](#doctor), [task](#task), [pr](#pr), [review](#review), [reset-dryrun](#reset-dryrun), [template](#template), [sprzataj](#sprzataj), [metryki](#metryki), [db](#db).
+Komendy: [new-project](#new-project), [adopt](#adopt), [repo](#repo), [stage](#stage), [cykl](#cykl), [decision](#decision), [escalate](#escalate), [status](#status), [stop-all](#stop-all), [skrzynka](#skrzynka), [obsidian](#obsidian), [doctor](#doctor), [task](#task), [pr](#pr), [review](#review), [reset-dryrun](#reset-dryrun), [template](#template), [sprzataj](#sprzataj), [metryki](#metryki), [db](#db).
 
 ## shctl --help
 
@@ -21,6 +21,7 @@ Użycie: shctl KOMENDA [argumenty] [--dry-run] [--json] [--projekt NAZWA]
   repo opis [--opis "..."] [--topics "a,b"] [--website URL]
   stage start|review|done|escalate ETAP [--notatka "..."]
   stage iter ETAP
+  cykl new --nazwa NAZWA [--od RRRR-MM-DDTGG:MM:SSZ]
   decision add --co "..." --dlaczego "..." --cofniecie "..." [--rola ROLA]
   escalate --dotyczy "#NR|ETAP" --powod "..." --sytuacja "..." --sprawdzono "..." --potrzebne "..." [--opcje "A;B"] [--priorytet high] [--akceptacja] [--typ blokada|pytanie]
   escalate close E-NNN --odpowiedz "..."
@@ -182,6 +183,30 @@ iteracji 2 otwiera eskalację. wydanie: eskalacja po FAIL w iteracji 3. 08-qa ni
 Powtórka dla tego samego review nic nie zmienia. Projekt przejęty przed merge'em analizy: DoD.md
 00-analiza jest tylko w worktree wt/NAZWA/stage-00-analiza, więc start, review, iter i escalate
 zmieniają go tam (commit na gałęzi stage/00-analiza).
+```
+
+## cykl
+
+```text
+Użycie: shctl cykl new --nazwa NAZWA [--od RRRR-MM-DDTGG:MM:SSZ]
+
+Kolejny cykl etapów trybu M w projekcie, którego wszystkie etapy mają status done albo pominiety
+(drugie i dalsze zlecenie M, np. M2-bezpieczenstwo). NAZWA: litery, cyfry i -, do 40 znaków.
+
+  docs/ETAP/*              -> docs/cykle/POPRZEDNI/ETAP/ (00-intake, 04-plan, 06-zadania, 08-qa,
+                              wydanie; projekt v1 04-architektura i 05-plan), opis w cykl.md
+  docs/ETAP/DoD.md         świeży: wersja z commita, który dodał plik, status todo, iteracja 0
+  zostają                  ADR (*/adr/), 06-zadania/index.md, 00-analiza projektu przejętego
+  docs/konfiguracja.md     cykl: NAZWA, cykl_od i zlecenie_od: --od (domyślnie teraz, UTC)
+  docs/historia.md         „Dziennik etapów” z nagłówkami „### Cykl …” i wpisem startu cyklu
+  stare gałęzie stage/*    usunięte z origin i lokalnie, gdy ich PR jest zmergowany albo zamknięty
+
+Poprzedni cykl to pole cykl z konfiguracji, a bez niego M1. Potem zwykłe shctl stage start|review|
+iter|done na nowym cyklu; Projekt.md pokazuje bieżący cykl, a historia.md zadania z cyklem.
+Odmowa (kod 4): tryb S, etap cyklu bez done albo pominiety, niezacommitowane zmiany w docs/ etapów
+albo konfiguracji, otwarty PR z gałęzi stage/ETAP, gałąź stage/ETAP bez PR albo w worktree (najpierw
+shctl sprzataj), zajęta nazwa archiwum. Powtórka z tą samą nazwą nic nie zmienia. Commit plików
+(git add -A docs) robi orkiestrator na main.
 ```
 
 ## decision

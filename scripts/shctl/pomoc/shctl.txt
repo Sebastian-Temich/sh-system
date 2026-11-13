@@ -6,6 +6,7 @@ Użycie: shctl KOMENDA [argumenty] [--dry-run] [--json] [--projekt NAZWA]
   repo opis [--opis "..."] [--topics "a,b"] [--website URL]
   stage start|review|done|escalate ETAP [--notatka "..."]
   stage iter ETAP
+  cykl new --nazwa NAZWA [--od RRRR-MM-DDTGG:MM:SSZ]
   decision add --co "..." --dlaczego "..." --cofniecie "..." [--rola ROLA]
   escalate --dotyczy "#NR|ETAP" --powod "..." --sytuacja "..." --sprawdzono "..." --potrzebne "..." [--opcje "A;B"] [--priorytet high] [--akceptacja] [--typ blokada|pytanie]
   escalate close E-NNN --odpowiedz "..."
