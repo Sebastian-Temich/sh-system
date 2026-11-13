@@ -1,0 +1,19 @@
+Użycie: shctl cykl new --nazwa NAZWA [--od RRRR-MM-DDTGG:MM:SSZ]
+
+Kolejny cykl etapów trybu M w projekcie, którego wszystkie etapy mają status done albo pominiety
+(drugie i dalsze zlecenie M, np. M2-bezpieczenstwo). NAZWA: litery, cyfry i -, do 40 znaków.
+
+  docs/ETAP/*              -> docs/cykle/POPRZEDNI/ETAP/ (00-intake, 04-plan, 06-zadania, 08-qa,
+                              wydanie; projekt v1 04-architektura i 05-plan), opis w cykl.md
+  docs/ETAP/DoD.md         świeży: wersja z commita, który dodał plik, status todo, iteracja 0
+  zostają                  ADR (*/adr/), 06-zadania/index.md, 00-analiza projektu przejętego
+  docs/konfiguracja.md     cykl: NAZWA, cykl_od i zlecenie_od: --od (domyślnie teraz, UTC)
+  docs/historia.md         „Dziennik etapów” z nagłówkami „### Cykl …” i wpisem startu cyklu
+  stare gałęzie stage/*    usunięte z origin i lokalnie, gdy ich PR jest zmergowany albo zamknięty
+
+Poprzedni cykl to pole cykl z konfiguracji, a bez niego M1. Potem zwykłe shctl stage start|review|
+iter|done na nowym cyklu; Projekt.md pokazuje bieżący cykl, a historia.md zadania z cyklem.
+Odmowa (kod 4): tryb S, etap cyklu bez done albo pominiety, niezacommitowane zmiany w docs/ etapów
+albo konfiguracji, otwarty PR z gałęzi stage/ETAP, gałąź stage/ETAP bez PR albo w worktree (najpierw
+shctl sprzataj), zajęta nazwa archiwum. Powtórka z tą samą nazwą nic nie zmienia. Commit plików
+(git add -A docs) robi orkiestrator na main.

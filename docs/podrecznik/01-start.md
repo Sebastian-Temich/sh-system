@@ -75,6 +75,10 @@ użytkowników i migracje bazy produkcyjnej to zawsze co najmniej M. Tryb nie zm
 | QA po kamieniu (`08-qa`) | `raport-MN.md`, zadania z błędami | Nie |
 | Odbiór (`wydanie`) | Krótka dokumentacja wydania, staging | **Twój odbiór** |
 
+Kolejne zlecenie M w tym samym projekcie, po odbiorze poprzedniego, to nowy cykl tych samych etapów
+(`shctl cykl new`). Dokumenty poprzedniego cyklu są w `docs/cykle/NAZWA/`, a `Projekt.md` pokazuje
+bieżący cykl.
+
 Wydanie produkcyjne (wdrożenie, tag, rollback) to etap B (jeszcze niedostępne, B2).
 
 ## Twoja rola

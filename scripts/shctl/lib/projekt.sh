@@ -210,7 +210,8 @@ opis_etapu() {
 # Etap jest w widoku projektu („Gdzie jesteśmy”), który liczy sync-status.sh z DoD.md.
 odswiez_etap() { odswiez_projekt || true; }
 
-# Wpis do „Dziennik etapów” w docs/historia.md; ten sam wpis nie powtarza się, „(brak)” znika.
+# Wpis do „Dziennik etapów” w docs/historia.md; ten sam wpis nie powtarza się w bieżącym cyklu (po
+# ostatnim nagłówku „### Cykl …” z shctl cykl new), „(brak)” znika.
 dopisz_dziennik() {
   local linia="$1" obecne h
   # Przed merge'em analizy projekt przejęty nie ma historia.md (dochodzi z adaptacją); stan jest w DoD.
@@ -218,7 +219,8 @@ dopisz_dziennik() {
   h="$(plik_historii "$ROOT")"
   [ -f "$h" ] || printf '# Historia projektu\n\n## Punkt przekazania\n\n(brak)\n\n## Dziennik etapów\n\n(brak)\n' >"$h"
   obecne="$(czytaj_sekcje "$h" "Dziennik etapów" | grep -vxF '(brak)' || true)"
-  [ -z "$(printf '%s\n' "$obecne" | grep -xF -- "$linia" || true)" ] || return 0
+  [ -z "$(printf '%s\n' "$obecne" | awk '/^### / { delete b; n = 0; next } { b[++n] = $0 } END { for (i = 1; i <= n; i++) print b[i] }' |
+    grep -xF -- "$linia" || true)" ] || return 0
   ustaw_sekcje "$h" "Dziennik etapów" "${obecne:+$obecne
 }$linia"
 }

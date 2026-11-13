@@ -61,8 +61,10 @@ Tryb proponuje `sh-intake` jednym zdaniem uzasadnienia, właściciel akceptuje. 
 - **Tryb S:** intake zadaje najwyżej 3 pytania i zakłada jedno issue zlecenia z krótką kartą. Dalej
   realizacja jak w M i odbiór. Bez `DoD.md` etapów (DoD to issue i checklista PR); `new-project
   --tryb S` ustawia etapom `pominiety`.
-- Drugie duże zlecenie w projekcie z ukończonymi etapami: podział na zlecenia S albo osobny projekt.
-  Kolejny cykl etapów w jednym projekcie to etap B.
+- Kolejne zlecenie M w projekcie z zamkniętym cyklem etapów: nowy cykl (`shctl cykl new --nazwa
+  MN-temat`). Dokumenty etapów poprzedniego cyklu przechodzą do `docs/cykle/NAZWA/`, etapy dostają
+  świeże `DoD.md`, a `Projekt.md` i `historia.md` pokazują cykle osobno. ADR, kamienie, karty `W-NN` i
+  ID zadań mają numerację ciągłą w całym projekcie. Zlecenie z obszarem ryzyka nie dzieli się na S.
 
 ## Etapy trybu M
 
@@ -283,5 +285,5 @@ Desktop, usunięcie repo testowych.
 
 Codex jako drugi wykonawca, workery w chmurze, automatyczne wznowienie po limitach, design przez
 Claude Design wprost do repo, pełne skille kategorii (B1), wydanie produkcyjne (B2), change request,
-raport dla klienta, retro jako skill, kolejny cykl etapów w projekcie, GitHub Projects, osobny
+raport dla klienta, retro jako skill, GitHub Projects, osobny
 użytkownik macOS i konto bota GitHub.

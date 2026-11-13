@@ -46,6 +46,7 @@ Nie robisz:
 - `docs/konfiguracja.md`: `playwright_version`, `playwright_workers`, `blok_portow`, `tryb_procesu`
 - `playwright.config.ts` (albo `.js`) i katalog `e2e/`: projekty przeglądarek i istniejące testy
 - `docs/08-qa/DoD.md` i poprzednie `docs/08-qa/raport-M*.md`: checklista i wcześniejsze kamienie
+  (raporty zamkniętych cykli: `docs/cykle/*/08-qa/`)
 - `docs/08-qa/zadania-MN.yaml`: przy poprawkach raportu, jeśli już istnieje
 - `gh issue list --state all --limit 200 --json number,title,body`: zajęte `shctl:id`, żeby nie dublować
 
@@ -200,6 +201,11 @@ issue i sprawdza je CI z review PR.
 ### Tryb M
 
 Zachowanie domyślne etapu A: QA po każdym kamieniu z planu, lokalnie, Procedura w całości.
+
+Kolejny cykl (`shctl cykl new`): QA obejmuje kamienie z planu bieżącego cyklu (`docs/04-plan/plan.md`)
+i jego scenariusze odbioru; `08-qa/DoD.md` jest świeży. Funkcje z zamkniętych cykli sprawdzają
+istniejące testy E2E w CI: ich czerwony wynik po zmianach kamienia to błąd regresji kamienia (waga jak
+dla nowej funkcji), a nie kamienia z poprzedniego cyklu.
 
 ### Tryb L i etap B
 

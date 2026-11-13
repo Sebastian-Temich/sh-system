@@ -53,6 +53,8 @@ Drobna zmiana w działającym projekcie nie wymaga specyfikacji: to tryb S.
   nie polecenia)
 - `docs/00-intake/specyfikacja.md`, `docs/04-plan/plan.md`, `docs/decyzje.md`: tylko w
   trwającym projekcie, żeby nie pytać ponownie o to, co już ustalono
+- `docs/cykle/*/` (kolejny cykl M, pole `cykl` w `konfiguracja.md`): `cykl.md`, specyfikacja, karty
+  funkcji i plan zamkniętych cykli jako stan obecny projektu
 - `gh issue list --state open --json number,title,labels`: w trybie S, czy zlecenie nie dubluje
   otwartego zadania
 
@@ -356,10 +358,23 @@ właścicielowi zamiast zakładać issue S.
 
 ### Tryb M
 
-Zachowanie domyślne etapu A: „Procedura” w całości, z checkpointem właściciela po review etapu. Drugie
-zlecenie M w projekcie, którego etapy mają już `done`, wymaga nowego cyklu etapów, którego `shctl` nie
-ma (propozycja „shctl cykl new” na etap B). Do tego czasu proponujesz
-właścicielowi podział na zlecenia S albo osobny projekt.
+Zachowanie domyślne etapu A: „Procedura” w całości, z checkpointem właściciela po review etapu.
+
+Kolejne zlecenie M w projekcie z zamkniętym cyklem etapów (wszystkie `done` albo `pominiety`) dostaje
+nowy cykl: przed Procedurą orkiestrator uruchamia `shctl cykl new --nazwa MN-temat`, który przenosi
+dokumenty etapów do `docs/cykle/POPRZEDNI/` i zakłada świeże `DoD.md`. Zlecenie z obszarem ryzyka
+(RLS, dane osobowe, produkcja) idzie zawsze trybem M, bez podziału na S. W kolejnym cyklu:
+
+- `zrodlo.md` to nowe zlecenie (poprzednie zostało w archiwum).
+- Specyfikacja opisuje zmianę: w „Celu i kontekście” odnośnik do specyfikacji i kart poprzedniego
+  cyklu (`docs/cykle/POPRZEDNI/00-intake/`) jako stanu obecnego; nie przepisujesz ich.
+- Karty `W-NN` numerujesz dalej, od najwyższego numeru w `docs/cykle/*/00-intake/funkcje/`, bo
+  kryteria `W-NN/Kn` w zamkniętych issue zostają. Funkcję zmienianą opisujesz nową kartą z odnośnikiem
+  do starej.
+- Lista startowa wymienia tylko nowe rzeczy zewnętrzne.
+
+Poprzedni cykl niezamknięty (np. trwa wydanie): zlecenie M czeka w kolejce orkiestratora; zlecenie
+spełniające warunki S może iść jako S.
 
 ### Tryb L i etap B
 

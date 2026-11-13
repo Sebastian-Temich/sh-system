@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-11-13 (kolejny cykl M w projekcie: shctl cykl new)
+
+- Nowa komenda `shctl cykl new --nazwa NAZWA [--od ISO]`: kolejny cykl etapów trybu M w projekcie z zamkniętym cyklem (wszystkie etapy `done` albo `pominiety`). Dokumenty etapów poprzedniego cyklu przechodzą do `docs/cykle/POPRZEDNI/` z opisem `cykl.md`; zostają ADR, `06-zadania/index.md` i `00-analiza`. Etapy dostają świeże `DoD.md` (wersja z commita, który dodał plik; `todo`, iteracja 0), `konfiguracja.md` pola `cykl`, `cykl_od` i `zlecenie_od`, a „Dziennik etapów” nagłówki „### Cykl …”. Stare gałęzie `stage/ETAP` ze zmergowanym albo zamkniętym PR znikają z origin i lokalnie. Odmowa przy niezamkniętym etapie, otwartym PR etapu, gałęzi w worktree i niezacommitowanych zmianach.
+- `stage start|review|iter|done` działają na nowym cyklu bez zmian; dziennik nie pomija wpisu, który był już w poprzednim cyklu (porównanie tylko w bieżącym cyklu), a `stage iter` nie widzi pamięci powtórek poprzedniego cyklu.
+- `sh-intake`, `sh-plan`, `sh-qa`, `sh-orkiestrator`, `proces.md`: kolejne zlecenie M to nowy cykl zamiast podziału na S (obszar ryzyka zawsze M); numeracja kart `W-NN`, ADR, kamieni i ID zadań ciągła w projekcie.
+- `sh-template-projekt` (osobny PR): `sync-status.sh` pokazuje w `Projekt.md` bieżący cykl i linki do poprzednich, a w `historia.md` kolumnę „Cykl” listy zadań; etap w `todo` nowego cyklu jest następnym krokiem także przy otwartych zadaniach S. Projekty dostają to przez `shctl template update`.
+
 ## 2026-11-12 (SH-lite B1 krok 3: lokalny Supabase dla agentów)
 
 - Nowa komenda `shctl db start|stop|reset|migrate|test|status --projekt NAZWA`: lokalny Supabase (Docker) projektu, poza sandboxem jak `git push` (Supabase CLI w sandboxie kończy się `EPERM`). Porty z bloku projektu w `porty.md` przez kopię roboczą `stan/db/NAZWA/supabase` (`config.toml` z portami i `project_id = NAZWA`, reszta jako dowiązania), więc pliki projektu, także przejętego przed adaptacją, zostają bez zmian. Źródło migracji: worktree, z którego wywołano komendę, inaczej główna kopia. `reset` odtwarza bazę z migracji i seedów, `test` uruchamia pgTAP, `status` podaje adres API i lokalne klucze.

@@ -47,7 +47,9 @@ Nie robisz:
 - `AGENTS.md`: sekcja „Stack (kontrakt)”
 - `docs/04-plan/DoD.md`, `docs/06-zadania/DoD.md`: checklisty etapów
 - `docs/_szablony/plan.md`, `docs/_szablony/adr.md`: formaty
-- `docs/04-plan/adr/`: istniejące ADR, żeby nie dublować decyzji
+- `docs/04-plan/adr/`: istniejące ADR wszystkich cykli, żeby nie dublować decyzji
+- `docs/cykle/*/04-plan/plan.md`, `docs/cykle/*/06-zadania/zadania.yaml`: w kolejnym cyklu (pole `cykl`
+  w `konfiguracja.md`) architektura, kamienie i ID zadań zamkniętych cykli
 - `docs/04-plan/plan.md`: w etapie `06-zadania` (zaakceptowany plan)
 - `docs/06-zadania/zadania.yaml`: przy poprawkach po review, jeśli już istnieje
 - `sh-system/plugin/warstwy-skilli.yaml`: kategorie i stacki znane dispatchowi
@@ -279,6 +281,18 @@ S wymaga zmiany kontraktu albo ADR, `sh-intake` proponuje tryb M.
 
 Zachowanie domyślne etapu A: „Procedura” w całości, zwykle 4–12 grubych zadań. Więcej niż 15 zadań
 oznacza zbyt duży zakres: proponujesz podział zlecenia (eskalacja), bo tryb L jest dopiero w etapie B.
+
+Kolejny cykl (`shctl cykl new`, pole `cykl` w `konfiguracja.md`): `plan.md` opisuje zmianę względem
+architektury poprzedniego cyklu (odnośnik do `docs/cykle/POPRZEDNI/04-plan/plan.md`) i powtarza tylko
+moduły, dane i zasady bezpieczeństwa, które się zmieniają. Numeracja jest wspólna dla całego projektu:
+
+- ADR od kolejnego numeru w `docs/04-plan/adr/` (ADR poprzednich cykli zostają tam i obowiązują);
+  decyzję zmienianą zastępujesz nowym ADR („zastąpiona przez ADR-NNN” w starym).
+- Kamienie od następnego numeru po ostatnim kamieniu projektu (cykl M1 z kamieniami M1–M2: nowy cykl
+  zaczyna od M3). Tytuł istniejącego milestone'u dopisałby zadania do starego kamienia, a QA zbiorcze
+  czyta zadania po tytule milestone'u.
+- ID zadań dalej od najwyższego w `docs/cykle/*/06-zadania/zadania.yaml` (np. `T7`); `shctl task
+  create` odmawia ID zajętego przez zamknięte issue o innym tytule.
 
 ### Tryb L i etap B
 
